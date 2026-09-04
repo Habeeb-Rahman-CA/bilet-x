@@ -3,64 +3,70 @@
 @layer base {
   :root {
     --font-sans:
-      'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      'Open Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
 
-  body {
+  html, body, app-root {
     font-family: var(--font-sans);
     margin: 0;
     padding: 0;
     height: 100vh;
     width: 100vw;
     overflow: hidden;
-    background-color: #030712;
+    background-color: transparent !important;
+    background: transparent !important;
+    color: #ffffff;
+  }
+
+
+  /* Global rule to strip all box shadows across the application */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
   }
 }
 
-/* Custom Scrollbar */
+/* Minimalist Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: #000000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.6);
-  border-radius: 9999px;
+  background: #262626;
+  border-radius: 0px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.6);
+  background: #525252;
 }
 
-/* Custom Utility Classes */
+/* Custom Minimalist Utility Classes (Black & White, No Shadow) */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #09090b;
+  border: 1px solid #27272a;
 }
 
 .glass-card {
-  background: rgba(30, 41, 59, 0.5);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #09090b;
+  border: 1px solid #27272a;
 }
 
 .glass-input {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: all 0.2s ease-in-out;
+  background: #000000;
+  border: 1px solid #27272a;
+  color: #ffffff;
+  transition: border-color 0.15s ease;
 }
 
 .glass-input:focus {
-  border-color: rgba(99, 102, 241, 0.8);
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
+  border-color: #ffffff;
   outline: none;
 }
 
@@ -73,32 +79,35 @@
   -webkit-app-region: no-drag;
 }
 
-/* Glow effects */
-.glow-indigo {
-  box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.4);
-}
-
-.glow-emerald {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.4);
-}
-
-.glow-cyan {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.4);
-}
-
-/* Animations */
-@keyframes pulse-subtle {
-  0%,
+/* Animations for Panel & Widget Expansion / Collapse */
+@keyframes panelExpand {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
   100% {
     opacity: 1;
     transform: scale(1);
   }
-  50% {
-    opacity: 0.7;
-    transform: scale(0.98);
+}
+
+@keyframes widgetPop {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-panel-expand {
+  animation: panelExpand 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+.animate-widget-pop {
+  animation: widgetPop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+

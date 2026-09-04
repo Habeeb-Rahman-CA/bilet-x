@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TitlebarComponent } from './shared/components/titlebar/titlebar.component';
-import { DashboardComponent } from './features/dashboard/dashboard.component';
+import { WidgetComponent } from './features/widget/widget.component';
 import { SystemService } from './core/tauri/system.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, TitlebarComponent, DashboardComponent],
+  imports: [CommonModule, WidgetComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })

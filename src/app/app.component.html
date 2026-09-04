@@ -1,33 +1,3 @@
-<div
-  class="flex h-screen w-screen flex-col overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased"
->
-  <!-- Desktop Titlebar -->
-  <app-titlebar></app-titlebar>
-
-  <!-- Main View Area -->
-  <main class="relative flex-1 overflow-hidden">
-    <app-dashboard></app-dashboard>
-  </main>
-
-  <!-- Bottom Status Bar -->
-  <footer
-    class="flex h-6 w-full items-center justify-between border-t border-slate-800 bg-slate-950 px-3 font-mono text-[11px] text-slate-400 select-none"
-  >
-    <div class="flex items-center space-x-3">
-      <span class="flex items-center text-emerald-400">
-        <span class="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
-        Ready
-      </span>
-      <span class="text-slate-600">|</span>
-      <span>IPC Protocol: WebSocket / Direct IPC</span>
-    </div>
-
-    <div class="flex items-center space-x-3">
-      <span>Bilet-X v0.1.0</span>
-      <span class="text-slate-600">|</span>
-      <span>UTF-8</span>
-      <span class="text-slate-600">|</span>
-      <span>Port: 4200</span>
-    </div>
-  </footer>
+<div class="h-screen w-screen bg-transparent overflow-hidden">
+  <app-widget></app-widget>
 </div>

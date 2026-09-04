@@ -105,6 +105,37 @@ pub fn window_close(window: Window) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn set_window_size(window: Window, width: f64, height: f64) -> Result<(), String> {
+    window
+        .set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn window_set_focus(window: Window) -> Result<(), String> {
+    window.set_focus().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn position_window_right(window: Window) -> Result<(), String> {
+    if let Ok(Some(monitor)) = window.primary_monitor() {
+        let monitor_size = monitor.size();
+        let window_size = window
+            .outer_size()
+            .unwrap_or(tauri::PhysicalSize { width: 640, height: 440 });
+        let x = (monitor_size.width as i32) - (window_size.width as i32) - 10;
+        let y = ((monitor_size.height as i32) - (window_size.height as i32)) / 2;
+        window
+            .set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }))
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+
+
+
+#[tauri::command]
 pub fn trigger_ping(app: AppHandle, message: String) -> Result<String, String> {
     let payload = serde_json::json!({
         "message": message,
@@ -118,7 +149,62 @@ pub fn trigger_ping(app: AppHandle, message: String) -> Result<String, String> {
     Ok(format!("Event emitted with message: '{}'", message))
 }
 
+// --- SQLITE PERSISTENCE COMMANDS VIA REPOSITORIES ---
+use crate::db::{NoteRepository, SettingsRepository, TaskRepository};
+
+#[tauri::command]
+pub fn db_get_notes(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::NoteItem>, String> {
+    db.get_all_notes().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_save_note(note: crate::models::NoteItem, db: State<'_, crate::db::Database>) -> Result<crate::models::NoteItem, String> {
+    db.save_note(note).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_delete_note(id: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
+    db.delete_note(&id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_get_tasks(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::TaskItem>, String> {
+    db.get_all_tasks().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_save_task(task: crate::models::TaskItem, db: State<'_, crate::db::Database>) -> Result<crate::models::TaskItem, String> {
+    db.save_task(task).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_update_task_status(id: String, status: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
+    db.update_task_status(&id, &status).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_delete_task(id: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
+    db.delete_task(&id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_get_settings(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::SettingItem>, String> {
+    db.get_all_settings().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_get_setting(key: String, db: State<'_, crate::db::Database>) -> Result<Option<String>, String> {
+    db.get_setting(&key).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_set_setting(key: String, value: String, db: State<'_, crate::db::Database>) -> Result<crate::models::SettingItem, String> {
+    db.set_setting(&key, &value).map_err(|e| e.to_string())
+}
+
+
 fn chrono_like_timestamp() -> String {
+
     use std::time::{SystemTime, UNIX_EPOCH};
     let start = SystemTime::now();
     let since_the_epoch = start
