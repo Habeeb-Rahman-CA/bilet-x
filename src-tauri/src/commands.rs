@@ -117,14 +117,33 @@ pub fn window_set_focus(window: Window) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn position_window_right(window: Window) -> Result<(), String> {
+pub fn set_widget_position(window: Window, position: String) -> Result<(), String> {
     if let Ok(Some(monitor)) = window.primary_monitor() {
         let monitor_size = monitor.size();
         let window_size = window
             .outer_size()
             .unwrap_or(tauri::PhysicalSize { width: 640, height: 440 });
-        let x = (monitor_size.width as i32) - (window_size.width as i32) - 10;
-        let y = ((monitor_size.height as i32) - (window_size.height as i32)) / 2;
+
+        let (x, y) = match position.as_str() {
+            "left" => (
+                10,
+                ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
+            ),
+            "top-right" => (
+                (monitor_size.width as i32) - (window_size.width as i32) - 10,
+                10,
+            ),
+            "bottom-right" => (
+                (monitor_size.width as i32) - (window_size.width as i32) - 10,
+                (monitor_size.height as i32) - (window_size.height as i32) - 10,
+            ),
+            _ => (
+                // default "right"
+                (monitor_size.width as i32) - (window_size.width as i32) - 10,
+                ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
+            ),
+        };
+
         window
             .set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }))
             .map_err(|e| e.to_string())?;

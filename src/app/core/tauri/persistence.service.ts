@@ -151,14 +151,31 @@ export class PersistenceService {
     }
   }
 
+  public getSettingValue(key: string, defaultValue: string = ''): string {
+    return this.settings().get(key) || defaultValue;
+  }
+
   public async setSetting(key: string, value: string): Promise<boolean> {
     try {
       await this.tauriService.invokeCommand<SettingItem>('db_set_setting', { key, value });
       await this.loadSettings();
+      if (key === 'theme') {
+        this.applyTheme(value);
+      }
       return true;
     } catch (e) {
       console.error('Failed to save setting to SQLite', e);
       return false;
+    }
+  }
+
+  public applyTheme(theme: string): void {
+    if (theme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
     }
   }
 }

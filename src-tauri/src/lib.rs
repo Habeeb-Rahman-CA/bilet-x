@@ -4,7 +4,11 @@ pub mod models;
 pub mod state;
 
 use state::AppState;
-use tauri::Manager;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Manager,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,7 +25,7 @@ pub fn run() {
             commands::window_close,
             commands::set_window_size,
             commands::window_set_focus,
-            commands::position_window_right,
+            commands::set_widget_position,
             commands::trigger_ping,
             commands::db_get_notes,
             commands::db_save_note,
@@ -47,6 +51,7 @@ pub fn run() {
 
             app.manage(database);
 
+            // 1. Initial Window Positioning Hook
             if let Some(main_window) = app.get_webview_window("main") {
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(150));
@@ -62,6 +67,55 @@ pub fn run() {
                 });
             }
 
+            // 2. System Tray Setup
+            let show_item = MenuItem::with_id(app, "show", "Show Widget", true, None::<&str>)?;
+            let hide_item = MenuItem::with_id(app, "hide", "Hide Widget", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit Bilet-X", true, None::<&str>)?;
+
+            let tray_menu = Menu::with_items(app, &[&show_item, &hide_item, &quit_item])?;
+
+            if let Some(icon) = app.default_window_icon() {
+                let _tray = TrayIconBuilder::new()
+                    .icon(icon.clone())
+                    .menu(&tray_menu)
+                    .show_menu_on_left_click(false)
+                    .on_menu_event(|app_handle, event| match event.id.as_ref() {
+                        "show" => {
+                            if let Some(window) = app_handle.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "hide" => {
+                            if let Some(window) = app_handle.get_webview_window("main") {
+                                let _ = window.hide();
+                            }
+                        }
+                        "quit" => {
+                            app_handle.exit(0);
+                        }
+                        _ => {}
+                    })
+                    .on_tray_icon_event(|tray_handle, event| {
+                        if let TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            let app = tray_handle.app_handle();
+                            if let Some(window) = app.get_webview_window("main") {
+                                if window.is_visible().unwrap_or(false) {
+                                    let _ = window.hide();
+                                } else {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                        }
+                    })
+                    .build(app)?;
+            }
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -75,4 +129,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-

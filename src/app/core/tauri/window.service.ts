@@ -14,10 +14,14 @@ export class WindowService {
   }
 
   public async positionRight(): Promise<void> {
+    this.setPosition('right');
+  }
+
+  public async setPosition(position: string): Promise<void> {
     try {
-      await this.tauriService.invokeCommand('position_window_right');
+      await this.tauriService.invokeCommand('set_widget_position', { position });
     } catch (e) {
-      console.warn('Position window right failed', e);
+      console.warn('Set widget position failed', e);
     }
   }
 
