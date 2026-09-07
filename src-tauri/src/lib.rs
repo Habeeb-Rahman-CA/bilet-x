@@ -26,6 +26,7 @@ pub fn run() {
             commands::set_window_size,
             commands::window_set_focus,
             commands::set_widget_position,
+            commands::set_interactive_area,
             commands::trigger_ping,
             commands::db_get_notes,
             commands::db_save_note,
@@ -53,16 +54,60 @@ pub fn run() {
 
             // 1. Initial Window Positioning Hook
             if let Some(main_window) = app.get_webview_window("main") {
+                let positioning_window = main_window.clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(150));
-                    if let Ok(Some(monitor)) = main_window.primary_monitor() {
+                    if let Ok(Some(monitor)) = positioning_window.primary_monitor() {
                         let monitor_size = monitor.size();
-                        let window_size = main_window
+                        let window_size = positioning_window
                             .outer_size()
                             .unwrap_or(tauri::PhysicalSize { width: 640, height: 440 });
                         let x = (monitor_size.width as i32) - (window_size.width as i32) - 10;
                         let y = ((monitor_size.height as i32) - (window_size.height as i32)) / 2;
-                        let _ = main_window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
+                        let _ = positioning_window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
+                    }
+                });
+
+                // 1a. Cursor Click-Through Polling
+                // Passes clicks through the transparent regions of the window while keeping
+                // the dock/panel area interactive. The frontend reports the interactive rect
+                // (in logical CSS pixels, relative to the window) via `set_interactive_area`.
+                let click_through_window = main_window.clone();
+                let interactive_rect = app.state::<AppState>().interactive_rect.clone();
+                std::thread::spawn(move || {
+                    let mut current_ignore = false;
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_millis(30));
+
+                        let rect_opt = interactive_rect.lock().ok().and_then(|g| *g);
+                        let Some(rect) = rect_opt else { continue };
+
+                        let cursor = match click_through_window.cursor_position() {
+                            Ok(pos) => pos,
+                            Err(_) => continue,
+                        };
+                        let win_pos = match click_through_window.outer_position() {
+                            Ok(pos) => pos,
+                            Err(_) => continue,
+                        };
+                        let scale = click_through_window.scale_factor().unwrap_or(1.0);
+
+                        let rel_x = (cursor.x - win_pos.x as f64) / scale;
+                        let rel_y = (cursor.y - win_pos.y as f64) / scale;
+                        let in_rect = rel_x >= rect.x
+                            && rel_x <= rect.x + rect.width
+                            && rel_y >= rect.y
+                            && rel_y <= rect.y + rect.height;
+                        let should_ignore = !in_rect;
+
+                        if should_ignore != current_ignore {
+                            if click_through_window
+                                .set_ignore_cursor_events(should_ignore)
+                                .is_ok()
+                            {
+                                current_ignore = should_ignore;
+                            }
+                        }
                     }
                 });
             }

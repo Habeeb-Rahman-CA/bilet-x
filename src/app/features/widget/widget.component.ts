@@ -1,4 +1,13 @@
-import { Component, HostListener, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  ViewChild,
+  effect,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WindowService } from '../../core/tauri/window.service';
 import { DockComponent, DockTab } from './components/dock/dock.component';
@@ -12,8 +21,7 @@ import { SettingsComponent } from './components/settings/settings.component';
   imports: [CommonModule, DockComponent, NoteComponent, TaskComponent, SettingsComponent],
   template: `
     <div
-      (click)="onBackdropClick()"
-      class="relative flex h-screen w-screen items-center justify-end overflow-hidden bg-transparent p-4 text-neutral-100 select-none"
+      class="relative flex h-screen w-screen items-center justify-end overflow-hidden bg-transparent text-neutral-100 select-none"
     >
       <!-- STATIONARY CONTAINER FOR VERTICAL DOCK & ABSOLUTE PANEL -->
       <div
@@ -22,6 +30,7 @@ import { SettingsComponent } from './components/settings/settings.component';
       >
         <!-- FLYOUT QUICK PANEL (POSITIONED ABSOLUTELY TO THE LEFT OF DOCK) -->
         <div
+          #panelEl
           *ngIf="isPanelExpanded()"
           class="animate-panel-expand absolute right-full mr-3 flex w-[380px] flex-col space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 backdrop-blur-xl shadow-2xl"
         >
@@ -62,6 +71,7 @@ import { SettingsComponent } from './components/settings/settings.component';
 
         <!-- VERTICAL DOCK COMPONENT (NOTE, TASK, SETTINGS) -->
         <app-dock
+          #dockEl
           [tabs]="tabs"
           [activeTabId]="activeTab().id"
           [isPanelExpanded]="isPanelExpanded()"
@@ -71,7 +81,7 @@ import { SettingsComponent } from './components/settings/settings.component';
     </div>
   `,
 })
-export class WidgetComponent {
+export class WidgetComponent implements AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
 
   // EXACT ORDER: 1. note, 2. task, 3. settings
@@ -83,7 +93,30 @@ export class WidgetComponent {
 
   public activeTab = signal<DockTab>(this.tabs[0]);
 
-  constructor(private windowService: WindowService) {}
+  @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;
+  @ViewChild('panelEl', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
+
+  private postAnimationTimer: number | undefined;
+
+  constructor(private windowService: WindowService) {
+    // Re-measure whenever the panel expands/collapses. Effects run outside the
+    // render lifecycle, so we defer to rAF and also re-measure after the 180ms
+    // panel-expand animation settles at its final scale.
+    effect(() => {
+      this.isPanelExpanded();
+      this.scheduleInteractiveAreaUpdate();
+    });
+  }
+
+  public ngAfterViewInit(): void {
+    this.scheduleInteractiveAreaUpdate();
+  }
+
+  public ngOnDestroy(): void {
+    if (this.postAnimationTimer !== undefined) {
+      window.clearTimeout(this.postAnimationTimer);
+    }
+  }
 
   public selectTab(tab: DockTab): void {
     if (this.activeTab().id === tab.id && this.isPanelExpanded()) {
@@ -99,12 +132,6 @@ export class WidgetComponent {
     this.isPanelExpanded.set(false);
   }
 
-  public onBackdropClick(): void {
-    if (this.isPanelExpanded()) {
-      this.collapseToWidget();
-    }
-  }
-
   @HostListener('window:keydown', ['$event'])
   public handleGlobalShortcuts(event: KeyboardEvent): void {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -114,5 +141,59 @@ export class WidgetComponent {
       event.preventDefault();
       this.collapseToWidget();
     }
+  }
+
+  @HostListener('window:resize')
+  public onWindowResize(): void {
+    this.scheduleInteractiveAreaUpdate();
+  }
+
+  // Click-through means outside clicks never reach the DOM, so we can't close
+  // the panel via a backdrop click. Instead, close whenever the OS window
+  // loses focus — clicking through to any window underneath (or the desktop)
+  // will always transfer focus away from us.
+  @HostListener('window:blur')
+  public onWindowBlur(): void {
+    if (this.isPanelExpanded()) {
+      this.collapseToWidget();
+    }
+  }
+
+  private scheduleInteractiveAreaUpdate(): void {
+    requestAnimationFrame(() => this.reportInteractiveArea());
+    // Re-measure after the panel-expand animation completes so we capture the
+    // final (scale=1) bounds rather than the initial 0.96-scaled rect.
+    if (this.postAnimationTimer !== undefined) {
+      window.clearTimeout(this.postAnimationTimer);
+    }
+    this.postAnimationTimer = window.setTimeout(() => this.reportInteractiveArea(), 220);
+  }
+
+  private reportInteractiveArea(): void {
+    const dock = this.dockRef?.nativeElement?.getBoundingClientRect();
+    if (!dock) return;
+
+    let left = dock.left;
+    let top = dock.top;
+    let right = dock.right;
+    let bottom = dock.bottom;
+
+    const panelEl = this.panelRef?.nativeElement;
+    if (this.isPanelExpanded() && panelEl) {
+      const panel = panelEl.getBoundingClientRect();
+      left = Math.min(left, panel.left);
+      top = Math.min(top, panel.top);
+      right = Math.max(right, panel.right);
+      bottom = Math.max(bottom, panel.bottom);
+    }
+
+    // Small buffer so edges and mid-animation frames still hit-test.
+    const pad = 8;
+    this.windowService.setInteractiveArea(
+      left - pad,
+      top - pad,
+      right - left + pad * 2,
+      bottom - top + pad * 2,
+    );
   }
 }

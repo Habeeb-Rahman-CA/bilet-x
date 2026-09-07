@@ -1,5 +1,5 @@
 use crate::models::{AppStateInfo, SystemInfo};
-use crate::state::AppState;
+use crate::state::{AppState, InteractiveRect};
 use tauri::{AppHandle, Emitter, State, Window};
 
 #[tauri::command]
@@ -153,6 +153,22 @@ pub fn set_widget_position(window: Window, position: String) -> Result<(), Strin
 
 
 
+
+#[tauri::command]
+pub fn set_interactive_area(
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let mut rect = state
+        .interactive_rect
+        .lock()
+        .map_err(|e| format!("Lock error: {}", e))?;
+    *rect = Some(InteractiveRect { x, y, width, height });
+    Ok(())
+}
 
 #[tauri::command]
 pub fn trigger_ping(app: AppHandle, message: String) -> Result<String, String> {
