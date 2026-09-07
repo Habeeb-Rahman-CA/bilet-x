@@ -103,6 +103,19 @@ export class PersistenceService {
     }
   }
 
+  public async clearAllNotes(): Promise<number> {
+    try {
+      const removed = await this.tauriService.invokeCommand<number>('db_clear_notes');
+      // main_scratchpad is stored as a note, so wipe the in-memory text too.
+      this.scratchpadText.set('');
+      await this.loadNotes();
+      return removed;
+    } catch (e) {
+      console.error('Failed to clear notes from SQLite', e);
+      return 0;
+    }
+  }
+
   // --- TASKS API ---
   public async loadTasks(): Promise<TaskItem[]> {
     try {
@@ -134,6 +147,17 @@ export class PersistenceService {
     } catch (e) {
       console.error('Failed to delete task from SQLite', e);
       return false;
+    }
+  }
+
+  public async clearAllTasks(): Promise<number> {
+    try {
+      const removed = await this.tauriService.invokeCommand<number>('db_clear_tasks');
+      await this.loadTasks();
+      return removed;
+    } catch (e) {
+      console.error('Failed to clear tasks from SQLite', e);
+      return 0;
     }
   }
 
