@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WidgetComponent } from './features/widget/widget.component';
-import { SystemService } from './core/tauri/system.service';
 
 @Component({
   selector: 'app-root',
@@ -10,6 +9,4 @@ import { SystemService } from './core/tauri/system.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent {
-  constructor(public systemService: SystemService) {}
-}
+export class AppComponent {}
