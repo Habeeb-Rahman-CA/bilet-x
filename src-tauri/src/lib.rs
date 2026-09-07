@@ -15,11 +15,6 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
-            commands::greet,
-            commands::get_system_info,
-            commands::get_app_state,
-            commands::increment_counter,
-            commands::set_theme,
             commands::window_minimize,
             commands::window_toggle_maximize,
             commands::window_close,
@@ -27,18 +22,15 @@ pub fn run() {
             commands::window_set_focus,
             commands::set_widget_position,
             commands::set_interactive_area,
-            commands::trigger_ping,
             commands::db_get_notes,
             commands::db_save_note,
             commands::db_delete_note,
             commands::db_clear_notes,
             commands::db_get_tasks,
             commands::db_save_task,
-            commands::db_update_task_status,
             commands::db_delete_task,
             commands::db_clear_tasks,
             commands::db_get_settings,
-            commands::db_get_setting,
             commands::db_set_setting,
         ])
         .setup(|app| {

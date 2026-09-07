@@ -1,12 +1,9 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Minimal permissions for the widget: frontend only uses invoke (gated by generate_handler!) and event listen/unlisten.",
+  "description": "Frontend uses only invoke, gated by generate_handler!. No core APIs called from JS, so no core permissions required.",
   "windows": [
     "main"
   ],
-  "permissions": [
-    "core:event:allow-listen",
-    "core:event:allow-unlisten"
-  ]
+  "permissions": []
 }

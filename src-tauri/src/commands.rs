@@ -1,10 +1,25 @@
-use crate::models::{AppStateInfo, SystemInfo};
+use crate::db::{NoteRepository, SettingsRepository, TaskRepository};
 use crate::state::{AppState, InteractiveRect};
-use tauri::{AppHandle, Emitter, State, Window};
+use tauri::{State, Window};
 
-const VALID_THEMES: &[&str] = &["light", "dark"];
 const VALID_TASK_STATUSES: &[&str] = &["pending", "in_progress", "completed"];
 const VALID_TASK_PRIORITIES: &[&str] = &["low", "medium", "high"];
+const VALID_THEMES: &[&str] = &["light", "dark"];
+const VALID_WIDGET_POSITIONS: &[&str] = &[
+    "left",
+    "right",
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right",
+];
+
+const MAX_ID_LEN: usize = 100;
+const MAX_TITLE_LEN: usize = 200;
+const MAX_CONTENT_LEN: usize = 100_000;
+const MAX_DESCRIPTION_LEN: usize = 10_000;
+const MAX_SETTING_KEY_LEN: usize = 50;
+const MAX_SETTING_VALUE_LEN: usize = 10_000;
 
 fn require_one_of(value: &str, allowed: &[&str], field: &str) -> Result<(), String> {
     if allowed.contains(&value) {
@@ -19,85 +34,49 @@ fn require_one_of(value: &str, allowed: &[&str], field: &str) -> Result<(), Stri
     }
 }
 
-#[tauri::command]
-pub fn greet(name: &str, state: State<'_, AppState>) -> String {
-    if let Ok(mut count) = state.total_invocations.lock() {
-        *count += 1;
+fn validate_id(id: &str, field: &str) -> Result<(), String> {
+    if id.is_empty() {
+        return Err(format!("{} cannot be empty", field));
     }
-    format!("Hello, {}! Greetings from Rust Tauri backend.", name)
+    if id.len() > MAX_ID_LEN {
+        return Err(format!(
+            "{} too long: {} chars (max {})",
+            field,
+            id.len(),
+            MAX_ID_LEN
+        ));
+    }
+    Ok(())
 }
 
-#[tauri::command]
-pub fn get_system_info(state: State<'_, AppState>) -> SystemInfo {
-    if let Ok(mut count) = state.total_invocations.lock() {
-        *count += 1;
+fn require_max_len(value: &str, max: usize, field: &str) -> Result<(), String> {
+    if value.len() > max {
+        return Err(format!(
+            "{} too long: {} chars (max {})",
+            field,
+            value.len(),
+            max
+        ));
     }
-
-    SystemInfo {
-        os: std::env::consts::OS.to_string(),
-        arch: std::env::consts::ARCH.to_string(),
-        rust_version: env!("CARGO_PKG_VERSION").to_string(),
-        tauri_version: tauri::VERSION.to_string(),
-        memory_info: "64-bit Architecture Active".to_string(),
-    }
+    Ok(())
 }
 
-#[tauri::command]
-pub fn get_app_state(state: State<'_, AppState>) -> AppStateInfo {
-    if let Ok(mut count) = state.total_invocations.lock() {
-        *count += 1;
+fn validate_setting(key: &str, value: &str) -> Result<(), String> {
+    if key.is_empty() {
+        return Err("setting key cannot be empty".to_string());
     }
-
-    let counter = state.counter.lock().map(|c| *c).unwrap_or(0);
-    let active_theme = state
-        .active_theme
-        .lock()
-        .map(|t| t.clone())
-        .unwrap_or_else(|_| "dark".to_string());
-    let total_invocations = state
-        .total_invocations
-        .lock()
-        .map(|c| *c)
-        .unwrap_or(0);
-    let uptime_seconds = state.start_time.elapsed().as_secs();
-
-    AppStateInfo {
-        counter,
-        active_theme,
-        uptime_seconds,
-        total_invocations,
+    require_max_len(key, MAX_SETTING_KEY_LEN, "setting key")?;
+    require_max_len(value, MAX_SETTING_VALUE_LEN, "setting value")?;
+    // For keys the app relies on, enforce the same enum on the write path
+    // that consumers already assume on the read path.
+    match key {
+        "theme" => require_one_of(value, VALID_THEMES, "theme"),
+        "widget_position" => require_one_of(value, VALID_WIDGET_POSITIONS, "widget_position"),
+        _ => Ok(()),
     }
 }
 
-#[tauri::command]
-pub fn increment_counter(state: State<'_, AppState>) -> u32 {
-    if let Ok(mut count) = state.total_invocations.lock() {
-        *count += 1;
-    }
-
-    if let Ok(mut counter) = state.counter.lock() {
-        *counter += 1;
-        *counter
-    } else {
-        0
-    }
-}
-
-#[tauri::command]
-pub fn set_theme(theme: String, state: State<'_, AppState>) -> Result<String, String> {
-    require_one_of(&theme, VALID_THEMES, "theme")?;
-
-    if let Ok(mut count) = state.total_invocations.lock() {
-        *count += 1;
-    }
-
-    let mut current_theme = state
-        .active_theme
-        .lock()
-        .map_err(|e| format!("Lock error: {}", e))?;
-    *current_theme = theme.clone();
-    Ok(theme)
-}
+// --- WINDOW COMMANDS ---
 
 #[tauri::command]
 pub fn window_minimize(window: Window) -> Result<(), String> {
@@ -118,6 +97,11 @@ pub fn window_toggle_maximize(window: Window) -> Result<bool, String> {
 #[tauri::command]
 pub fn window_close(window: Window) -> Result<(), String> {
     window.close().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn window_set_focus(window: Window) -> Result<(), String> {
+    window.set_focus().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -148,12 +132,9 @@ pub fn set_window_size(window: Window, width: f64, height: f64) -> Result<(), St
 }
 
 #[tauri::command]
-pub fn window_set_focus(window: Window) -> Result<(), String> {
-    window.set_focus().map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub fn set_widget_position(window: Window, position: String) -> Result<(), String> {
+    require_one_of(&position, VALID_WIDGET_POSITIONS, "position")?;
+
     if let Ok(Some(monitor)) = window.primary_monitor() {
         let monitor_size = monitor.size();
         let window_size = window
@@ -192,9 +173,6 @@ pub fn set_widget_position(window: Window, position: String) -> Result<(), Strin
     Ok(())
 }
 
-
-
-
 #[tauri::command]
 pub fn set_interactive_area(
     x: f64,
@@ -221,22 +199,7 @@ pub fn set_interactive_area(
     Ok(())
 }
 
-#[tauri::command]
-pub fn trigger_ping(app: AppHandle, message: String) -> Result<String, String> {
-    let payload = serde_json::json!({
-        "message": message,
-        "timestamp": chrono_like_timestamp(),
-        "status": "acknowledged"
-    });
-
-    app.emit("backend-ping-event", &payload)
-        .map_err(|e| e.to_string())?;
-
-    Ok(format!("Event emitted with message: '{}'", message))
-}
-
-// --- SQLITE PERSISTENCE COMMANDS VIA REPOSITORIES ---
-use crate::db::{NoteRepository, SettingsRepository, TaskRepository};
+// --- SQLITE PERSISTENCE COMMANDS ---
 
 #[tauri::command]
 pub fn db_get_notes(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::NoteItem>, String> {
@@ -245,11 +208,15 @@ pub fn db_get_notes(db: State<'_, crate::db::Database>) -> Result<Vec<crate::mod
 
 #[tauri::command]
 pub fn db_save_note(note: crate::models::NoteItem, db: State<'_, crate::db::Database>) -> Result<crate::models::NoteItem, String> {
+    validate_id(&note.id, "note.id")?;
+    require_max_len(&note.title, MAX_TITLE_LEN, "note.title")?;
+    require_max_len(&note.content, MAX_CONTENT_LEN, "note.content")?;
     db.save_note(note).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn db_delete_note(id: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
+    validate_id(&id, "id")?;
     db.delete_note(&id).map_err(|e| e.to_string())
 }
 
@@ -265,19 +232,17 @@ pub fn db_get_tasks(db: State<'_, crate::db::Database>) -> Result<Vec<crate::mod
 
 #[tauri::command]
 pub fn db_save_task(task: crate::models::TaskItem, db: State<'_, crate::db::Database>) -> Result<crate::models::TaskItem, String> {
+    validate_id(&task.id, "task.id")?;
+    require_max_len(&task.title, MAX_TITLE_LEN, "task.title")?;
+    require_max_len(&task.description, MAX_DESCRIPTION_LEN, "task.description")?;
     require_one_of(&task.status, VALID_TASK_STATUSES, "task.status")?;
     require_one_of(&task.priority, VALID_TASK_PRIORITIES, "task.priority")?;
     db.save_task(task).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn db_update_task_status(id: String, status: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
-    require_one_of(&status, VALID_TASK_STATUSES, "status")?;
-    db.update_task_status(&id, &status).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub fn db_delete_task(id: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
+    validate_id(&id, "id")?;
     db.delete_task(&id).map_err(|e| e.to_string())
 }
 
@@ -292,22 +257,7 @@ pub fn db_get_settings(db: State<'_, crate::db::Database>) -> Result<Vec<crate::
 }
 
 #[tauri::command]
-pub fn db_get_setting(key: String, db: State<'_, crate::db::Database>) -> Result<Option<String>, String> {
-    db.get_setting(&key).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
 pub fn db_set_setting(key: String, value: String, db: State<'_, crate::db::Database>) -> Result<crate::models::SettingItem, String> {
+    validate_setting(&key, &value)?;
     db.set_setting(&key, &value).map_err(|e| e.to_string())
-}
-
-
-fn chrono_like_timestamp() -> String {
-
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let start = SystemTime::now();
-    let since_the_epoch = start
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    format!("{}s", since_the_epoch.as_secs())
 }
