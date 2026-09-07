@@ -75,6 +75,13 @@ export class PersistenceService {
     };
     try {
       await this.tauriService.invokeCommand<NoteItem>('db_save_note', { note });
+      // Keep the notes signal in sync with the DB write so live consumers
+      // (e.g. the settings Data counter) reflect the current state without
+      // paying for an extra loadNotes IPC round-trip on every keystroke.
+      this.notes.update((prev) => {
+        const others = prev.filter((n) => n.id !== note.id);
+        return [note, ...others];
+      });
     } catch (e) {
       console.error('Failed to autosave scratchpad note to SQLite', e);
     }

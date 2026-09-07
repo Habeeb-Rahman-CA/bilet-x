@@ -184,24 +184,29 @@ impl NoteRepository for Database {
             .conn
             .lock()
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
-        conn.execute(
+        // Timestamps are stamped by SQLite so the client can't backdate rows
+        // and break the `ORDER BY updated_at DESC` sort. RETURNING gives the
+        // caller the DB-authoritative row rather than echoing input.
+        conn.query_row(
             "INSERT INTO notes (id, title, content, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5)
+             VALUES (?1, ?2, ?3, datetime('now'), datetime('now'))
              ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 content = excluded.content,
-                updated_at = excluded.updated_at;",
-            params![
-                note.id,
-                note.title,
-                note.content,
-                note.created_at,
-                note.updated_at
-            ],
+                updated_at = datetime('now')
+             RETURNING id, title, content, created_at, updated_at;",
+            params![note.id, note.title, note.content],
+            |row| {
+                Ok(NoteItem {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    content: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                })
+            },
         )
-        .map_err(|e| DbError::QueryFailed(e.to_string()))?;
-
-        Ok(note)
+        .map_err(|e| DbError::QueryFailed(e.to_string()))
     }
 
     fn delete_note(&self, id: &str) -> Result<bool, DbError> {
@@ -270,16 +275,17 @@ impl TaskRepository for Database {
             .conn
             .lock()
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
-        conn.execute(
+        conn.query_row(
             "INSERT INTO tasks (id, title, description, status, priority, due_date, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'), datetime('now'))
              ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 description = excluded.description,
                 status = excluded.status,
                 priority = excluded.priority,
                 due_date = excluded.due_date,
-                updated_at = excluded.updated_at;",
+                updated_at = datetime('now')
+             RETURNING id, title, description, status, priority, due_date, created_at, updated_at;",
             params![
                 task.id,
                 task.title,
@@ -287,13 +293,21 @@ impl TaskRepository for Database {
                 task.status,
                 task.priority,
                 task.due_date,
-                task.created_at,
-                task.updated_at
             ],
+            |row| {
+                Ok(TaskItem {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    description: row.get(2)?,
+                    status: row.get(3)?,
+                    priority: row.get(4)?,
+                    due_date: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            },
         )
-        .map_err(|e| DbError::QueryFailed(e.to_string()))?;
-
-        Ok(task)
+        .map_err(|e| DbError::QueryFailed(e.to_string()))
     }
 
     fn update_task_status(&self, id: &str, status: &str) -> Result<bool, DbError> {
@@ -301,11 +315,10 @@ impl TaskRepository for Database {
             .conn
             .lock()
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
-        let now = chrono_like_timestamp();
         let rows = conn
             .execute(
-                "UPDATE tasks SET status = ?1, updated_at = ?2 WHERE id = ?3;",
-                params![status, now, id],
+                "UPDATE tasks SET status = ?1, updated_at = datetime('now') WHERE id = ?2;",
+                params![status, id],
             )
             .map_err(|e| DbError::QueryFailed(e.to_string()))?;
 
@@ -390,31 +403,24 @@ impl SettingsRepository for Database {
             .conn
             .lock()
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
-        let now = chrono_like_timestamp();
-
-        conn.execute(
+        conn.query_row(
             "INSERT INTO settings (key, value, updated_at)
-             VALUES (?1, ?2, ?3)
+             VALUES (?1, ?2, datetime('now'))
              ON CONFLICT(key) DO UPDATE SET
                 value = excluded.value,
-                updated_at = excluded.updated_at;",
-            params![key, value, now],
+                updated_at = datetime('now')
+             RETURNING key, value, updated_at;",
+            params![key, value],
+            |row| {
+                Ok(SettingItem {
+                    key: row.get(0)?,
+                    value: row.get(1)?,
+                    updated_at: row.get(2)?,
+                })
+            },
         )
-        .map_err(|e| DbError::QueryFailed(e.to_string()))?;
-
-        Ok(SettingItem {
-            key: key.to_string(),
-            value: value.to_string(),
-            updated_at: now,
-        })
+        .map_err(|e| DbError::QueryFailed(e.to_string()))
     }
-}
-
-fn chrono_like_timestamp() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let start = SystemTime::now();
-    let since_the_epoch = start.duration_since(UNIX_EPOCH).unwrap_or_default();
-    format!("{}s", since_the_epoch.as_secs())
 }
 
 #[cfg(test)]

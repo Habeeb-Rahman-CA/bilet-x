@@ -114,7 +114,6 @@ export class TauriService {
           arch: 'x86_64',
           rust_version: '1.94.1 (mock)',
           tauri_version: '2.11.4 (mock)',
-          hostname: 'bilet-x-desktop',
           memory_info: '64-bit Architecture Active',
         } as unknown as T;
       }
