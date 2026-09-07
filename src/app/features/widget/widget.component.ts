@@ -5,11 +5,13 @@ import {
   HostListener,
   OnDestroy,
   ViewChild,
+  computed,
   effect,
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WindowService } from '../../core/tauri/window.service';
+import { PersistenceService } from '../../core/tauri/persistence.service';
 import { DockComponent, DockTab } from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
@@ -21,18 +23,29 @@ import { SettingsComponent } from './components/settings/settings.component';
   imports: [CommonModule, DockComponent, NoteComponent, TaskComponent, SettingsComponent],
   template: `
     <div
-      class="relative flex h-screen w-screen items-center justify-end overflow-hidden bg-transparent text-neutral-100 select-none"
+      class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 select-none"
+      [class.justify-start]="isLeftSide()"
+      [class.justify-end]="!isLeftSide()"
+      [class.items-start]="isTopSide()"
+      [class.items-end]="isBottomSide()"
+      [class.items-center]="!isTopSide() && !isBottomSide()"
     >
-      <!-- STATIONARY CONTAINER FOR VERTICAL DOCK & ABSOLUTE PANEL -->
+      <!-- Row containing panel + dock. flex-row-reverse for left-side positions
+           puts the dock at the screen edge and the panel toward the center. -->
       <div
-        class="relative flex items-center"
+        class="relative flex gap-3"
+        [class.flex-row]="!isLeftSide()"
+        [class.flex-row-reverse]="isLeftSide()"
+        [class.items-start]="isTopSide()"
+        [class.items-end]="isBottomSide()"
+        [class.items-center]="!isTopSide() && !isBottomSide()"
         (click)="$event.stopPropagation()"
       >
-        <!-- FLYOUT QUICK PANEL (POSITIONED ABSOLUTELY TO THE LEFT OF DOCK) -->
+        <!-- FLYOUT QUICK PANEL -->
         <div
           #panelEl
           *ngIf="isPanelExpanded()"
-          class="animate-panel-expand absolute right-full mr-3 flex w-[380px] flex-col space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 backdrop-blur-xl shadow-2xl"
+          class="animate-panel-expand flex w-[380px] max-h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 backdrop-blur-xl shadow-2xl"
         >
           <!-- PANEL TOP HEADER ACTION CONTROLS -->
           <div class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3">
@@ -57,7 +70,7 @@ import { SettingsComponent } from './components/settings/settings.component';
           </div>
 
           <!-- PANEL MAIN CONTENT BODY -->
-          <div class="space-y-3 pr-1">
+          <div class="mt-3 flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
             <!-- VIEW 1: NOTE COMPONENT -->
             <app-note *ngIf="activeTab().id === 'notes'"></app-note>
 
@@ -93,18 +106,47 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
 
   public activeTab = signal<DockTab>(this.tabs[0]);
 
+  // Derived from the saved widget_position setting. Drives dock alignment
+  // inside the transparent 640x440 window and the side the panel flies out to.
+  public currentPosition = computed(() =>
+    this.persistence.getSettingValue('widget_position', 'right'),
+  );
+  public isLeftSide = computed(() => this.currentPosition().includes('left'));
+  public isTopSide = computed(() => this.currentPosition().startsWith('top'));
+  public isBottomSide = computed(() => this.currentPosition().startsWith('bottom'));
+
   @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;
   @ViewChild('panelEl', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
 
   private postAnimationTimer: number | undefined;
 
-  constructor(private windowService: WindowService) {
+  constructor(
+    private windowService: WindowService,
+    private persistence: PersistenceService,
+  ) {
     // Re-measure whenever the panel expands/collapses. Effects run outside the
     // render lifecycle, so we defer to rAF and also re-measure after the 180ms
     // panel-expand animation settles at its final scale.
     effect(() => {
       this.isPanelExpanded();
+      // Re-measure when the widget's screen position changes too — the dock
+      // and panel move within the window, so the interactive rect shifts.
+      this.currentPosition();
       this.scheduleInteractiveAreaUpdate();
+    });
+
+    // Restore the saved widget position once settings finish loading from
+    // SQLite. Runs once (guarded) so subsequent settings mutations don't
+    // yank the window back.
+    let positionRestored = false;
+    effect(() => {
+      const map = this.persistence.settings();
+      if (positionRestored || map.size === 0) return;
+      positionRestored = true;
+      const saved = map.get('widget_position');
+      if (saved) {
+        this.windowService.setPosition(saved);
+      }
     });
   }
 
