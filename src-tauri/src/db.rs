@@ -132,6 +132,7 @@ pub trait NoteRepository {
     fn get_all_notes(&self) -> Result<Vec<NoteItem>, DbError>;
     fn save_note(&self, note: NoteItem) -> Result<NoteItem, DbError>;
     fn delete_note(&self, id: &str) -> Result<bool, DbError>;
+    fn clear_all_notes(&self) -> Result<usize, DbError>;
 }
 
 pub trait TaskRepository {
@@ -139,6 +140,7 @@ pub trait TaskRepository {
     fn save_task(&self, task: TaskItem) -> Result<TaskItem, DbError>;
     fn update_task_status(&self, id: &str, status: &str) -> Result<bool, DbError>;
     fn delete_task(&self, id: &str) -> Result<bool, DbError>;
+    fn clear_all_tasks(&self) -> Result<usize, DbError>;
 }
 
 pub trait SettingsRepository {
@@ -216,6 +218,17 @@ impl NoteRepository for Database {
         } else {
             Ok(true)
         }
+    }
+
+    fn clear_all_notes(&self) -> Result<usize, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+        let rows = conn
+            .execute("DELETE FROM notes;", [])
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+        Ok(rows)
     }
 }
 
@@ -317,6 +330,17 @@ impl TaskRepository for Database {
         } else {
             Ok(true)
         }
+    }
+
+    fn clear_all_tasks(&self) -> Result<usize, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+        let rows = conn
+            .execute("DELETE FROM tasks;", [])
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+        Ok(rows)
     }
 }
 

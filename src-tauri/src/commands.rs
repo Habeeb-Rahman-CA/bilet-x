@@ -208,6 +208,11 @@ pub fn db_delete_note(id: String, db: State<'_, crate::db::Database>) -> Result<
 }
 
 #[tauri::command]
+pub fn db_clear_notes(db: State<'_, crate::db::Database>) -> Result<usize, String> {
+    db.clear_all_notes().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn db_get_tasks(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::TaskItem>, String> {
     db.get_all_tasks().map_err(|e| e.to_string())
 }
@@ -225,6 +230,11 @@ pub fn db_update_task_status(id: String, status: String, db: State<'_, crate::db
 #[tauri::command]
 pub fn db_delete_task(id: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
     db.delete_task(&id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_clear_tasks(db: State<'_, crate::db::Database>) -> Result<usize, String> {
+    db.clear_all_tasks().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

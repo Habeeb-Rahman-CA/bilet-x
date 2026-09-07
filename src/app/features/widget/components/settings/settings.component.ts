@@ -1,4 +1,4 @@
-import { Component, Signal, computed } from '@angular/core';
+import { Component, OnDestroy, Signal, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WindowService } from '../../../../core/tauri/window.service';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
@@ -57,7 +57,48 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
         </div>
       </div>
 
-      <!-- 3. SHORTCUT HINTS & UTILITY INFO -->
+      <!-- 3. DATA / PERSISTENCE MANAGEMENT -->
+      <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-2">
+        <div class="text-[11px] font-semibold text-neutral-300">Data</div>
+
+        <div class="flex items-center justify-between font-mono text-[10px]">
+          <span class="text-neutral-400">
+            Notes:
+            <span class="text-neutral-200">{{ noteCount() }}</span>
+          </span>
+          <button
+            (click)="handleClearNotes()"
+            type="button"
+            [class.bg-red-500]="clearNotesArmed()"
+            [class.text-white]="clearNotesArmed()"
+            [class.bg-neutral-800]="!clearNotesArmed()"
+            [class.text-neutral-400]="!clearNotesArmed()"
+            class="rounded-lg px-2 py-1 transition hover:text-white"
+          >
+            {{ clearNotesArmed() ? 'Confirm?' : 'Clear' }}
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between font-mono text-[10px]">
+          <span class="text-neutral-400">
+            Tasks:
+            <span class="text-neutral-200">{{ taskCount() }}</span>
+          </span>
+          <button
+            (click)="handleClearTasks()"
+            type="button"
+            [class.bg-red-500]="clearTasksArmed()"
+            [class.text-white]="clearTasksArmed()"
+            [class.bg-neutral-800]="!clearTasksArmed()"
+            [class.text-neutral-400]="!clearTasksArmed()"
+            class="rounded-lg px-2 py-1 transition hover:text-white"
+          >
+            {{ clearTasksArmed() ? 'Confirm?' : 'Clear' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. SHORTCUT HINTS & UTILITY INFO -->
       <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-2">
         <div class="flex items-center justify-between text-neutral-400 text-[10px]">
           <span>Toggle Shortcut</span>
@@ -69,7 +110,7 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
         </div>
       </div>
 
-      <!-- 4. ABOUT & VERSION SCREEN -->
+      <!-- 5. ABOUT & VERSION SCREEN -->
       <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-1 text-[10px]">
         <div class="flex items-center justify-between">
           <span class="font-bold text-white uppercase font-mono">Bilet-X Utility</span>
@@ -82,7 +123,7 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
     </div>
   `,
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnDestroy {
   public positions = [
     { id: 'right', label: 'Right' },
     { id: 'left', label: 'Left' },
@@ -95,20 +136,34 @@ export class SettingsComponent {
   public currentPosition: Signal<string>;
   public currentTheme: Signal<string>;
 
+  public noteCount: Signal<number>;
+  public taskCount: Signal<number>;
+
+  // Two-click confirm: first click arms the button for CONFIRM_WINDOW_MS,
+  // second click actually clears. The armed state auto-resets on timeout.
+  public clearNotesArmed = signal(false);
+  public clearTasksArmed = signal(false);
+  private clearNotesTimer: number | undefined;
+  private clearTasksTimer: number | undefined;
+  private readonly CONFIRM_WINDOW_MS = 3000;
+
   constructor(
     private windowService: WindowService,
     private persistence: PersistenceService,
   ) {
-    // Bind directly to the persistence signal so the highlighted button always
-    // matches the saved value the moment settings finish loading. Avoids the
-    // brief flash where a local default (e.g. 'right') is shown while the
-    // async DB load resolves the actual saved value.
     this.currentPosition = computed(() =>
       this.persistence.getSettingValue('widget_position', 'right'),
     );
     this.currentTheme = computed(() =>
       this.persistence.getSettingValue('theme', 'dark'),
     );
+    this.noteCount = computed(() => this.persistence.notes().length);
+    this.taskCount = computed(() => this.persistence.tasks().length);
+  }
+
+  public ngOnDestroy(): void {
+    if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
+    if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
   }
 
   public async selectPosition(pos: string): Promise<void> {
@@ -119,5 +174,35 @@ export class SettingsComponent {
   public async selectTheme(theme: string): Promise<void> {
     this.persistence.applyTheme(theme);
     await this.persistence.setSetting('theme', theme);
+  }
+
+  public async handleClearNotes(): Promise<void> {
+    if (this.clearNotesArmed()) {
+      this.clearNotesArmed.set(false);
+      if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
+      await this.persistence.clearAllNotes();
+      return;
+    }
+    this.clearNotesArmed.set(true);
+    if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
+    this.clearNotesTimer = window.setTimeout(
+      () => this.clearNotesArmed.set(false),
+      this.CONFIRM_WINDOW_MS,
+    );
+  }
+
+  public async handleClearTasks(): Promise<void> {
+    if (this.clearTasksArmed()) {
+      this.clearTasksArmed.set(false);
+      if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
+      await this.persistence.clearAllTasks();
+      return;
+    }
+    this.clearTasksArmed.set(true);
+    if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
+    this.clearTasksTimer = window.setTimeout(
+      () => this.clearTasksArmed.set(false),
+      this.CONFIRM_WINDOW_MS,
+    );
   }
 }

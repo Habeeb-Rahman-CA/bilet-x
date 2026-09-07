@@ -45,7 +45,7 @@ import { SettingsComponent } from './components/settings/settings.component';
         <div
           #panelEl
           *ngIf="isPanelExpanded()"
-          class="animate-panel-expand flex w-[380px] max-h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 backdrop-blur-xl shadow-2xl"
+          class="animate-panel-expand flex w-[380px] h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 backdrop-blur-xl shadow-2xl"
         >
           <!-- PANEL TOP HEADER ACTION CONTROLS -->
           <div class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3">

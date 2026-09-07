@@ -8,9 +8,9 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="space-y-3">
-      <!-- TASK LIST CONTAINER -->
-      <div class="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+    <div class="flex h-full flex-col space-y-3">
+      <!-- TASK LIST CONTAINER — fills available space, scrolls when overflowed -->
+      <div class="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
         <div
           *ngFor="let task of persistence.tasks()"
           class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-2.5 text-xs flex items-center justify-between group hover:border-neutral-700 transition"
@@ -33,10 +33,10 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
         </div>
       </div>
 
-      <!-- BOTTOM TASK INPUT FORM -->
+      <!-- BOTTOM TASK INPUT FORM — pinned to bottom of the panel body -->
       <form
         (submit)="onTaskSubmit($event)"
-        class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-2 flex items-center justify-between text-xs mt-2"
+        class="shrink-0 rounded-xl border border-neutral-800 bg-neutral-900/90 p-2 flex items-center justify-between text-xs"
       >
         <input
           type="text"
