@@ -66,6 +66,19 @@ export class WindowService {
       console.warn('Focus window triggered', e);
     }
   }
+
+  public async setInteractiveArea(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): Promise<void> {
+    try {
+      await this.tauriService.invokeCommand('set_interactive_area', { x, y, width, height });
+    } catch (e) {
+      console.warn('Set interactive area failed', e);
+    }
+  }
 }
 
 

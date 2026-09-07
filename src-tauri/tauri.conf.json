@@ -25,6 +25,7 @@
         "transparent": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
+        "shadow": false,
         "backgroundColor": "#00000000"
       }
     ],
