@@ -3,7 +3,6 @@ export interface SystemInfo {
   arch: string;
   rust_version: string;
   tauri_version: string;
-  hostname: string;
   memory_info: string;
 }
 

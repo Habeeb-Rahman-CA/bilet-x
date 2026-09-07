@@ -2,6 +2,23 @@ use crate::models::{AppStateInfo, SystemInfo};
 use crate::state::{AppState, InteractiveRect};
 use tauri::{AppHandle, Emitter, State, Window};
 
+const VALID_THEMES: &[&str] = &["light", "dark"];
+const VALID_TASK_STATUSES: &[&str] = &["pending", "in_progress", "completed"];
+const VALID_TASK_PRIORITIES: &[&str] = &["low", "medium", "high"];
+
+fn require_one_of(value: &str, allowed: &[&str], field: &str) -> Result<(), String> {
+    if allowed.contains(&value) {
+        Ok(())
+    } else {
+        Err(format!(
+            "invalid {}: '{}' (allowed: {})",
+            field,
+            value,
+            allowed.join(", ")
+        ))
+    }
+}
+
 #[tauri::command]
 pub fn greet(name: &str, state: State<'_, AppState>) -> String {
     if let Ok(mut count) = state.total_invocations.lock() {
@@ -21,9 +38,6 @@ pub fn get_system_info(state: State<'_, AppState>) -> SystemInfo {
         arch: std::env::consts::ARCH.to_string(),
         rust_version: env!("CARGO_PKG_VERSION").to_string(),
         tauri_version: tauri::VERSION.to_string(),
-        hostname: std::env::var("HOSTNAME")
-            .or_else(|_| std::env::var("COMPUTERNAME"))
-            .unwrap_or_else(|_| "localhost".to_string()),
         memory_info: "64-bit Architecture Active".to_string(),
     }
 }
@@ -71,6 +85,8 @@ pub fn increment_counter(state: State<'_, AppState>) -> u32 {
 
 #[tauri::command]
 pub fn set_theme(theme: String, state: State<'_, AppState>) -> Result<String, String> {
+    require_one_of(&theme, VALID_THEMES, "theme")?;
+
     if let Ok(mut count) = state.total_invocations.lock() {
         *count += 1;
     }
@@ -106,8 +122,28 @@ pub fn window_close(window: Window) -> Result<(), String> {
 
 #[tauri::command]
 pub fn set_window_size(window: Window, width: f64, height: f64) -> Result<(), String> {
+    if !width.is_finite() || !height.is_finite() || width <= 0.0 || height <= 0.0 {
+        return Err("width and height must be positive and finite".to_string());
+    }
+
+    const MIN_LOGICAL: f64 = 200.0; // matches minWidth/minHeight in tauri.conf.json
+    let (max_w, max_h) = match window.primary_monitor() {
+        Ok(Some(m)) => {
+            let scale = window.scale_factor().unwrap_or(1.0);
+            let s = m.size();
+            (s.width as f64 / scale, s.height as f64 / scale)
+        }
+        _ => (f64::INFINITY, f64::INFINITY),
+    };
+
+    let clamped_w = width.clamp(MIN_LOGICAL, max_w.max(MIN_LOGICAL));
+    let clamped_h = height.clamp(MIN_LOGICAL, max_h.max(MIN_LOGICAL));
+
     window
-        .set_size(tauri::Size::Logical(tauri::LogicalSize { width, height }))
+        .set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: clamped_w,
+            height: clamped_h,
+        }))
         .map_err(|e| e.to_string())
 }
 
@@ -167,6 +203,16 @@ pub fn set_interactive_area(
     height: f64,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    // Reject degenerate rects: a zero/negative width or height would leave
+    // the window fully click-through with no way to reach the dock — the
+    // user would have to recover via the tray icon.
+    if !x.is_finite() || !y.is_finite() || !width.is_finite() || !height.is_finite() {
+        return Err("x, y, width, height must be finite".to_string());
+    }
+    if width <= 0.0 || height <= 0.0 {
+        return Err("width and height must be positive".to_string());
+    }
+
     let mut rect = state
         .interactive_rect
         .lock()
@@ -219,11 +265,14 @@ pub fn db_get_tasks(db: State<'_, crate::db::Database>) -> Result<Vec<crate::mod
 
 #[tauri::command]
 pub fn db_save_task(task: crate::models::TaskItem, db: State<'_, crate::db::Database>) -> Result<crate::models::TaskItem, String> {
+    require_one_of(&task.status, VALID_TASK_STATUSES, "task.status")?;
+    require_one_of(&task.priority, VALID_TASK_PRIORITIES, "task.priority")?;
     db.save_task(task).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn db_update_task_status(id: String, status: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
+    require_one_of(&status, VALID_TASK_STATUSES, "status")?;
     db.update_task_status(&id, &status).map_err(|e| e.to_string())
 }
 

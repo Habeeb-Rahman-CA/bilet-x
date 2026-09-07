@@ -6,7 +6,6 @@ pub struct SystemInfo {
     pub arch: String,
     pub rust_version: String,
     pub tauri_version: String,
-    pub hostname: String,
     pub memory_info: String,
 }
 
