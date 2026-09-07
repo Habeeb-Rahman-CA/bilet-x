@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, Signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WindowService } from '../../../../core/tauri/window.service';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
@@ -87,37 +87,36 @@ export class SettingsComponent {
     { id: 'right', label: 'Right' },
     { id: 'left', label: 'Left' },
     { id: 'top-right', label: 'Top Right' },
+    { id: 'top-left', label: 'Top Left' },
     { id: 'bottom-right', label: 'Bottom Right' },
+    { id: 'bottom-left', label: 'Bottom Left' },
   ];
 
-  public currentPosition = signal<string>('right');
-  public currentTheme = signal<string>('dark');
+  public currentPosition: Signal<string>;
+  public currentTheme: Signal<string>;
 
   constructor(
     private windowService: WindowService,
-    private persistence: PersistenceService
+    private persistence: PersistenceService,
   ) {
-    this.initSettings();
-  }
-
-  private async initSettings(): Promise<void> {
-    await this.persistence.loadSettings();
-    const savedPos = this.persistence.getSettingValue('widget_position', 'right');
-    const savedTheme = this.persistence.getSettingValue('theme', 'dark');
-
-    this.currentPosition.set(savedPos);
-    this.currentTheme.set(savedTheme);
-    this.persistence.applyTheme(savedTheme);
+    // Bind directly to the persistence signal so the highlighted button always
+    // matches the saved value the moment settings finish loading. Avoids the
+    // brief flash where a local default (e.g. 'right') is shown while the
+    // async DB load resolves the actual saved value.
+    this.currentPosition = computed(() =>
+      this.persistence.getSettingValue('widget_position', 'right'),
+    );
+    this.currentTheme = computed(() =>
+      this.persistence.getSettingValue('theme', 'dark'),
+    );
   }
 
   public async selectPosition(pos: string): Promise<void> {
-    this.currentPosition.set(pos);
     await this.windowService.setPosition(pos);
     await this.persistence.setSetting('widget_position', pos);
   }
 
   public async selectTheme(theme: string): Promise<void> {
-    this.currentTheme.set(theme);
     this.persistence.applyTheme(theme);
     await this.persistence.setSetting('theme', theme);
   }

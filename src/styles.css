@@ -110,4 +110,103 @@
   animation: widgetPop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* =========================================================================
+   LIGHT MODE OVERRIDES
+   PersistenceService.applyTheme() toggles `.dark` / `.light` on <html>.
+   These rules flip the widget's neutral palette when `html.light` is active
+   without requiring `dark:` variants on every component class.
+   ========================================================================= */
+
+html.light,
+html.light body,
+html.light app-root {
+  color: #171717 !important;
+}
+
+/* Surfaces */
+html.light .bg-neutral-950,
+html.light .bg-neutral-950\/90,
+html.light .bg-neutral-950\/95 {
+  background-color: rgb(255 255 255 / 0.95) !important;
+}
+
+html.light .bg-neutral-900,
+html.light .bg-neutral-900\/90 {
+  background-color: rgb(245 245 245 / 0.95) !important;
+}
+
+html.light .bg-neutral-800 {
+  background-color: rgb(229 229 229) !important;
+}
+
+/* Borders */
+html.light .border-neutral-800,
+html.light .border-neutral-800\/80 {
+  border-color: rgb(229 229 229) !important;
+}
+
+html.light .border-neutral-700 {
+  border-color: rgb(212 212 212) !important;
+}
+
+html.light .focus\:border-neutral-500:focus,
+html.light .hover\:border-neutral-700:hover,
+html.light .hover\:border-neutral-600:hover {
+  border-color: rgb(115 115 115) !important;
+}
+
+/* Text */
+html.light .text-neutral-100,
+html.light .text-neutral-200,
+html.light .text-neutral-300,
+html.light .text-white {
+  color: rgb(23 23 23) !important;
+}
+
+html.light .text-neutral-400 {
+  color: rgb(82 82 82) !important;
+}
+
+html.light .text-neutral-500 {
+  color: rgb(115 115 115) !important;
+}
+
+/* Active pills / primary buttons — invert so they still stand out */
+html.light .bg-white {
+  background-color: rgb(23 23 23) !important;
+}
+html.light .text-black {
+  color: rgb(255 255 255) !important;
+}
+
+/* Hover swaps that go white in dark should go dark in light */
+html.light .hover\:bg-white:hover {
+  background-color: rgb(23 23 23) !important;
+}
+html.light .hover\:text-black:hover {
+  color: rgb(255 255 255) !important;
+}
+html.light .hover\:text-white:hover {
+  color: rgb(23 23 23) !important;
+}
+html.light .hover\:bg-neutral-800:hover {
+  background-color: rgb(229 229 229) !important;
+}
+html.light .hover\:bg-neutral-200:hover {
+  background-color: rgb(64 64 64) !important;
+}
+
+/* Placeholders */
+html.light .placeholder-neutral-500::placeholder {
+  color: rgb(115 115 115) !important;
+}
+
+/* Selection inside inputs */
+html.light .selection\:bg-neutral-700::selection {
+  background-color: rgb(212 212 212) !important;
+}
+html.light .selection\:text-white::selection {
+  color: rgb(23 23 23) !important;
+}
+
 

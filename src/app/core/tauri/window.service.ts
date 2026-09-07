@@ -9,13 +9,7 @@ export class WindowService {
   public readonly isFocused: WritableSignal<boolean> = signal(true);
   public readonly title: WritableSignal<string> = signal('Bilet-X Desktop');
 
-  constructor(private tauriService: TauriService) {
-    this.positionRight();
-  }
-
-  public async positionRight(): Promise<void> {
-    this.setPosition('right');
-  }
+  constructor(private tauriService: TauriService) {}
 
   public async setPosition(position: string): Promise<void> {
     try {

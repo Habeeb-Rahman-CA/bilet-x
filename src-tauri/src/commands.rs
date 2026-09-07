@@ -129,6 +129,11 @@ pub fn set_widget_position(window: Window, position: String) -> Result<(), Strin
                 10,
                 ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
             ),
+            "top-left" => (10, 10),
+            "bottom-left" => (
+                10,
+                (monitor_size.height as i32) - (window_size.height as i32) - 10,
+            ),
             "top-right" => (
                 (monitor_size.width as i32) - (window_size.width as i32) - 10,
                 10,

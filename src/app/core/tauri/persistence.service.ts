@@ -144,6 +144,9 @@ export class PersistenceService {
       const map = new Map<string, string>();
       (list || []).forEach(item => map.set(item.key, item.value));
       this.settings.set(map);
+      // Apply the saved theme immediately so it's live before any component
+      // that reads it (e.g. the settings panel) is even instantiated.
+      this.applyTheme(map.get('theme') || 'dark');
       return map;
     } catch (e) {
       console.warn('Failed to load SQLite settings', e);
