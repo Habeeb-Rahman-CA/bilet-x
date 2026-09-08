@@ -267,11 +267,12 @@ import { DockFlipService } from '../../../../core/services/dock-flip.service';
         <div class="flex items-center justify-between">
           <span class="font-mono font-bold text-white uppercase">Bilet-X Utility</span>
           <span class="rounded bg-neutral-800 px-1.5 py-0.5 font-mono text-neutral-300"
-            >v0.1.0</span
+            >v1.0.2</span
           >
         </div>
         <p class="pt-1 leading-relaxed text-neutral-400">
-          A minimalist desktop floating widget for notes, tasks, and settings.
+          Always-on-top desktop widget for notes, tasks, and quick actions. Runs
+          locally, follows you across workspaces via a global hotkey.
         </p>
       </div>
     </div>

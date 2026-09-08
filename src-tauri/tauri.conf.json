@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "bilet-x",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "identifier": "com.bilet.x.app",
   "build": {
     "frontendDist": "../dist/bilet-x/browser",
@@ -41,6 +41,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "shortDescription": "Always-on-top desktop widget for notes, tasks, and quick actions.",
+    "longDescription": "Bilet-X is a minimalist always-on-top desktop widget for notes, tasks, and quick actions. Data stays local (SQLite in your app data directory) and a global hotkey brings it to any workspace.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
