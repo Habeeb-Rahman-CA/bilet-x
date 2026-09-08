@@ -1,4 +1,4 @@
-use crate::models::{NoteItem, SettingItem, TaskItem};
+use crate::models::{ActivityItem, NoteItem, SettingItem, TaskItem};
 use rusqlite::{params, Connection};
 use std::fmt;
 use std::fs;
@@ -23,7 +23,6 @@ impl fmt::Display for DbError {
 }
 
 impl std::error::Error for DbError {}
-
 
 impl From<DbError> for String {
     fn from(err: DbError) -> Self {
@@ -123,6 +122,34 @@ impl Database {
             .map_err(|e| DbError::QueryFailed(e.to_string()))?;
         }
 
+        // Version 2: Activity log
+        if current_version < 2 {
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS activity_log (
+                    id TEXT PRIMARY KEY,
+                    entity TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    summary TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );",
+                [],
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_activity_log_created_at
+                    ON activity_log (created_at DESC);",
+                [],
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+            conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (2, datetime('now'));",
+                [],
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+        }
+
         Ok(())
     }
 }
@@ -147,6 +174,12 @@ pub trait SettingsRepository {
     fn get_all_settings(&self) -> Result<Vec<SettingItem>, DbError>;
     fn get_setting(&self, key: &str) -> Result<Option<String>, DbError>;
     fn set_setting(&self, key: &str, value: &str) -> Result<SettingItem, DbError>;
+}
+
+pub trait ActivityRepository {
+    fn add_activity(&self, entity: &str, action: &str, summary: &str) -> Result<ActivityItem, DbError>;
+    fn get_recent_activities(&self, limit: u32) -> Result<Vec<ActivityItem>, DbError>;
+    fn clear_activities(&self) -> Result<usize, DbError>;
 }
 
 impl NoteRepository for Database {
@@ -423,6 +456,112 @@ impl SettingsRepository for Database {
     }
 }
 
+// Soft cap on activity_log; older rows are pruned on each insert so the log
+// stays bounded without a scheduled cleanup job.
+const ACTIVITY_LOG_MAX_ROWS: u32 = 100;
+
+impl ActivityRepository for Database {
+    fn add_activity(&self, entity: &str, action: &str, summary: &str) -> Result<ActivityItem, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+
+        let id = format!(
+            "act_{}_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0),
+            rand_suffix()
+        );
+
+        let saved = conn
+            .query_row(
+                "INSERT INTO activity_log (id, entity, action, summary, created_at)
+                 VALUES (?1, ?2, ?3, ?4, datetime('now'))
+                 RETURNING id, entity, action, summary, created_at;",
+                params![id, entity, action, summary],
+                |row| {
+                    Ok(ActivityItem {
+                        id: row.get(0)?,
+                        entity: row.get(1)?,
+                        action: row.get(2)?,
+                        summary: row.get(3)?,
+                        created_at: row.get(4)?,
+                    })
+                },
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        // Prune oldest rows beyond the soft cap. Cheap on 100-row tables.
+        conn.execute(
+            "DELETE FROM activity_log
+             WHERE id NOT IN (
+                SELECT id FROM activity_log
+                ORDER BY created_at DESC
+                LIMIT ?1
+             );",
+            params![ACTIVITY_LOG_MAX_ROWS],
+        )
+        .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        Ok(saved)
+    }
+
+    fn get_recent_activities(&self, limit: u32) -> Result<Vec<ActivityItem>, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, entity, action, summary, created_at
+                 FROM activity_log
+                 ORDER BY created_at DESC
+                 LIMIT ?1",
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        let iter = stmt
+            .query_map(params![limit], |row| {
+                Ok(ActivityItem {
+                    id: row.get(0)?,
+                    entity: row.get(1)?,
+                    action: row.get(2)?,
+                    summary: row.get(3)?,
+                    created_at: row.get(4)?,
+                })
+            })
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        let mut list = Vec::new();
+        for item in iter {
+            list.push(item.map_err(|e| DbError::QueryFailed(e.to_string()))?);
+        }
+        Ok(list)
+    }
+
+    fn clear_activities(&self) -> Result<usize, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+        conn.execute("DELETE FROM activity_log;", [])
+            .map_err(|e| DbError::QueryFailed(e.to_string()))
+    }
+}
+
+fn rand_suffix() -> String {
+    // Small non-crypto entropy tail to disambiguate two inserts inside the
+    // same millisecond. Nanosecond fraction of the wall clock is enough here.
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos())
+        .unwrap_or(0);
+    format!("{:x}", nanos)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -430,7 +569,7 @@ mod tests {
     #[test]
     fn test_persistence_across_restart() {
         let temp_dir = std::env::temp_dir().join(format!("bilet_x_test_{}", std::process::id()));
-        
+
         // 1. First app launch: Save data
         {
             let db1 = Database::init(temp_dir.clone()).expect("Init DB failed");

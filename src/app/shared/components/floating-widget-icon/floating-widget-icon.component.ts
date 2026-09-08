@@ -18,11 +18,7 @@ import { CommonModule } from '@angular/common';
         title="Bilet-X Desktop Widget - Click to Open"
         class="no-drag group relative flex h-12 w-12 cursor-pointer items-center justify-center border border-neutral-800 bg-black transition hover:border-neutral-400 focus:outline-none"
       >
-        <img
-          src="bilet-x-dark-icon-v1.png"
-          alt="Bilet-X Widget"
-          class="h-7 w-7 object-contain"
-        />
+        <img src="bilet-x-dark-icon-v1.png" alt="Bilet-X Widget" class="h-7 w-7 object-contain" />
         <span class="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-white"></span>
       </button>
     </div>

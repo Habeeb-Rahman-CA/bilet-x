@@ -18,7 +18,9 @@ import { TauriService } from '../../../core/tauri/tauri.service';
           alt="Bilet-X Logo"
           class="h-5 w-5 rounded border border-neutral-800 bg-neutral-900 object-contain"
         />
-        <span class="font-semibold tracking-wide text-neutral-100">{{ windowService.title() }}</span>
+        <span class="font-semibold tracking-wide text-neutral-100">{{
+          windowService.title()
+        }}</span>
 
         <!-- Environment Indicator Badge -->
         <span
@@ -95,4 +97,3 @@ export class TitlebarComponent {
     public tauriService: TauriService
   ) {}
 }
-

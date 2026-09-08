@@ -26,6 +26,14 @@ export interface SettingItem {
   updated_at: string;
 }
 
+export interface ActivityItem {
+  id: string;
+  entity: string;
+  action: string;
+  summary: string;
+  created_at: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -33,6 +41,7 @@ export class PersistenceService {
   public notes = signal<NoteItem[]>([]);
   public tasks = signal<TaskItem[]>([]);
   public settings = signal<Map<string, string>>(new Map());
+  public activities = signal<ActivityItem[]>([]);
   public scratchpadText = signal<string>('');
 
   constructor(private tauriService: TauriService) {
@@ -44,6 +53,7 @@ export class PersistenceService {
       this.loadNotes(),
       this.loadTasks(),
       this.loadSettings(),
+      this.loadActivities(),
     ]);
   }
 
@@ -52,7 +62,7 @@ export class PersistenceService {
     try {
       const notes = await this.tauriService.invokeCommand<NoteItem[]>('db_get_notes');
       this.notes.set(notes || []);
-      const scratchpad = (notes || []).find(n => n.id === 'main_scratchpad');
+      const scratchpad = (notes || []).find((n) => n.id === 'main_scratchpad');
       if (scratchpad) {
         this.scratchpadText.set(scratchpad.content);
       }
@@ -88,7 +98,6 @@ export class PersistenceService {
   }
 
   public async saveNote(note: NoteItem): Promise<NoteItem | null> {
-
     try {
       const saved = await this.tauriService.invokeCommand<NoteItem>('db_save_note', { note });
       await this.loadNotes();
@@ -173,7 +182,7 @@ export class PersistenceService {
     try {
       const list = await this.tauriService.invokeCommand<SettingItem[]>('db_get_settings');
       const map = new Map<string, string>();
-      (list || []).forEach(item => map.set(item.key, item.value));
+      (list || []).forEach((item) => map.set(item.key, item.value));
       this.settings.set(map);
       // Apply the saved theme immediately so it's live before any component
       // that reads it (e.g. the settings panel) is even instantiated.
@@ -210,6 +219,31 @@ export class PersistenceService {
     } else {
       document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
+    }
+  }
+
+  // --- ACTIVITY LOG API ---
+  public async loadActivities(limit: number = 50): Promise<ActivityItem[]> {
+    try {
+      const list = await this.tauriService.invokeCommand<ActivityItem[]>('db_get_activities', {
+        limit,
+      });
+      this.activities.set(list || []);
+      return list || [];
+    } catch (e) {
+      console.warn('Failed to load activity log', e);
+      return [];
+    }
+  }
+
+  public async clearActivities(): Promise<number> {
+    try {
+      const removed = await this.tauriService.invokeCommand<number>('db_clear_activities');
+      await this.loadActivities();
+      return removed;
+    } catch (e) {
+      console.error('Failed to clear activity log', e);
+      return 0;
     }
   }
 }

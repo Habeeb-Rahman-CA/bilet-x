@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
+import { NotificationService } from '../../../../core/tauri/notification.service';
 
 @Component({
   selector: 'app-task',
@@ -10,25 +11,28 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
   template: `
     <div class="flex h-full flex-col space-y-3">
       <!-- TASK LIST CONTAINER — fills available space, scrolls when overflowed -->
-      <div class="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
+      <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         <div
           *ngFor="let task of persistence.tasks()"
-          class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-2.5 text-xs flex items-center justify-between group hover:border-neutral-700 transition"
+          class="group flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/90 p-2.5 text-xs transition hover:border-neutral-700"
         >
           <div class="flex items-center space-x-2">
             <span class="h-2 w-2 rounded-full bg-white"></span>
-            <span class="text-neutral-200 font-medium">{{ task.title }}</span>
+            <span class="font-medium text-neutral-200">{{ task.title }}</span>
           </div>
           <button
             (click)="persistence.deleteTask(task.id)"
             type="button"
-            class="text-neutral-500 hover:text-white text-[10px] transition"
+            class="text-[10px] text-neutral-500 transition hover:text-white"
           >
             Delete
           </button>
         </div>
 
-        <div *ngIf="persistence.tasks().length === 0" class="text-center py-6 text-xs text-neutral-500 font-mono">
+        <div
+          *ngIf="persistence.tasks().length === 0"
+          class="py-6 text-center font-mono text-xs text-neutral-500"
+        >
           No tasks yet.
         </div>
       </div>
@@ -36,7 +40,7 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
       <!-- BOTTOM TASK INPUT FORM — pinned to bottom of the panel body -->
       <form
         (submit)="onTaskSubmit($event)"
-        class="shrink-0 rounded-xl border border-neutral-800 bg-neutral-900/90 p-2 flex items-center justify-between text-xs"
+        class="flex shrink-0 items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/90 p-2 text-xs"
       >
         <input
           type="text"
@@ -48,9 +52,25 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
         <button
           type="submit"
           title="Add Task"
-          class="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-black hover:bg-neutral-200 transition"
+          class="flex h-6 w-6 items-center justify-center rounded-lg bg-white text-black transition hover:bg-neutral-200"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.5.5 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-send"
+          >
+            <path
+              d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.5.5 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+            />
+            <path d="m21.854 2.147-10.94 10.939" />
+          </svg>
         </button>
       </form>
     </div>
@@ -59,7 +79,10 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
 export class TaskComponent {
   public quickInputText = '';
 
-  constructor(public persistence: PersistenceService) {}
+  constructor(
+    public persistence: PersistenceService,
+    private notificationService: NotificationService
+  ) {}
 
   public async onTaskSubmit(event: Event): Promise<void> {
     event.preventDefault();
@@ -79,6 +102,7 @@ export class TaskComponent {
       updated_at: now,
     });
 
+    this.notificationService.sendNotification('Task Created', text);
     this.quickInputText = '';
   }
 }

@@ -17,7 +17,9 @@ import { TauriService } from '../../../core/tauri/tauri.service';
           <h3 class="text-xs font-bold tracking-wider text-neutral-200 uppercase">
             IPC Activity Monitor
           </h3>
-          <span class="border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 font-mono text-[10px] text-neutral-400">
+          <span
+            class="border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 font-mono text-[10px] text-neutral-400"
+          >
             {{ tauriService.ipcLogs().length }} entries
           </span>
         </div>
@@ -82,4 +84,3 @@ export class IpcLoggerComponent {
     }
   }
 }
-

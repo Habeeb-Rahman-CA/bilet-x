@@ -4,6 +4,7 @@ import {
   ElementRef,
   HostListener,
   OnDestroy,
+  OnInit,
   ViewChild,
   computed,
   effect,
@@ -12,43 +13,67 @@ import {
 import { CommonModule } from '@angular/common';
 import { WindowService } from '../../core/tauri/window.service';
 import { PersistenceService } from '../../core/tauri/persistence.service';
-import { DockComponent, DockTab } from './components/dock/dock.component';
+import { LayoutService } from '../../core/services/layout.service';
+import {
+  DockComponent,
+  DockTab,
+  DockSize,
+  DockOrientation,
+} from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
+import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
 
 @Component({
   selector: 'app-widget',
   standalone: true,
-  imports: [CommonModule, DockComponent, NoteComponent, TaskComponent, SettingsComponent],
+  imports: [
+    CommonModule,
+    DockComponent,
+    NoteComponent,
+    TaskComponent,
+    ActivityComponent,
+    SettingsComponent,
+  ],
   template: `
     <div
       class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 select-none"
       [class.justify-start]="isLeftSide()"
-      [class.justify-end]="!isLeftSide()"
+      [class.justify-center]="isHorizontallyCentered()"
+      [class.justify-end]="!isLeftSide() && !isHorizontallyCentered()"
       [class.items-start]="isTopSide()"
       [class.items-end]="isBottomSide()"
       [class.items-center]="!isTopSide() && !isBottomSide()"
     >
-      <!-- Row containing panel + dock. flex-row-reverse for left-side positions
-           puts the dock at the screen edge and the panel toward the center. -->
+      <!-- Inner container: flex-row for vertical dock (panel + dock side by side),
+           flex-col for horizontal dock (panel + dock stacked). -->
       <div
         class="relative flex gap-3"
-        [class.flex-row]="!isLeftSide()"
-        [class.flex-row-reverse]="isLeftSide()"
-        [class.items-start]="isTopSide()"
-        [class.items-end]="isBottomSide()"
-        [class.items-center]="!isTopSide() && !isBottomSide()"
+        [class.flex-row]="dockOrientation() === 'vertical' && !isLeftSide()"
+        [class.flex-row-reverse]="dockOrientation() === 'vertical' && isLeftSide()"
+        [class.flex-col]="dockOrientation() === 'horizontal' && !isTopSide()"
+        [class.flex-col-reverse]="dockOrientation() === 'horizontal' && isTopSide()"
+        [class.items-start]="dockOrientation() === 'vertical' && isTopSide()"
+        [class.items-end]="dockOrientation() === 'vertical' && isBottomSide()"
+        [class.items-center]="
+          dockOrientation() === 'horizontal' || (!isTopSide() && !isBottomSide())
+        "
         (click)="$event.stopPropagation()"
       >
         <!-- FLYOUT QUICK PANEL -->
         <div
           #panelEl
           *ngIf="isPanelExpanded()"
-          class="animate-panel-expand flex w-[380px] h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 backdrop-blur-xl shadow-2xl"
+          class="animate-panel-expand flex w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl transition-[height] duration-300 ease-out"
+          [style.height]="
+            dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
+          "
         >
           <!-- PANEL TOP HEADER ACTION CONTROLS -->
-          <div class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3">
+          <div
+            class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3"
+          >
             <!-- Left Header Title -->
             <div class="no-drag flex items-center space-x-1.5">
               <span class="font-mono text-xs font-bold tracking-wider text-neutral-200 uppercase">
@@ -62,45 +87,68 @@ import { SettingsComponent } from './components/settings/settings.component';
                 (click)="collapseToWidget()"
                 type="button"
                 title="Close (ESC)"
-                class="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 hover:bg-white hover:text-black transition"
+                class="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 transition hover:bg-white hover:text-black"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="lucide lucide-x"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
               </button>
             </div>
           </div>
 
           <!-- PANEL MAIN CONTENT BODY -->
-          <div class="mt-3 flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
+          <div class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <!-- VIEW 1: NOTE COMPONENT -->
             <app-note *ngIf="activeTab().id === 'notes'"></app-note>
 
             <!-- VIEW 2: TASK COMPONENT -->
             <app-task *ngIf="activeTab().id === 'tasks'"></app-task>
 
-            <!-- VIEW 3: SETTINGS COMPONENT -->
+            <!-- VIEW 3: ACTIVITY COMPONENT -->
+            <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
+
+            <!-- VIEW 4: SETTINGS COMPONENT -->
             <app-settings *ngIf="activeTab().id === 'settings'"></app-settings>
           </div>
         </div>
 
-        <!-- VERTICAL DOCK COMPONENT (NOTE, TASK, SETTINGS) -->
+        <!-- DOCK COMPONENT (Notes, Tasks, Activity, Settings) -->
         <app-dock
           #dockEl
-          [tabs]="tabs"
+          [tabs]="visibleTabs()"
           [activeTabId]="activeTab().id"
           [isPanelExpanded]="isPanelExpanded()"
+          [size]="dockSize()"
+          [orientation]="dockOrientation()"
+          [faded]="dockFaded()"
           (tabSelect)="selectTab($event)"
+          (mouseenter)="onDockMouseEnter()"
+          (mouseleave)="onDockMouseLeave()"
         ></app-dock>
       </div>
     </div>
   `,
 })
-export class WidgetComponent implements AfterViewInit, OnDestroy {
+export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
 
-  // EXACT ORDER: 1. note, 2. task, 3. settings
+  // EXACT ORDER: 1. note, 2. task, 3. activity, 4. settings
   public tabs: DockTab[] = [
     { id: 'notes', label: 'Notes' },
     { id: 'tasks', label: 'Tasks' },
+    { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ];
 
@@ -109,43 +157,92 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
   // Derived from the saved widget_position setting. Drives dock alignment
   // inside the transparent 640x440 window and the side the panel flies out to.
   public currentPosition = computed(() =>
-    this.persistence.getSettingValue('widget_position', 'right'),
+    this.persistence.getSettingValue('widget_position', 'right')
   );
   public isLeftSide = computed(() => this.currentPosition().includes('left'));
   public isTopSide = computed(() => this.currentPosition().startsWith('top'));
   public isBottomSide = computed(() => this.currentPosition().startsWith('bottom'));
+  // Only the exact "top" and "bottom" presets are centered on their axis;
+  // "top-left", "bottom-right" etc. carry an explicit horizontal side.
+  public isHorizontallyCentered = computed(() => {
+    const p = this.currentPosition();
+    return p === 'top' || p === 'bottom';
+  });
+
+  // Dock customization signals (Task 5)
+  public dockSize = computed<DockSize>(
+    () => (this.persistence.getSettingValue('dock_size', 'normal') as DockSize)
+  );
+  public dockOrientation = computed<DockOrientation>(
+    () =>
+      (this.persistence.getSettingValue('dock_orientation', 'vertical') as DockOrientation)
+  );
+  private dockAutoHideEnabled = computed(
+    () => this.persistence.getSettingValue('dock_auto_hide', 'false') === 'true'
+  );
+  private isHoveringDock = signal<boolean>(false);
+  public dockFaded = computed(
+    () =>
+      this.dockAutoHideEnabled() && !this.isPanelExpanded() && !this.isHoveringDock()
+  );
+
+  // Filter tabs by per-tab visibility settings. Falls back to full list if the
+  // user ever hides every tab (never leave the dock unusable).
+  public visibleTabs = computed<DockTab[]>(() => {
+    const visible = this.tabs.filter(
+      (t) => this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
+    );
+    return visible.length > 0 ? visible : this.tabs;
+  });
 
   @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;
   @ViewChild('panelEl', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
 
   private postAnimationTimer: number | undefined;
+  private hoverLeaveTimer: number | undefined;
+  private unlistenToggleWidget?: () => void;
+  private readonly HOVER_LEAVE_MS = 600;
 
   constructor(
     private windowService: WindowService,
     private persistence: PersistenceService,
+    private layoutService: LayoutService
   ) {
     // Re-measure whenever the panel expands/collapses. Effects run outside the
     // render lifecycle, so we defer to rAF and also re-measure after the 180ms
     // panel-expand animation settles at its final scale.
     effect(() => {
       this.isPanelExpanded();
-      // Re-measure when the widget's screen position changes too — the dock
-      // and panel move within the window, so the interactive rect shifts.
+      // Re-measure when the widget's screen position, orientation, or size
+      // changes too — dock/panel move within the window, so the click-through
+      // rect shifts.
       this.currentPosition();
+      this.dockOrientation();
+      this.dockSize();
+      this.visibleTabs();
       this.scheduleInteractiveAreaUpdate();
     });
 
-    // Restore the saved widget position once settings finish loading from
-    // SQLite. Runs once (guarded) so subsequent settings mutations don't
-    // yank the window back.
-    let positionRestored = false;
+    // If the user hides the currently-active tab, switch to the first visible
+    // tab so the panel doesn't render a stale/empty view.
     effect(() => {
-      const map = this.persistence.settings();
-      if (positionRestored || map.size === 0) return;
-      positionRestored = true;
-      const saved = map.get('widget_position');
-      if (saved) {
-        this.windowService.setPosition(saved);
+      const tabs = this.visibleTabs();
+      const active = this.activeTab();
+      if (!tabs.some((t) => t.id === active.id)) {
+        this.activeTab.set(tabs[0]);
+      }
+    });
+  }
+
+  public async ngOnInit(): Promise<void> {
+    this.unlistenToggleWidget = await this.windowService.onToggleWidget(async () => {
+      const nextState = !this.isPanelExpanded();
+      if (nextState) {
+        await this.layoutService.ensureVisible();
+      }
+      this.isPanelExpanded.set(nextState);
+      if (nextState) {
+        this.windowService.focusWindow();
       }
     });
   }
@@ -158,12 +255,19 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
     if (this.postAnimationTimer !== undefined) {
       window.clearTimeout(this.postAnimationTimer);
     }
+    if (this.hoverLeaveTimer !== undefined) {
+      window.clearTimeout(this.hoverLeaveTimer);
+    }
+    if (this.unlistenToggleWidget) {
+      this.unlistenToggleWidget();
+    }
   }
 
-  public selectTab(tab: DockTab): void {
+  public async selectTab(tab: DockTab): Promise<void> {
     if (this.activeTab().id === tab.id && this.isPanelExpanded()) {
       this.isPanelExpanded.set(false);
     } else {
+      await this.layoutService.ensureVisible();
       this.activeTab.set(tab);
       this.isPanelExpanded.set(true);
       this.windowService.focusWindow();
@@ -174,11 +278,30 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
     this.isPanelExpanded.set(false);
   }
 
+  public onDockMouseEnter(): void {
+    if (this.hoverLeaveTimer !== undefined) {
+      window.clearTimeout(this.hoverLeaveTimer);
+      this.hoverLeaveTimer = undefined;
+    }
+    this.isHoveringDock.set(true);
+  }
+
+  public onDockMouseLeave(): void {
+    if (this.hoverLeaveTimer !== undefined) window.clearTimeout(this.hoverLeaveTimer);
+    this.hoverLeaveTimer = window.setTimeout(() => {
+      this.isHoveringDock.set(false);
+    }, this.HOVER_LEAVE_MS);
+  }
+
   @HostListener('window:keydown', ['$event'])
-  public handleGlobalShortcuts(event: KeyboardEvent): void {
+  public async handleGlobalShortcuts(event: KeyboardEvent): Promise<void> {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      this.isPanelExpanded.set(!this.isPanelExpanded());
+      const opening = !this.isPanelExpanded();
+      if (opening) {
+        await this.layoutService.ensureVisible();
+      }
+      this.isPanelExpanded.set(opening);
     } else if (event.key === 'Escape' && this.isPanelExpanded()) {
       event.preventDefault();
       this.collapseToWidget();
@@ -235,7 +358,7 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
       left - pad,
       top - pad,
       right - left + pad * 2,
-      bottom - top + pad * 2,
+      bottom - top + pad * 2
     );
   }
 }
