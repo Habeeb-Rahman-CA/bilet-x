@@ -188,50 +188,82 @@ pub fn set_window_position(window: Window, x: f64, y: f64) -> Result<(), String>
 pub fn set_widget_position(window: Window, position: String) -> Result<(), String> {
     require_one_of(&position, VALID_WIDGET_POSITIONS, "position")?;
 
-    if let Ok(Some(monitor)) = window.primary_monitor() {
-        let monitor_size = monitor.size();
-        let window_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
-            width: 640,
-            height: 440,
-        });
+    let Some(monitor) = window.primary_monitor().ok().flatten() else {
+        return Ok(());
+    };
+    let monitor_size = monitor.size();
+    let window_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
+        width: 640,
+        height: 440,
+    });
 
-        let (x, y) = match position.as_str() {
-            "left" => (
-                10,
-                ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
-            ),
-            "top" => (
-                ((monitor_size.width as i32) - (window_size.width as i32)) / 2,
-                10,
-            ),
-            "bottom" => (
-                ((monitor_size.width as i32) - (window_size.width as i32)) / 2,
-                (monitor_size.height as i32) - (window_size.height as i32) - 10,
-            ),
-            "top-left" => (10, 10),
-            "bottom-left" => (
-                10,
-                (monitor_size.height as i32) - (window_size.height as i32) - 10,
-            ),
-            "top-right" => (
-                (monitor_size.width as i32) - (window_size.width as i32) - 10,
-                10,
-            ),
-            "bottom-right" => (
-                (monitor_size.width as i32) - (window_size.width as i32) - 10,
-                (monitor_size.height as i32) - (window_size.height as i32) - 10,
-            ),
-            _ => (
-                // default "right"
-                (monitor_size.width as i32) - (window_size.width as i32) - 10,
-                ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
-            ),
-        };
+    let (target_x, target_y) = match position.as_str() {
+        "left" => (
+            10,
+            ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
+        ),
+        "top" => (
+            ((monitor_size.width as i32) - (window_size.width as i32)) / 2,
+            10,
+        ),
+        "bottom" => (
+            ((monitor_size.width as i32) - (window_size.width as i32)) / 2,
+            (monitor_size.height as i32) - (window_size.height as i32) - 10,
+        ),
+        "top-left" => (10, 10),
+        "bottom-left" => (
+            10,
+            (monitor_size.height as i32) - (window_size.height as i32) - 10,
+        ),
+        "top-right" => (
+            (monitor_size.width as i32) - (window_size.width as i32) - 10,
+            10,
+        ),
+        "bottom-right" => (
+            (monitor_size.width as i32) - (window_size.width as i32) - 10,
+            (monitor_size.height as i32) - (window_size.height as i32) - 10,
+        ),
+        _ => (
+            (monitor_size.width as i32) - (window_size.width as i32) - 10,
+            ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
+        ),
+    };
 
-        window
-            .set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }))
-            .map_err(|e| e.to_string())?;
-    }
+    let start_pos = window.outer_position().map_err(|e| e.to_string())?;
+    let start_x = start_pos.x as f64;
+    let start_y = start_pos.y as f64;
+    let target_x_f = target_x as f64;
+    let target_y_f = target_y as f64;
+
+    // Spawn a short animation thread so the window slides to the preset
+    // instead of teleporting. easeOutCubic: fast start, decelerates into
+    // the target. Sub-pixel step values are truncated on set_position, but
+    // 15 frames over ~250ms is small enough that the truncation isn't
+    // visible.
+    let win = window.clone();
+    std::thread::spawn(move || {
+        const FRAMES: u32 = 15;
+        const TOTAL_MS: u64 = 250;
+        let frame_ms = TOTAL_MS / FRAMES as u64;
+        for i in 1..=FRAMES {
+            let t = i as f64 / FRAMES as f64;
+            let eased = 1.0 - (1.0 - t).powi(3);
+            let cx = (start_x + (target_x_f - start_x) * eased) as i32;
+            let cy = (start_y + (target_y_f - start_y) * eased) as i32;
+            let _ = win.set_position(tauri::Position::Physical(
+                tauri::PhysicalPosition { x: cx, y: cy },
+            ));
+            std::thread::sleep(std::time::Duration::from_millis(frame_ms));
+        }
+        // Land exactly on target in case rounding drifted.
+        let _ = win.set_position(tauri::Position::Physical(
+            tauri::PhysicalPosition {
+                x: target_x,
+                y: target_y,
+            },
+        ));
+    });
+
     Ok(())
 }
 

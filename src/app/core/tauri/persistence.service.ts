@@ -199,15 +199,24 @@ export class PersistenceService {
   }
 
   public async setSetting(key: string, value: string): Promise<boolean> {
+    // Optimistic local update so signal consumers (dock layout, theme etc.)
+    // react on the next microtask instead of waiting for the DB write +
+    // reload round-trip. The reload path only runs on failure to rollback.
+    this.settings.update((prev) => {
+      const next = new Map(prev);
+      next.set(key, value);
+      return next;
+    });
+    if (key === 'theme') {
+      this.applyTheme(value);
+    }
     try {
       await this.tauriService.invokeCommand<SettingItem>('db_set_setting', { key, value });
-      await this.loadSettings();
-      if (key === 'theme') {
-        this.applyTheme(value);
-      }
       return true;
     } catch (e) {
       console.error('Failed to save setting to SQLite', e);
+      // Rollback to the on-disk truth so the UI doesn't drift.
+      await this.loadSettings();
       return false;
     }
   }

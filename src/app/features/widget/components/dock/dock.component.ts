@@ -1,5 +1,14 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnDestroy,
+  Output,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DockFlipService } from '../../../../core/services/dock-flip.service';
 
 export interface DockTab {
   id: 'notes' | 'tasks' | 'activity' | 'settings';
@@ -127,7 +136,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
     </div>
   `,
 })
-export class DockComponent {
+export class DockComponent implements AfterViewInit, OnDestroy {
   @Input() tabs: DockTab[] = [];
   @Input() activeTabId: string = 'notes';
   @Input() isPanelExpanded: boolean = false;
@@ -136,6 +145,19 @@ export class DockComponent {
   @Input() faded: boolean = false;
 
   @Output() tabSelect = new EventEmitter<DockTab>();
+
+  constructor(
+    private el: ElementRef<HTMLElement>,
+    private flip: DockFlipService
+  ) {}
+
+  public ngAfterViewInit(): void {
+    this.flip.register(this.el.nativeElement);
+  }
+
+  public ngOnDestroy(): void {
+    this.flip.unregister();
+  }
 
   public get iconSize(): number {
     return this.size === 'compact' ? 12 : this.size === 'large' ? 20 : 16;
