@@ -113,6 +113,16 @@
   animation: widgetPop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Snappier default for View Transitions API. Default is 250ms which reads
+   as sluggish for a small in-app layout swap; 140ms feels responsive while
+   still cross-fading. Matches the panel-expand cubic-bezier for a
+   consistent motion language. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 140ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* =========================================================================
    LIGHT MODE OVERRIDES
    PersistenceService.applyTheme() toggles `.dark` / `.light` on <html>.

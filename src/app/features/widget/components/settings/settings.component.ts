@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { WindowService } from '../../../../core/tauri/window.service';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
 import { NotificationService } from '../../../../core/tauri/notification.service';
+import { DockFlipService } from '../../../../core/services/dock-flip.service';
 
 @Component({
   selector: 'app-settings',
@@ -278,18 +279,18 @@ import { NotificationService } from '../../../../core/tauri/notification.service
 })
 export class SettingsComponent implements OnDestroy {
   public verticalPositions = [
-    { id: 'right', label: 'Right' },
-    { id: 'left', label: 'Left' },
-    { id: 'top-right', label: 'Top Right' },
     { id: 'top-left', label: 'Top Left' },
-    { id: 'bottom-right', label: 'Bottom Right' },
+    { id: 'top-right', label: 'Top Right' },
+    { id: 'left', label: 'Left' },
+    { id: 'right', label: 'Right' },
     { id: 'bottom-left', label: 'Bottom Left' },
+    { id: 'bottom-right', label: 'Bottom Right' },
   ];
 
   public horizontalPositions = [
-    { id: 'top', label: 'Top' },
     { id: 'top-left', label: 'Top Left' },
     { id: 'top-right', label: 'Top Right' },
+    { id: 'top', label: 'Top' },
     { id: 'bottom', label: 'Bottom' },
     { id: 'bottom-left', label: 'Bottom Left' },
     { id: 'bottom-right', label: 'Bottom Right' },
@@ -347,7 +348,8 @@ export class SettingsComponent implements OnDestroy {
   constructor(
     private windowService: WindowService,
     private persistence: PersistenceService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private dockFlip: DockFlipService
   ) {
     this.currentPosition = computed(() =>
       this.persistence.getSettingValue('widget_position', 'right')
@@ -416,10 +418,18 @@ export class SettingsComponent implements OnDestroy {
   }
 
   public async selectDockOrientation(orientation: string): Promise<void> {
-    await this.persistence.setSetting('dock_orientation', orientation);
-    // Auto-migrate widget_position if the current one isn't valid for the new
-    // orientation. Horizontal supports only top/bottom (centered); vertical
-    // supports the 6 corner/side presets.
+    // FLIP: capture dock button positions BEFORE the layout change so the
+    // dock items smoothly slide from old to new positions.
+    this.dockFlip.capture();
+    // setSetting updates the local signal synchronously, so Angular flips
+    // the dock layout on the next tick; play() then animates each button
+    // back to its captured position and releases.
+    this.persistence.setSetting('dock_orientation', orientation);
+    this.dockFlip.play();
+
+    // Auto-migrate widget_position if the current one isn't valid for the
+    // new orientation. selectPosition triggers the animated Rust window
+    // move, which runs concurrently with the FLIP transition.
     const currentPos = this.currentPosition();
     const target =
       orientation === 'horizontal'
