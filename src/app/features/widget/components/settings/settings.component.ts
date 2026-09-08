@@ -18,11 +18,8 @@ import { NotificationService } from '../../../../core/tauri/notification.service
             *ngFor="let pos of activePositions()"
             (click)="selectPosition(pos.id)"
             type="button"
-            [class.bg-white]="currentPosition() === pos.id"
-            [class.text-black]="currentPosition() === pos.id"
-            [class.bg-neutral-800]="currentPosition() !== pos.id"
-            [class.text-neutral-400]="currentPosition() !== pos.id"
-            class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+            [ngClass]="toggleClasses(currentPosition() === pos.id)"
+            class="rounded-lg px-2 py-1.5 text-center transition-all duration-200 ease-out"
           >
             {{ pos.label }}
           </button>
@@ -41,11 +38,8 @@ import { NotificationService } from '../../../../core/tauri/notification.service
               *ngFor="let opt of dockSizes"
               (click)="selectDockSize(opt.id)"
               type="button"
-              [class.bg-white]="currentDockSize() === opt.id"
-              [class.text-black]="currentDockSize() === opt.id"
-              [class.bg-neutral-800]="currentDockSize() !== opt.id"
-              [class.text-neutral-400]="currentDockSize() !== opt.id"
-              class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+              [ngClass]="toggleClasses(currentDockSize() === opt.id)"
+              class="rounded-lg px-2 py-1.5 text-center transition-all duration-200 ease-out"
             >
               {{ opt.label }}
             </button>
@@ -60,11 +54,8 @@ import { NotificationService } from '../../../../core/tauri/notification.service
               *ngFor="let opt of dockOrientations"
               (click)="selectDockOrientation(opt.id)"
               type="button"
-              [class.bg-white]="currentDockOrientation() === opt.id"
-              [class.text-black]="currentDockOrientation() === opt.id"
-              [class.bg-neutral-800]="currentDockOrientation() !== opt.id"
-              [class.text-neutral-400]="currentDockOrientation() !== opt.id"
-              class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+              [ngClass]="toggleClasses(currentDockOrientation() === opt.id)"
+              class="rounded-lg px-2 py-1.5 text-center transition-all duration-200 ease-out"
             >
               {{ opt.label }}
             </button>
@@ -87,22 +78,16 @@ import { NotificationService } from '../../../../core/tauri/notification.service
             <button
               (click)="toggleAutoHide(true)"
               type="button"
-              [class.bg-white]="isAutoHideEnabled()"
-              [class.text-black]="isAutoHideEnabled()"
-              [class.bg-neutral-800]="!isAutoHideEnabled()"
-              [class.text-neutral-400]="!isAutoHideEnabled()"
-              class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+              [ngClass]="toggleClasses(isAutoHideEnabled())"
+              class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out"
             >
               On
             </button>
             <button
               (click)="toggleAutoHide(false)"
               type="button"
-              [class.bg-white]="!isAutoHideEnabled()"
-              [class.text-black]="!isAutoHideEnabled()"
-              [class.bg-neutral-800]="isAutoHideEnabled()"
-              [class.text-neutral-400]="isAutoHideEnabled()"
-              class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+              [ngClass]="toggleClasses(!isAutoHideEnabled())"
+              class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out"
             >
               Off
             </button>
@@ -117,11 +102,8 @@ import { NotificationService } from '../../../../core/tauri/notification.service
               *ngFor="let tab of allTabs"
               (click)="toggleTabVisibility(tab.id)"
               type="button"
-              [class.bg-white]="isTabVisible(tab.id)"
-              [class.text-black]="isTabVisible(tab.id)"
-              [class.bg-neutral-800]="!isTabVisible(tab.id)"
-              [class.text-neutral-500]="!isTabVisible(tab.id)"
-              class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+              [ngClass]="toggleClasses(isTabVisible(tab.id), true)"
+              class="rounded-lg px-2 py-1.5 text-center transition-all duration-200 ease-out"
             >
               {{ tab.label }}
             </button>
@@ -139,22 +121,16 @@ import { NotificationService } from '../../../../core/tauri/notification.service
           <button
             (click)="selectTheme('dark')"
             type="button"
-            [class.bg-white]="currentTheme() === 'dark'"
-            [class.text-black]="currentTheme() === 'dark'"
-            [class.bg-neutral-800]="currentTheme() !== 'dark'"
-            [class.text-neutral-400]="currentTheme() !== 'dark'"
-            class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+            [ngClass]="toggleClasses(currentTheme() === 'dark')"
+            class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out"
           >
             Dark Mode
           </button>
           <button
             (click)="selectTheme('light')"
             type="button"
-            [class.bg-white]="currentTheme() === 'light'"
-            [class.text-black]="currentTheme() === 'light'"
-            [class.bg-neutral-800]="currentTheme() !== 'light'"
-            [class.text-neutral-400]="currentTheme() !== 'light'"
-            class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+            [ngClass]="toggleClasses(currentTheme() === 'light')"
+            class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out"
           >
             Light Mode
           </button>
@@ -220,11 +196,8 @@ import { NotificationService } from '../../../../core/tauri/notification.service
             *ngFor="let sc of shortcuts"
             (click)="selectShortcut(sc.id)"
             type="button"
-            [class.bg-white]="currentShortcut() === sc.id"
-            [class.text-black]="currentShortcut() === sc.id"
-            [class.bg-neutral-800]="currentShortcut() !== sc.id"
-            [class.text-neutral-400]="currentShortcut() !== sc.id"
-            class="truncate rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+            [ngClass]="toggleClasses(currentShortcut() === sc.id)"
+            class="truncate rounded-lg px-2 py-1.5 text-center transition-all duration-200 ease-out"
             [title]="sc.label"
           >
             {{ sc.label }}
@@ -264,22 +237,16 @@ import { NotificationService } from '../../../../core/tauri/notification.service
           <button
             (click)="toggleNotifications(true)"
             type="button"
-            [class.bg-white]="isNotificationsEnabled()"
-            [class.text-black]="isNotificationsEnabled()"
-            [class.bg-neutral-800]="!isNotificationsEnabled()"
-            [class.text-neutral-400]="!isNotificationsEnabled()"
-            class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+            [ngClass]="toggleClasses(isNotificationsEnabled())"
+            class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out"
           >
             On
           </button>
           <button
             (click)="toggleNotifications(false)"
             type="button"
-            [class.bg-white]="!isNotificationsEnabled()"
-            [class.text-black]="!isNotificationsEnabled()"
-            [class.bg-neutral-800]="isNotificationsEnabled()"
-            [class.text-neutral-400]="isNotificationsEnabled()"
-            class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+            [ngClass]="toggleClasses(!isNotificationsEnabled())"
+            class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out"
           >
             Off
           </button>
@@ -415,6 +382,16 @@ export class SettingsComponent implements OnDestroy {
     if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
     if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
     if (this.testNotificationTimer !== undefined) window.clearTimeout(this.testNotificationTimer);
+  }
+
+  // Shared toggle-pill classes. Active pills have inverted colors (white bg +
+  // black text) and must keep text black on hover; inactive pills use neutral
+  // colors and brighten on hover. `dimInactive` picks a slightly dimmer text
+  // for the tab visibility toggles so hidden tabs read distinctly.
+  public toggleClasses(active: boolean, dimInactive = false): string {
+    if (active) return 'bg-white text-black hover:text-black';
+    const inactiveText = dimInactive ? 'text-neutral-500' : 'text-neutral-400';
+    return `bg-neutral-800 ${inactiveText} hover:text-white`;
   }
 
   public async selectShortcut(shortcut: string): Promise<void> {

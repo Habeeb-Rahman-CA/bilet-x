@@ -65,7 +65,7 @@ import { SettingsComponent } from './components/settings/settings.component';
         <div
           #panelEl
           *ngIf="isPanelExpanded()"
-          class="animate-panel-expand flex w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl"
+          class="animate-panel-expand flex w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl transition-[height] duration-300 ease-out"
           [style.height]="
             dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
           "

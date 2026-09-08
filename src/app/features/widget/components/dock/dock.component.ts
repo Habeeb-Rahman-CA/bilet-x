@@ -15,7 +15,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
   imports: [CommonModule],
   template: `
     <div
-      class="titlebar-drag-region flex items-center rounded-2xl border border-neutral-800 bg-neutral-950/90 shadow-2xl backdrop-blur-xl transition-opacity duration-300 select-none"
+      class="titlebar-drag-region flex items-center rounded-2xl border border-neutral-800 bg-neutral-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-out select-none"
       [ngClass]="{
         'flex-col': orientation === 'vertical',
         'flex-row': orientation === 'horizontal',
@@ -37,16 +37,14 @@ export type DockOrientation = 'vertical' | 'horizontal';
         (click)="onTabClick(tab)"
         type="button"
         [title]="tab.label"
-        [class.bg-white]="activeTabId === tab.id && isPanelExpanded"
-        [class.text-black]="activeTabId === tab.id && isPanelExpanded"
-        [class.text-neutral-400]="activeTabId !== tab.id || !isPanelExpanded"
-        [class.h-7]="size === 'compact'"
-        [class.w-7]="size === 'compact'"
-        [class.h-9]="size === 'normal'"
-        [class.w-9]="size === 'normal'"
-        [class.h-11]="size === 'large'"
-        [class.w-11]="size === 'large'"
-        class="no-drag group relative flex items-center justify-center rounded-xl border border-transparent transition hover:border-neutral-700 hover:text-white"
+        [ngClass]="{
+          'bg-white text-black hover:text-black': activeTabId === tab.id && isPanelExpanded,
+          'text-neutral-400 hover:text-white': activeTabId !== tab.id || !isPanelExpanded,
+          'h-7 w-7': size === 'compact',
+          'h-9 w-9': size === 'normal',
+          'h-11 w-11': size === 'large'
+        }"
+        class="no-drag group relative flex items-center justify-center rounded-xl border border-transparent transition-all duration-200 ease-out hover:border-neutral-700"
       >
         <!-- 1. Lucide FileText (Note) -->
         <svg
