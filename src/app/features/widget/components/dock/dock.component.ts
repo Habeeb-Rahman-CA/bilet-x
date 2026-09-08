@@ -6,13 +6,31 @@ export interface DockTab {
   label: string;
 }
 
+export type DockSize = 'compact' | 'normal' | 'large';
+export type DockOrientation = 'vertical' | 'horizontal';
+
 @Component({
   selector: 'app-dock',
   standalone: true,
   imports: [CommonModule],
   template: `
     <div
-      class="titlebar-drag-region flex flex-col items-center space-y-2.5 rounded-2xl border border-neutral-800 bg-neutral-950/90 p-2 shadow-2xl backdrop-blur-xl select-none"
+      class="titlebar-drag-region flex items-center rounded-2xl border border-neutral-800 bg-neutral-950/90 shadow-2xl backdrop-blur-xl transition-opacity duration-300 select-none"
+      [ngClass]="{
+        'flex-col': orientation === 'vertical',
+        'flex-row': orientation === 'horizontal',
+        'space-y-2': orientation === 'vertical' && size === 'compact',
+        'space-y-2.5': orientation === 'vertical' && size === 'normal',
+        'space-y-3': orientation === 'vertical' && size === 'large',
+        'space-x-2': orientation === 'horizontal' && size === 'compact',
+        'space-x-2.5': orientation === 'horizontal' && size === 'normal',
+        'space-x-3': orientation === 'horizontal' && size === 'large',
+        'p-1.5': size === 'compact',
+        'p-2': size === 'normal',
+        'p-2.5': size === 'large',
+        'opacity-20': faded,
+        'opacity-100': !faded
+      }"
     >
       <button
         *ngFor="let tab of tabs"
@@ -22,14 +40,20 @@ export interface DockTab {
         [class.bg-white]="activeTabId === tab.id && isPanelExpanded"
         [class.text-black]="activeTabId === tab.id && isPanelExpanded"
         [class.text-neutral-400]="activeTabId !== tab.id || !isPanelExpanded"
-        class="no-drag group relative flex h-9 w-9 items-center justify-center rounded-xl border border-transparent transition hover:border-neutral-700 hover:text-white"
+        [class.h-7]="size === 'compact'"
+        [class.w-7]="size === 'compact'"
+        [class.h-9]="size === 'normal'"
+        [class.w-9]="size === 'normal'"
+        [class.h-11]="size === 'large'"
+        [class.w-11]="size === 'large'"
+        class="no-drag group relative flex items-center justify-center rounded-xl border border-transparent transition hover:border-neutral-700 hover:text-white"
       >
         <!-- 1. Lucide FileText (Note) -->
         <svg
           *ngIf="tab.id === 'notes'"
           xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -49,8 +73,8 @@ export interface DockTab {
         <svg
           *ngIf="tab.id === 'tasks'"
           xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -67,8 +91,8 @@ export interface DockTab {
         <svg
           *ngIf="tab.id === 'activity'"
           xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -86,8 +110,8 @@ export interface DockTab {
         <svg
           *ngIf="tab.id === 'settings'"
           xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -109,7 +133,15 @@ export class DockComponent {
   @Input() tabs: DockTab[] = [];
   @Input() activeTabId: string = 'notes';
   @Input() isPanelExpanded: boolean = false;
+  @Input() size: DockSize = 'normal';
+  @Input() orientation: DockOrientation = 'vertical';
+  @Input() faded: boolean = false;
+
   @Output() tabSelect = new EventEmitter<DockTab>();
+
+  public get iconSize(): number {
+    return this.size === 'compact' ? 12 : this.size === 'large' ? 20 : 16;
+  }
 
   public onTabClick(tab: DockTab): void {
     this.tabSelect.emit(tab);

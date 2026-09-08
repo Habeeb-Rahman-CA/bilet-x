@@ -66,6 +66,8 @@ fn compute_initial_position(
 
     let (x, y) = match saved_preset.unwrap_or("right") {
         "left" => (10, (mh - wh) / 2),
+        "top" => ((mw - ww) / 2, 10),
+        "bottom" => ((mw - ww) / 2, mh - wh - 10),
         "top-left" => (10, 10),
         "bottom-left" => (10, mh - wh - 10),
         "top-right" => (mw - ww - 10, 10),

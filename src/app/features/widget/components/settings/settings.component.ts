@@ -15,7 +15,7 @@ import { NotificationService } from '../../../../core/tauri/notification.service
         <div class="text-[11px] font-semibold text-neutral-300">Widget Position</div>
         <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
           <button
-            *ngFor="let pos of positions"
+            *ngFor="let pos of activePositions()"
             (click)="selectPosition(pos.id)"
             type="button"
             [class.bg-white]="currentPosition() === pos.id"
@@ -26,6 +26,109 @@ import { NotificationService } from '../../../../core/tauri/notification.service
           >
             {{ pos.label }}
           </button>
+        </div>
+      </div>
+
+      <!-- 1b. DOCK CUSTOMIZATION -->
+      <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+        <div class="text-[11px] font-semibold text-neutral-300">Dock</div>
+
+        <!-- Size picker -->
+        <div class="space-y-1">
+          <div class="text-[10px] text-neutral-400">Size</div>
+          <div class="grid grid-cols-3 gap-1.5 font-mono text-[10px]">
+            <button
+              *ngFor="let opt of dockSizes"
+              (click)="selectDockSize(opt.id)"
+              type="button"
+              [class.bg-white]="currentDockSize() === opt.id"
+              [class.text-black]="currentDockSize() === opt.id"
+              [class.bg-neutral-800]="currentDockSize() !== opt.id"
+              [class.text-neutral-400]="currentDockSize() !== opt.id"
+              class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Orientation picker -->
+        <div class="space-y-1">
+          <div class="text-[10px] text-neutral-400">Orientation</div>
+          <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+            <button
+              *ngFor="let opt of dockOrientations"
+              (click)="selectDockOrientation(opt.id)"
+              type="button"
+              [class.bg-white]="currentDockOrientation() === opt.id"
+              [class.text-black]="currentDockOrientation() === opt.id"
+              [class.bg-neutral-800]="currentDockOrientation() !== opt.id"
+              [class.text-neutral-400]="currentDockOrientation() !== opt.id"
+              class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Auto-hide toggle -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-neutral-400">Auto-hide on idle</span>
+            <span
+              [class.text-emerald-400]="isAutoHideEnabled()"
+              [class.text-neutral-500]="!isAutoHideEnabled()"
+              class="rounded border border-neutral-800 px-1.5 py-0.5 font-mono text-[9px]"
+            >
+              {{ isAutoHideEnabled() ? 'On' : 'Off' }}
+            </span>
+          </div>
+          <div class="flex items-center space-x-2 font-mono text-[10px]">
+            <button
+              (click)="toggleAutoHide(true)"
+              type="button"
+              [class.bg-white]="isAutoHideEnabled()"
+              [class.text-black]="isAutoHideEnabled()"
+              [class.bg-neutral-800]="!isAutoHideEnabled()"
+              [class.text-neutral-400]="!isAutoHideEnabled()"
+              class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+            >
+              On
+            </button>
+            <button
+              (click)="toggleAutoHide(false)"
+              type="button"
+              [class.bg-white]="!isAutoHideEnabled()"
+              [class.text-black]="!isAutoHideEnabled()"
+              [class.bg-neutral-800]="isAutoHideEnabled()"
+              [class.text-neutral-400]="isAutoHideEnabled()"
+              class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+            >
+              Off
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab visibility toggles -->
+        <div class="space-y-1">
+          <div class="text-[10px] text-neutral-400">Visible tabs</div>
+          <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+            <button
+              *ngFor="let tab of allTabs"
+              (click)="toggleTabVisibility(tab.id)"
+              type="button"
+              [class.bg-white]="isTabVisible(tab.id)"
+              [class.text-black]="isTabVisible(tab.id)"
+              [class.bg-neutral-800]="!isTabVisible(tab.id)"
+              [class.text-neutral-500]="!isTabVisible(tab.id)"
+              class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+          <p *ngIf="visibleTabCount() <= 1" class="pt-0.5 text-[9px] text-neutral-500">
+            At least one tab stays visible.
+          </p>
         </div>
       </div>
 
@@ -207,13 +310,22 @@ import { NotificationService } from '../../../../core/tauri/notification.service
   `,
 })
 export class SettingsComponent implements OnDestroy {
-  public positions = [
+  public verticalPositions = [
     { id: 'right', label: 'Right' },
     { id: 'left', label: 'Left' },
     { id: 'top-right', label: 'Top Right' },
     { id: 'top-left', label: 'Top Left' },
     { id: 'bottom-right', label: 'Bottom Right' },
     { id: 'bottom-left', label: 'Bottom Left' },
+  ];
+
+  public horizontalPositions = [
+    { id: 'top', label: 'Top' },
+    { id: 'top-left', label: 'Top Left' },
+    { id: 'top-right', label: 'Top Right' },
+    { id: 'bottom', label: 'Bottom' },
+    { id: 'bottom-left', label: 'Bottom Left' },
+    { id: 'bottom-right', label: 'Bottom Right' },
   ];
 
   public shortcuts = [
@@ -224,9 +336,32 @@ export class SettingsComponent implements OnDestroy {
     { id: '', label: 'Disabled' },
   ];
 
+  public dockSizes = [
+    { id: 'compact', label: 'Compact' },
+    { id: 'normal', label: 'Normal' },
+    { id: 'large', label: 'Large' },
+  ];
+
+  public dockOrientations = [
+    { id: 'vertical', label: 'Vertical' },
+    { id: 'horizontal', label: 'Horizontal' },
+  ];
+
+  public allTabs = [
+    { id: 'notes', label: 'Notes' },
+    { id: 'tasks', label: 'Tasks' },
+    { id: 'activity', label: 'Activity' },
+    { id: 'settings', label: 'Settings' },
+  ];
+
   public currentPosition: Signal<string>;
   public currentTheme: Signal<string>;
   public currentShortcut: Signal<string>;
+  public currentDockSize: Signal<string>;
+  public currentDockOrientation: Signal<string>;
+  public isAutoHideEnabled: Signal<boolean>;
+  public visibleTabCount: Signal<number>;
+  public activePositions: Signal<{ id: string; label: string }[]>;
   public isNotificationsEnabled: Signal<boolean>;
   public testNotificationSent = signal<boolean>(false);
   private testNotificationTimer: number | undefined;
@@ -254,6 +389,23 @@ export class SettingsComponent implements OnDestroy {
     this.currentShortcut = computed(() =>
       this.persistence.getSettingValue('global_shortcut', 'CommandOrControl+Shift+K')
     );
+    this.currentDockSize = computed(() =>
+      this.persistence.getSettingValue('dock_size', 'normal')
+    );
+    this.currentDockOrientation = computed(() =>
+      this.persistence.getSettingValue('dock_orientation', 'vertical')
+    );
+    this.isAutoHideEnabled = computed(
+      () => this.persistence.getSettingValue('dock_auto_hide', 'false') === 'true'
+    );
+    this.visibleTabCount = computed(
+      () => this.allTabs.filter((t) => this.isTabVisible(t.id)).length
+    );
+    this.activePositions = computed(() =>
+      this.currentDockOrientation() === 'horizontal'
+        ? this.horizontalPositions
+        : this.verticalPositions
+    );
     this.isNotificationsEnabled = this.notificationService.isNotificationsEnabled;
     this.noteCount = computed(() => this.persistence.notes().length);
     this.taskCount = computed(() => this.persistence.tasks().length);
@@ -280,6 +432,58 @@ export class SettingsComponent implements OnDestroy {
   public async selectTheme(theme: string): Promise<void> {
     this.persistence.applyTheme(theme);
     await this.persistence.setSetting('theme', theme);
+  }
+
+  public async selectDockSize(size: string): Promise<void> {
+    await this.persistence.setSetting('dock_size', size);
+  }
+
+  public async selectDockOrientation(orientation: string): Promise<void> {
+    await this.persistence.setSetting('dock_orientation', orientation);
+    // Auto-migrate widget_position if the current one isn't valid for the new
+    // orientation. Horizontal supports only top/bottom (centered); vertical
+    // supports the 6 corner/side presets.
+    const currentPos = this.currentPosition();
+    const target =
+      orientation === 'horizontal'
+        ? this.mapToHorizontal(currentPos)
+        : this.mapToVertical(currentPos);
+    if (target && target !== currentPos) {
+      await this.selectPosition(target);
+    }
+  }
+
+  private mapToHorizontal(pos: string): string | null {
+    // Corners and top/bottom (centered) are valid in horizontal;
+    // only left/right (middle side) need migration.
+    if (pos === 'left' || pos === 'right') return 'bottom';
+    return null;
+  }
+
+  private mapToVertical(pos: string): string | null {
+    // Corners and left/right are valid in vertical;
+    // only top/bottom (centered) need migration.
+    if (pos === 'top') return 'top-right';
+    if (pos === 'bottom') return 'bottom-right';
+    return null;
+  }
+
+  public async toggleAutoHide(enabled: boolean): Promise<void> {
+    await this.persistence.setSetting('dock_auto_hide', enabled ? 'true' : 'false');
+  }
+
+  public isTabVisible(tabId: string): boolean {
+    return this.persistence.getSettingValue(`tab_${tabId}_visible`, 'true') === 'true';
+  }
+
+  public async toggleTabVisibility(tabId: string): Promise<void> {
+    const currentlyVisible = this.isTabVisible(tabId);
+    // Guard: never let the user hide the last visible tab.
+    if (currentlyVisible && this.visibleTabCount() <= 1) return;
+    await this.persistence.setSetting(
+      `tab_${tabId}_visible`,
+      currentlyVisible ? 'false' : 'true'
+    );
   }
 
   public async toggleNotifications(enabled: boolean): Promise<void> {

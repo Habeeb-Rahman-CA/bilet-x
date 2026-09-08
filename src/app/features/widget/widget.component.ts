@@ -14,7 +14,12 @@ import { CommonModule } from '@angular/common';
 import { WindowService } from '../../core/tauri/window.service';
 import { PersistenceService } from '../../core/tauri/persistence.service';
 import { LayoutService } from '../../core/services/layout.service';
-import { DockComponent, DockTab } from './components/dock/dock.component';
+import {
+  DockComponent,
+  DockTab,
+  DockSize,
+  DockOrientation,
+} from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
 import { ActivityComponent } from './components/activity/activity.component';
@@ -35,27 +40,35 @@ import { SettingsComponent } from './components/settings/settings.component';
     <div
       class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 select-none"
       [class.justify-start]="isLeftSide()"
-      [class.justify-end]="!isLeftSide()"
+      [class.justify-center]="isHorizontallyCentered()"
+      [class.justify-end]="!isLeftSide() && !isHorizontallyCentered()"
       [class.items-start]="isTopSide()"
       [class.items-end]="isBottomSide()"
       [class.items-center]="!isTopSide() && !isBottomSide()"
     >
-      <!-- Row containing panel + dock. flex-row-reverse for left-side positions
-           puts the dock at the screen edge and the panel toward the center. -->
+      <!-- Inner container: flex-row for vertical dock (panel + dock side by side),
+           flex-col for horizontal dock (panel + dock stacked). -->
       <div
         class="relative flex gap-3"
-        [class.flex-row]="!isLeftSide()"
-        [class.flex-row-reverse]="isLeftSide()"
-        [class.items-start]="isTopSide()"
-        [class.items-end]="isBottomSide()"
-        [class.items-center]="!isTopSide() && !isBottomSide()"
+        [class.flex-row]="dockOrientation() === 'vertical' && !isLeftSide()"
+        [class.flex-row-reverse]="dockOrientation() === 'vertical' && isLeftSide()"
+        [class.flex-col]="dockOrientation() === 'horizontal' && !isTopSide()"
+        [class.flex-col-reverse]="dockOrientation() === 'horizontal' && isTopSide()"
+        [class.items-start]="dockOrientation() === 'vertical' && isTopSide()"
+        [class.items-end]="dockOrientation() === 'vertical' && isBottomSide()"
+        [class.items-center]="
+          dockOrientation() === 'horizontal' || (!isTopSide() && !isBottomSide())
+        "
         (click)="$event.stopPropagation()"
       >
         <!-- FLYOUT QUICK PANEL -->
         <div
           #panelEl
           *ngIf="isPanelExpanded()"
-          class="animate-panel-expand flex h-[calc(100vh-1rem)] w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl"
+          class="animate-panel-expand flex w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl"
+          [style.height]="
+            dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
+          "
         >
           <!-- PANEL TOP HEADER ACTION CONTROLS -->
           <div
@@ -111,13 +124,18 @@ import { SettingsComponent } from './components/settings/settings.component';
           </div>
         </div>
 
-        <!-- VERTICAL DOCK COMPONENT (NOTE, TASK, SETTINGS) -->
+        <!-- DOCK COMPONENT (Notes, Tasks, Activity, Settings) -->
         <app-dock
           #dockEl
-          [tabs]="tabs"
+          [tabs]="visibleTabs()"
           [activeTabId]="activeTab().id"
           [isPanelExpanded]="isPanelExpanded()"
+          [size]="dockSize()"
+          [orientation]="dockOrientation()"
+          [faded]="dockFaded()"
           (tabSelect)="selectTab($event)"
+          (mouseenter)="onDockMouseEnter()"
+          (mouseleave)="onDockMouseLeave()"
         ></app-dock>
       </div>
     </div>
@@ -138,21 +156,52 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Derived from the saved widget_position setting. Drives dock alignment
   // inside the transparent 640x440 window and the side the panel flies out to.
-  // Panel-fit is handled separately: LayoutService.ensureVisible() nudges the
-  // whole window into visible bounds at panel-open time so we never need to
-  // flip the internal layout.
   public currentPosition = computed(() =>
     this.persistence.getSettingValue('widget_position', 'right')
   );
   public isLeftSide = computed(() => this.currentPosition().includes('left'));
   public isTopSide = computed(() => this.currentPosition().startsWith('top'));
   public isBottomSide = computed(() => this.currentPosition().startsWith('bottom'));
+  // Only the exact "top" and "bottom" presets are centered on their axis;
+  // "top-left", "bottom-right" etc. carry an explicit horizontal side.
+  public isHorizontallyCentered = computed(() => {
+    const p = this.currentPosition();
+    return p === 'top' || p === 'bottom';
+  });
+
+  // Dock customization signals (Task 5)
+  public dockSize = computed<DockSize>(
+    () => (this.persistence.getSettingValue('dock_size', 'normal') as DockSize)
+  );
+  public dockOrientation = computed<DockOrientation>(
+    () =>
+      (this.persistence.getSettingValue('dock_orientation', 'vertical') as DockOrientation)
+  );
+  private dockAutoHideEnabled = computed(
+    () => this.persistence.getSettingValue('dock_auto_hide', 'false') === 'true'
+  );
+  private isHoveringDock = signal<boolean>(false);
+  public dockFaded = computed(
+    () =>
+      this.dockAutoHideEnabled() && !this.isPanelExpanded() && !this.isHoveringDock()
+  );
+
+  // Filter tabs by per-tab visibility settings. Falls back to full list if the
+  // user ever hides every tab (never leave the dock unusable).
+  public visibleTabs = computed<DockTab[]>(() => {
+    const visible = this.tabs.filter(
+      (t) => this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
+    );
+    return visible.length > 0 ? visible : this.tabs;
+  });
 
   @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;
   @ViewChild('panelEl', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
 
   private postAnimationTimer: number | undefined;
+  private hoverLeaveTimer: number | undefined;
   private unlistenToggleWidget?: () => void;
+  private readonly HOVER_LEAVE_MS = 600;
 
   constructor(
     private windowService: WindowService,
@@ -164,15 +213,25 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     // panel-expand animation settles at its final scale.
     effect(() => {
       this.isPanelExpanded();
-      // Re-measure when the widget's screen position changes too — the dock
-      // and panel move within the window, so the interactive rect shifts.
+      // Re-measure when the widget's screen position, orientation, or size
+      // changes too — dock/panel move within the window, so the click-through
+      // rect shifts.
       this.currentPosition();
+      this.dockOrientation();
+      this.dockSize();
+      this.visibleTabs();
       this.scheduleInteractiveAreaUpdate();
     });
-    // Startup positioning is owned by Rust (see lib.rs `compute_initial_position`),
-    // which reads widget_x/widget_y (or the widget_position preset as fallback)
-    // before the webview boots. User-triggered preset changes still flow through
-    // WindowService.setPosition from the settings UI.
+
+    // If the user hides the currently-active tab, switch to the first visible
+    // tab so the panel doesn't render a stale/empty view.
+    effect(() => {
+      const tabs = this.visibleTabs();
+      const active = this.activeTab();
+      if (!tabs.some((t) => t.id === active.id)) {
+        this.activeTab.set(tabs[0]);
+      }
+    });
   }
 
   public async ngOnInit(): Promise<void> {
@@ -196,6 +255,9 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.postAnimationTimer !== undefined) {
       window.clearTimeout(this.postAnimationTimer);
     }
+    if (this.hoverLeaveTimer !== undefined) {
+      window.clearTimeout(this.hoverLeaveTimer);
+    }
     if (this.unlistenToggleWidget) {
       this.unlistenToggleWidget();
     }
@@ -214,6 +276,21 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
 
   public collapseToWidget(): void {
     this.isPanelExpanded.set(false);
+  }
+
+  public onDockMouseEnter(): void {
+    if (this.hoverLeaveTimer !== undefined) {
+      window.clearTimeout(this.hoverLeaveTimer);
+      this.hoverLeaveTimer = undefined;
+    }
+    this.isHoveringDock.set(true);
+  }
+
+  public onDockMouseLeave(): void {
+    if (this.hoverLeaveTimer !== undefined) window.clearTimeout(this.hoverLeaveTimer);
+    this.hoverLeaveTimer = window.setTimeout(() => {
+      this.isHoveringDock.set(false);
+    }, this.HOVER_LEAVE_MS);
   }
 
   @HostListener('window:keydown', ['$event'])

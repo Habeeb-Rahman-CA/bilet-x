@@ -10,6 +10,13 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "widget_position",
     "global_shortcut",
     "notifications_enabled",
+    "dock_size",
+    "dock_auto_hide",
+    "dock_orientation",
+    "tab_notes_visible",
+    "tab_tasks_visible",
+    "tab_activity_visible",
+    "tab_settings_visible",
 ];
 
 const VALID_TASK_STATUSES: &[&str] = &["pending", "in_progress", "completed"];
@@ -18,12 +25,16 @@ const VALID_THEMES: &[&str] = &["light", "dark"];
 const VALID_WIDGET_POSITIONS: &[&str] = &[
     "left",
     "right",
+    "top",
+    "bottom",
     "top-left",
     "top-right",
     "bottom-left",
     "bottom-right",
 ];
 const VALID_BOOL_STRINGS: &[&str] = &["true", "false"];
+const VALID_DOCK_SIZES: &[&str] = &["compact", "normal", "large"];
+const VALID_DOCK_ORIENTATIONS: &[&str] = &["vertical", "horizontal"];
 
 const MAX_ID_LEN: usize = 100;
 const MAX_TITLE_LEN: usize = 200;
@@ -90,6 +101,13 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
         "notifications_enabled" => {
             require_one_of(value, VALID_BOOL_STRINGS, "notifications_enabled")
         }
+        "dock_size" => require_one_of(value, VALID_DOCK_SIZES, "dock_size"),
+        "dock_orientation" => require_one_of(value, VALID_DOCK_ORIENTATIONS, "dock_orientation"),
+        "dock_auto_hide"
+        | "tab_notes_visible"
+        | "tab_tasks_visible"
+        | "tab_activity_visible"
+        | "tab_settings_visible" => require_one_of(value, VALID_BOOL_STRINGS, key),
         _ => Ok(()),
     }
 }
@@ -181,6 +199,14 @@ pub fn set_widget_position(window: Window, position: String) -> Result<(), Strin
             "left" => (
                 10,
                 ((monitor_size.height as i32) - (window_size.height as i32)) / 2,
+            ),
+            "top" => (
+                ((monitor_size.width as i32) - (window_size.width as i32)) / 2,
+                10,
+            ),
+            "bottom" => (
+                ((monitor_size.width as i32) - (window_size.width as i32)) / 2,
+                (monitor_size.height as i32) - (window_size.height as i32) - 10,
             ),
             "top-left" => (10, 10),
             "bottom-left" => (
