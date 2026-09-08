@@ -13,6 +13,7 @@ const VALID_WIDGET_POSITIONS: &[&str] = &[
     "bottom-left",
     "bottom-right",
 ];
+const VALID_BOOL_STRINGS: &[&str] = &["true", "false"];
 
 const MAX_ID_LEN: usize = 100;
 const MAX_TITLE_LEN: usize = 200;
@@ -20,6 +21,9 @@ const MAX_CONTENT_LEN: usize = 100_000;
 const MAX_DESCRIPTION_LEN: usize = 10_000;
 const MAX_SETTING_KEY_LEN: usize = 50;
 const MAX_SETTING_VALUE_LEN: usize = 10_000;
+const MAX_SHORTCUT_LEN: usize = 100;
+const MAX_NOTIFICATION_TITLE_LEN: usize = 200;
+const MAX_NOTIFICATION_BODY_LEN: usize = 1_000;
 
 fn require_one_of(value: &str, allowed: &[&str], field: &str) -> Result<(), String> {
     if allowed.contains(&value) {
@@ -72,6 +76,10 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
     match key {
         "theme" => require_one_of(value, VALID_THEMES, "theme"),
         "widget_position" => require_one_of(value, VALID_WIDGET_POSITIONS, "widget_position"),
+        "global_shortcut" => require_max_len(value, MAX_SHORTCUT_LEN, "global_shortcut"),
+        "notifications_enabled" => {
+            require_one_of(value, VALID_BOOL_STRINGS, "notifications_enabled")
+        }
         _ => Ok(()),
     }
 }
@@ -289,6 +297,8 @@ pub fn set_global_shortcut(app: tauri::AppHandle, shortcut: String) -> Result<()
     use std::str::FromStr;
     use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
 
+    require_max_len(&shortcut, MAX_SHORTCUT_LEN, "shortcut")?;
+
     let global_shortcut = app.global_shortcut();
     global_shortcut
         .unregister_all()
@@ -301,4 +311,29 @@ pub fn set_global_shortcut(app: tauri::AppHandle, shortcut: String) -> Result<()
         global_shortcut.register(sc).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub fn send_desktop_notification(
+    app: tauri::AppHandle,
+    title: String,
+    body: Option<String>,
+) -> Result<(), String> {
+    use tauri_plugin_notification::NotificationExt;
+
+    if title.trim().is_empty() {
+        return Err("Notification title cannot be empty".to_string());
+    }
+    require_max_len(&title, MAX_NOTIFICATION_TITLE_LEN, "notification title")?;
+    if let Some(ref b) = body {
+        require_max_len(b, MAX_NOTIFICATION_BODY_LEN, "notification body")?;
+    }
+
+    let mut builder = app.notification().builder().title(title);
+    if let Some(b) = body {
+        if !b.trim().is_empty() {
+            builder = builder.body(b);
+        }
+    }
+    builder.show().map_err(|e| e.to_string())
 }

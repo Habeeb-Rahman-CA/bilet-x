@@ -26,6 +26,7 @@ pub fn run() {
             commands::set_widget_position,
             commands::set_interactive_area,
             commands::set_global_shortcut,
+            commands::send_desktop_notification,
             commands::db_get_notes,
             commands::db_save_note,
             commands::db_delete_note,
@@ -194,6 +195,9 @@ pub fn run() {
                     let _ = app.global_shortcut().register(sc);
                 }
             }
+
+            // 4. Desktop Notifications Plugin Setup
+            app.handle().plugin(tauri_plugin_notification::init())?;
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(

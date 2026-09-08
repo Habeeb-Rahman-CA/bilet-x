@@ -2,6 +2,7 @@ import { Component, OnDestroy, Signal, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { WindowService } from '../../../../core/tauri/window.service';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
+import { NotificationService } from '../../../../core/tauri/notification.service';
 
 @Component({
   selector: 'app-settings',
@@ -140,7 +141,57 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
         </div>
       </div>
 
-      <!-- 5. ABOUT & VERSION SCREEN -->
+      <!-- 5. DESKTOP NOTIFICATIONS SETTING -->
+      <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-semibold text-neutral-300">Desktop Notifications</div>
+          <span
+            [class.text-emerald-400]="isNotificationsEnabled()"
+            [class.bg-emerald-500_10]="isNotificationsEnabled()"
+            [class.border-emerald-500_20]="isNotificationsEnabled()"
+            [class.text-neutral-500]="!isNotificationsEnabled()"
+            [class.bg-neutral-800]="!isNotificationsEnabled()"
+            [class.border-neutral-700]="!isNotificationsEnabled()"
+            class="rounded border px-1.5 py-0.5 font-mono text-[9px]"
+          >
+            {{ isNotificationsEnabled() ? 'Enabled' : 'Disabled' }}
+          </span>
+        </div>
+        <div class="flex items-center space-x-2 font-mono text-[10px]">
+          <button
+            (click)="toggleNotifications(true)"
+            type="button"
+            [class.bg-white]="isNotificationsEnabled()"
+            [class.text-black]="isNotificationsEnabled()"
+            [class.bg-neutral-800]="!isNotificationsEnabled()"
+            [class.text-neutral-400]="!isNotificationsEnabled()"
+            class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+          >
+            On
+          </button>
+          <button
+            (click)="toggleNotifications(false)"
+            type="button"
+            [class.bg-white]="!isNotificationsEnabled()"
+            [class.text-black]="!isNotificationsEnabled()"
+            [class.bg-neutral-800]="isNotificationsEnabled()"
+            [class.text-neutral-400]="isNotificationsEnabled()"
+            class="flex-1 rounded-lg py-1.5 text-center transition hover:text-white"
+          >
+            Off
+          </button>
+        </div>
+        <button
+          (click)="sendTestNotification()"
+          type="button"
+          [disabled]="!isNotificationsEnabled()"
+          class="w-full rounded-lg border border-neutral-800 bg-neutral-800/80 py-1.5 font-mono text-[10px] text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {{ testNotificationSent() ? '✓ Notification Dispatched!' : 'Send Test Notification' }}
+        </button>
+      </div>
+
+      <!-- 6. ABOUT & VERSION SCREEN -->
       <div class="space-y-1 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 text-[10px]">
         <div class="flex items-center justify-between">
           <span class="font-mono font-bold text-white uppercase">Bilet-X Utility</span>
@@ -176,6 +227,9 @@ export class SettingsComponent implements OnDestroy {
   public currentPosition: Signal<string>;
   public currentTheme: Signal<string>;
   public currentShortcut: Signal<string>;
+  public isNotificationsEnabled: Signal<boolean>;
+  public testNotificationSent = signal<boolean>(false);
+  private testNotificationTimer: number | undefined;
 
   public noteCount: Signal<number>;
   public taskCount: Signal<number>;
@@ -190,7 +244,8 @@ export class SettingsComponent implements OnDestroy {
 
   constructor(
     private windowService: WindowService,
-    private persistence: PersistenceService
+    private persistence: PersistenceService,
+    private notificationService: NotificationService
   ) {
     this.currentPosition = computed(() =>
       this.persistence.getSettingValue('widget_position', 'right')
@@ -199,6 +254,7 @@ export class SettingsComponent implements OnDestroy {
     this.currentShortcut = computed(() =>
       this.persistence.getSettingValue('global_shortcut', 'CommandOrControl+Shift+K')
     );
+    this.isNotificationsEnabled = this.notificationService.isNotificationsEnabled;
     this.noteCount = computed(() => this.persistence.notes().length);
     this.taskCount = computed(() => this.persistence.tasks().length);
   }
@@ -206,6 +262,7 @@ export class SettingsComponent implements OnDestroy {
   public ngOnDestroy(): void {
     if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
     if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
+    if (this.testNotificationTimer !== undefined) window.clearTimeout(this.testNotificationTimer);
   }
 
   public async selectShortcut(shortcut: string): Promise<void> {
@@ -223,6 +280,23 @@ export class SettingsComponent implements OnDestroy {
   public async selectTheme(theme: string): Promise<void> {
     this.persistence.applyTheme(theme);
     await this.persistence.setSetting('theme', theme);
+  }
+
+  public async toggleNotifications(enabled: boolean): Promise<void> {
+    await this.notificationService.toggleNotifications(enabled);
+  }
+
+  public async sendTestNotification(): Promise<void> {
+    const sent = await this.notificationService.sendTestNotification();
+    if (sent) {
+      this.testNotificationSent.set(true);
+      if (this.testNotificationTimer !== undefined) {
+        window.clearTimeout(this.testNotificationTimer);
+      }
+      this.testNotificationTimer = window.setTimeout(() => {
+        this.testNotificationSent.set(false);
+      }, 2500);
+    }
   }
 
   public async handleClearNotes(): Promise<void> {

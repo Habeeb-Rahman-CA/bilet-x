@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
+import { NotificationService } from '../../../../core/tauri/notification.service';
 
 @Component({
   selector: 'app-task',
@@ -78,7 +79,10 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
 export class TaskComponent {
   public quickInputText = '';
 
-  constructor(public persistence: PersistenceService) {}
+  constructor(
+    public persistence: PersistenceService,
+    private notificationService: NotificationService
+  ) {}
 
   public async onTaskSubmit(event: Event): Promise<void> {
     event.preventDefault();
@@ -98,6 +102,7 @@ export class TaskComponent {
       updated_at: now,
     });
 
+    this.notificationService.sendNotification('Task Created', text);
     this.quickInputText = '';
   }
 }
