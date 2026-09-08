@@ -100,6 +100,8 @@ pub fn run() {
             commands::db_clear_tasks,
             commands::db_get_settings,
             commands::db_set_setting,
+            commands::db_get_activities,
+            commands::db_clear_activities,
         ])
         .setup(|app| {
             let app_dir = app

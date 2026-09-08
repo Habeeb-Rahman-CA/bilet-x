@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 export interface DockTab {
-  id: 'notes' | 'tasks' | 'settings';
+  id: 'notes' | 'tasks' | 'activity' | 'settings';
   label: string;
 }
 
@@ -63,7 +63,26 @@ export interface DockTab {
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
         </svg>
 
-        <!-- 3. Lucide Settings (Settings) -->
+        <!-- 3. Lucide History (Activity) -->
+        <svg
+          *ngIf="tab.id === 'activity'"
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-history"
+        >
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M12 7v5l4 2" />
+        </svg>
+
+        <!-- 4. Lucide Settings (Settings) -->
         <svg
           *ngIf="tab.id === 'settings'"
           xmlns="http://www.w3.org/2000/svg"

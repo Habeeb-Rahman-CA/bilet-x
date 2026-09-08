@@ -27,3 +27,12 @@ pub struct SettingItem {
     pub value: String,
     pub updated_at: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityItem {
+    pub id: String,
+    pub entity: String,
+    pub action: String,
+    pub summary: String,
+    pub created_at: String,
+}

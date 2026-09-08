@@ -26,6 +26,14 @@ export interface SettingItem {
   updated_at: string;
 }
 
+export interface ActivityItem {
+  id: string;
+  entity: string;
+  action: string;
+  summary: string;
+  created_at: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -33,6 +41,7 @@ export class PersistenceService {
   public notes = signal<NoteItem[]>([]);
   public tasks = signal<TaskItem[]>([]);
   public settings = signal<Map<string, string>>(new Map());
+  public activities = signal<ActivityItem[]>([]);
   public scratchpadText = signal<string>('');
 
   constructor(private tauriService: TauriService) {
@@ -40,7 +49,12 @@ export class PersistenceService {
   }
 
   public async loadAllData(): Promise<void> {
-    await Promise.all([this.loadNotes(), this.loadTasks(), this.loadSettings()]);
+    await Promise.all([
+      this.loadNotes(),
+      this.loadTasks(),
+      this.loadSettings(),
+      this.loadActivities(),
+    ]);
   }
 
   // --- NOTES / SCRATCHPAD API ---
@@ -205,6 +219,31 @@ export class PersistenceService {
     } else {
       document.documentElement.classList.remove('light');
       document.documentElement.classList.add('dark');
+    }
+  }
+
+  // --- ACTIVITY LOG API ---
+  public async loadActivities(limit: number = 50): Promise<ActivityItem[]> {
+    try {
+      const list = await this.tauriService.invokeCommand<ActivityItem[]>('db_get_activities', {
+        limit,
+      });
+      this.activities.set(list || []);
+      return list || [];
+    } catch (e) {
+      console.warn('Failed to load activity log', e);
+      return [];
+    }
+  }
+
+  public async clearActivities(): Promise<number> {
+    try {
+      const removed = await this.tauriService.invokeCommand<number>('db_clear_activities');
+      await this.loadActivities();
+      return removed;
+    } catch (e) {
+      console.error('Failed to clear activity log', e);
+      return 0;
     }
   }
 }

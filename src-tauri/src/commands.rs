@@ -1,6 +1,16 @@
-use crate::db::{NoteRepository, SettingsRepository, TaskRepository};
+use crate::db::{ActivityRepository, NoteRepository, SettingsRepository, TaskRepository};
 use crate::state::{AppState, InteractiveRect};
 use tauri::{State, Window};
+
+const ACTIVITY_LOG_LIMIT_MAX: u32 = 500;
+// Settings keys we surface in the activity feed. Others (widget_x, widget_y)
+// are set by Rust itself on drag and would flood the log.
+const USER_FACING_SETTING_KEYS: &[&str] = &[
+    "theme",
+    "widget_position",
+    "global_shortcut",
+    "notifications_enabled",
+];
 
 const VALID_TASK_STATUSES: &[&str] = &["pending", "in_progress", "completed"];
 const VALID_TASK_PRIORITIES: &[&str] = &["low", "medium", "high"];
@@ -247,18 +257,30 @@ pub fn db_save_note(
     validate_id(&note.id, "note.id")?;
     require_max_len(&note.title, MAX_TITLE_LEN, "note.title")?;
     require_max_len(&note.content, MAX_CONTENT_LEN, "note.content")?;
-    db.save_note(note).map_err(|e| e.to_string())
+    let is_scratchpad = note.id == "main_scratchpad";
+    let title_for_log = note.title.clone();
+    let saved = db.save_note(note).map_err(|e| e.to_string())?;
+    // Skip scratchpad autosaves — they fire on every keystroke and would
+    // drown the activity log.
+    if !is_scratchpad {
+        let _ = db.add_activity("note", "saved", &format!("Saved note \"{}\"", title_for_log));
+    }
+    Ok(saved)
 }
 
 #[tauri::command]
 pub fn db_delete_note(id: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
     validate_id(&id, "id")?;
-    db.delete_note(&id).map_err(|e| e.to_string())
+    let ok = db.delete_note(&id).map_err(|e| e.to_string())?;
+    let _ = db.add_activity("note", "deleted", &format!("Deleted note {}", id));
+    Ok(ok)
 }
 
 #[tauri::command]
 pub fn db_clear_notes(db: State<'_, crate::db::Database>) -> Result<usize, String> {
-    db.clear_all_notes().map_err(|e| e.to_string())
+    let n = db.clear_all_notes().map_err(|e| e.to_string())?;
+    let _ = db.add_activity("note", "cleared", &format!("Cleared all notes ({})", n));
+    Ok(n)
 }
 
 #[tauri::command]
@@ -278,18 +300,25 @@ pub fn db_save_task(
     require_max_len(&task.description, MAX_DESCRIPTION_LEN, "task.description")?;
     require_one_of(&task.status, VALID_TASK_STATUSES, "task.status")?;
     require_one_of(&task.priority, VALID_TASK_PRIORITIES, "task.priority")?;
-    db.save_task(task).map_err(|e| e.to_string())
+    let title_for_log = task.title.clone();
+    let saved = db.save_task(task).map_err(|e| e.to_string())?;
+    let _ = db.add_activity("task", "saved", &format!("Saved task \"{}\"", title_for_log));
+    Ok(saved)
 }
 
 #[tauri::command]
 pub fn db_delete_task(id: String, db: State<'_, crate::db::Database>) -> Result<bool, String> {
     validate_id(&id, "id")?;
-    db.delete_task(&id).map_err(|e| e.to_string())
+    let ok = db.delete_task(&id).map_err(|e| e.to_string())?;
+    let _ = db.add_activity("task", "deleted", &format!("Deleted task {}", id));
+    Ok(ok)
 }
 
 #[tauri::command]
 pub fn db_clear_tasks(db: State<'_, crate::db::Database>) -> Result<usize, String> {
-    db.clear_all_tasks().map_err(|e| e.to_string())
+    let n = db.clear_all_tasks().map_err(|e| e.to_string())?;
+    let _ = db.add_activity("task", "cleared", &format!("Cleared all tasks ({})", n));
+    Ok(n)
 }
 
 #[tauri::command]
@@ -306,7 +335,36 @@ pub fn db_set_setting(
     db: State<'_, crate::db::Database>,
 ) -> Result<crate::models::SettingItem, String> {
     validate_setting(&key, &value)?;
-    db.set_setting(&key, &value).map_err(|e| e.to_string())
+    let saved = db.set_setting(&key, &value).map_err(|e| e.to_string())?;
+    if USER_FACING_SETTING_KEYS.contains(&key.as_str()) {
+        let _ = db.add_activity(
+            "setting",
+            "changed",
+            &format!("Set {} to \"{}\"", key, value),
+        );
+    }
+    Ok(saved)
+}
+
+#[tauri::command]
+pub fn db_get_activities(
+    limit: u32,
+    db: State<'_, crate::db::Database>,
+) -> Result<Vec<crate::models::ActivityItem>, String> {
+    if limit == 0 || limit > ACTIVITY_LOG_LIMIT_MAX {
+        return Err(format!(
+            "limit must be between 1 and {}",
+            ACTIVITY_LOG_LIMIT_MAX
+        ));
+    }
+    db.get_recent_activities(limit).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_clear_activities(db: State<'_, crate::db::Database>) -> Result<usize, String> {
+    let n = db.clear_activities().map_err(|e| e.to_string())?;
+    let _ = db.add_activity("activity", "cleared", &format!("Cleared activity log ({})", n));
+    Ok(n)
 }
 
 #[tauri::command]

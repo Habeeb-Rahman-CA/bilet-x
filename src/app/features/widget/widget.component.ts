@@ -17,12 +17,20 @@ import { LayoutService } from '../../core/services/layout.service';
 import { DockComponent, DockTab } from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
+import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
 
 @Component({
   selector: 'app-widget',
   standalone: true,
-  imports: [CommonModule, DockComponent, NoteComponent, TaskComponent, SettingsComponent],
+  imports: [
+    CommonModule,
+    DockComponent,
+    NoteComponent,
+    TaskComponent,
+    ActivityComponent,
+    SettingsComponent,
+  ],
   template: `
     <div
       class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 select-none"
@@ -95,7 +103,10 @@ import { SettingsComponent } from './components/settings/settings.component';
             <!-- VIEW 2: TASK COMPONENT -->
             <app-task *ngIf="activeTab().id === 'tasks'"></app-task>
 
-            <!-- VIEW 3: SETTINGS COMPONENT -->
+            <!-- VIEW 3: ACTIVITY COMPONENT -->
+            <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
+
+            <!-- VIEW 4: SETTINGS COMPONENT -->
             <app-settings *ngIf="activeTab().id === 'settings'"></app-settings>
           </div>
         </div>
@@ -115,10 +126,11 @@ import { SettingsComponent } from './components/settings/settings.component';
 export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
 
-  // EXACT ORDER: 1. note, 2. task, 3. settings
+  // EXACT ORDER: 1. note, 2. task, 3. activity, 4. settings
   public tabs: DockTab[] = [
     { id: 'notes', label: 'Notes' },
     { id: 'tasks', label: 'Tasks' },
+    { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ];
 
