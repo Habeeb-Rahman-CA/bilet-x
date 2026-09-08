@@ -10,7 +10,7 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
   template: `
     <div class="space-y-3 text-xs">
       <!-- 1. WIDGET POSITION SETTING -->
-      <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-2">
+      <div class="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
         <div class="text-[11px] font-semibold text-neutral-300">Widget Position</div>
         <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
           <button
@@ -21,7 +21,7 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
             [class.text-black]="currentPosition() === pos.id"
             [class.bg-neutral-800]="currentPosition() !== pos.id"
             [class.text-neutral-400]="currentPosition() !== pos.id"
-            class="rounded-lg py-1.5 px-2 text-center transition hover:text-white"
+            class="rounded-lg px-2 py-1.5 text-center transition hover:text-white"
           >
             {{ pos.label }}
           </button>
@@ -29,7 +29,7 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
       </div>
 
       <!-- 2. THEME SETTING -->
-      <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-2">
+      <div class="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
         <div class="text-[11px] font-semibold text-neutral-300">Theme</div>
         <div class="flex items-center space-x-2 font-mono text-[10px]">
           <button
@@ -58,7 +58,7 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
       </div>
 
       <!-- 3. DATA / PERSISTENCE MANAGEMENT -->
-      <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-2">
+      <div class="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
         <div class="text-[11px] font-semibold text-neutral-300">Data</div>
 
         <div class="flex items-center justify-between font-mono text-[10px]">
@@ -98,25 +98,57 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
         </div>
       </div>
 
-      <!-- 4. SHORTCUT HINTS & UTILITY INFO -->
-      <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-2">
-        <div class="flex items-center justify-between text-neutral-400 text-[10px]">
-          <span>Toggle Shortcut</span>
-          <kbd class="rounded border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 font-mono">Ctrl + K</kbd>
+      <!-- 4. GLOBAL SHORTCUT CONFIGURATION -->
+      <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-semibold text-neutral-300">Global Shortcut</div>
+          <span
+            class="rounded border border-emerald-500/20 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[9px] text-emerald-400"
+          >
+            OS-Wide
+          </span>
         </div>
-        <div class="flex items-center justify-between border-t border-neutral-800/80 pt-2 text-neutral-400 text-[10px]">
+        <p class="text-[10px] leading-normal text-neutral-400">
+          Bring Bilet-X to the front and toggle the widget from any app.
+        </p>
+        <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
+          <button
+            *ngFor="let sc of shortcuts"
+            (click)="selectShortcut(sc.id)"
+            type="button"
+            [class.bg-white]="currentShortcut() === sc.id"
+            [class.text-black]="currentShortcut() === sc.id"
+            [class.bg-neutral-800]="currentShortcut() !== sc.id"
+            [class.text-neutral-400]="currentShortcut() !== sc.id"
+            class="truncate rounded-lg px-2 py-1.5 text-center transition hover:text-white"
+            [title]="sc.label"
+          >
+            {{ sc.label }}
+          </button>
+        </div>
+        <div
+          class="flex items-center justify-between border-t border-neutral-800/80 pt-2 text-[10px] text-neutral-400"
+        >
+          <span>In-App Toggle</span>
+          <kbd class="rounded border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 font-mono"
+            >Ctrl + K / Esc</kbd
+          >
+        </div>
+        <div class="flex items-center justify-between text-[10px] text-neutral-400">
           <span>System Tray</span>
-          <span class="text-emerald-400 font-medium">Active (Minimize/Restore)</span>
+          <span class="font-medium text-emerald-400">Active (Minimize/Restore)</span>
         </div>
       </div>
 
       <!-- 5. ABOUT & VERSION SCREEN -->
-      <div class="rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 space-y-1 text-[10px]">
+      <div class="space-y-1 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 text-[10px]">
         <div class="flex items-center justify-between">
-          <span class="font-bold text-white uppercase font-mono">Bilet-X Utility</span>
-          <span class="rounded bg-neutral-800 px-1.5 py-0.5 text-neutral-300 font-mono">v0.1.0</span>
+          <span class="font-mono font-bold text-white uppercase">Bilet-X Utility</span>
+          <span class="rounded bg-neutral-800 px-1.5 py-0.5 font-mono text-neutral-300"
+            >v0.1.0</span
+          >
         </div>
-        <p class="text-neutral-400 leading-relaxed pt-1">
+        <p class="pt-1 leading-relaxed text-neutral-400">
           A minimalist desktop floating widget for notes, tasks, and settings.
         </p>
       </div>
@@ -133,8 +165,17 @@ export class SettingsComponent implements OnDestroy {
     { id: 'bottom-left', label: 'Bottom Left' },
   ];
 
+  public shortcuts = [
+    { id: 'CommandOrControl+Shift+K', label: 'Ctrl+Shift+K' },
+    { id: 'Alt+Space', label: 'Alt+Space' },
+    { id: 'CommandOrControl+Alt+B', label: 'Ctrl+Alt+B' },
+    { id: 'CommandOrControl+Shift+Space', label: 'Ctrl+Shift+Space' },
+    { id: '', label: 'Disabled' },
+  ];
+
   public currentPosition: Signal<string>;
   public currentTheme: Signal<string>;
+  public currentShortcut: Signal<string>;
 
   public noteCount: Signal<number>;
   public taskCount: Signal<number>;
@@ -149,13 +190,14 @@ export class SettingsComponent implements OnDestroy {
 
   constructor(
     private windowService: WindowService,
-    private persistence: PersistenceService,
+    private persistence: PersistenceService
   ) {
     this.currentPosition = computed(() =>
-      this.persistence.getSettingValue('widget_position', 'right'),
+      this.persistence.getSettingValue('widget_position', 'right')
     );
-    this.currentTheme = computed(() =>
-      this.persistence.getSettingValue('theme', 'dark'),
+    this.currentTheme = computed(() => this.persistence.getSettingValue('theme', 'dark'));
+    this.currentShortcut = computed(() =>
+      this.persistence.getSettingValue('global_shortcut', 'CommandOrControl+Shift+K')
     );
     this.noteCount = computed(() => this.persistence.notes().length);
     this.taskCount = computed(() => this.persistence.tasks().length);
@@ -164,6 +206,13 @@ export class SettingsComponent implements OnDestroy {
   public ngOnDestroy(): void {
     if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
     if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
+  }
+
+  public async selectShortcut(shortcut: string): Promise<void> {
+    const success = await this.windowService.setGlobalShortcut(shortcut);
+    if (success) {
+      await this.persistence.setSetting('global_shortcut', shortcut);
+    }
   }
 
   public async selectPosition(pos: string): Promise<void> {
@@ -187,7 +236,7 @@ export class SettingsComponent implements OnDestroy {
     if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
     this.clearNotesTimer = window.setTimeout(
       () => this.clearNotesArmed.set(false),
-      this.CONFIRM_WINDOW_MS,
+      this.CONFIRM_WINDOW_MS
     );
   }
 
@@ -202,7 +251,7 @@ export class SettingsComponent implements OnDestroy {
     if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
     this.clearTasksTimer = window.setTimeout(
       () => this.clearTasksArmed.set(false),
-      this.CONFIRM_WINDOW_MS,
+      this.CONFIRM_WINDOW_MS
     );
   }
 }

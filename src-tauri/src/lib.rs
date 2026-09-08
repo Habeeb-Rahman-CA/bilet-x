@@ -3,12 +3,15 @@ pub mod db;
 pub mod models;
 pub mod state;
 
+use db::SettingsRepository;
 use state::AppState;
+use std::str::FromStr;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Emitter, Manager,
 };
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,6 +25,7 @@ pub fn run() {
             commands::window_set_focus,
             commands::set_widget_position,
             commands::set_interactive_area,
+            commands::set_global_shortcut,
             commands::db_get_notes,
             commands::db_save_note,
             commands::db_delete_note,
@@ -39,10 +43,14 @@ pub fn run() {
                 .app_data_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("./bilet_x_data"));
 
-            let database = db::Database::init(app_dir).map_err(|e| {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, e))
-                    as Box<dyn std::error::Error>
-            })?;
+            let database = db::Database::init(app_dir)
+                .map_err(|e| Box::new(std::io::Error::other(e)) as Box<dyn std::error::Error>)?;
+
+            let initial_shortcut_str = database
+                .get_setting("global_shortcut")
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "CommandOrControl+Shift+K".to_string());
 
             app.manage(database);
 
@@ -53,12 +61,18 @@ pub fn run() {
                     std::thread::sleep(std::time::Duration::from_millis(150));
                     if let Ok(Some(monitor)) = positioning_window.primary_monitor() {
                         let monitor_size = monitor.size();
-                        let window_size = positioning_window
-                            .outer_size()
-                            .unwrap_or(tauri::PhysicalSize { width: 640, height: 440 });
+                        let window_size =
+                            positioning_window
+                                .outer_size()
+                                .unwrap_or(tauri::PhysicalSize {
+                                    width: 640,
+                                    height: 440,
+                                });
                         let x = (monitor_size.width as i32) - (window_size.width as i32) - 10;
                         let y = ((monitor_size.height as i32) - (window_size.height as i32)) / 2;
-                        let _ = positioning_window.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
+                        let _ = positioning_window.set_position(tauri::Position::Physical(
+                            tauri::PhysicalPosition { x, y },
+                        ));
                     }
                 });
 
@@ -94,13 +108,12 @@ pub fn run() {
                             && rel_y <= rect.y + rect.height;
                         let should_ignore = !in_rect;
 
-                        if should_ignore != current_ignore {
-                            if click_through_window
+                        if should_ignore != current_ignore
+                            && click_through_window
                                 .set_ignore_cursor_events(should_ignore)
                                 .is_ok()
-                            {
-                                current_ignore = should_ignore;
-                            }
+                        {
+                            current_ignore = should_ignore;
                         }
                     }
                 });
@@ -154,6 +167,32 @@ pub fn run() {
                         }
                     })
                     .build(app)?;
+            }
+
+            // 3. Global Shortcut Setup
+            app.handle().plugin(
+                tauri_plugin_global_shortcut::Builder::new()
+                    .with_handler(|app_handle, _shortcut, event| {
+                        if event.state() == ShortcutState::Pressed {
+                            if let Some(window) = app_handle.get_webview_window("main") {
+                                let is_visible = window.is_visible().unwrap_or(false);
+                                if !is_visible {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                } else {
+                                    let _ = window.set_focus();
+                                }
+                                let _ = window.emit("toggle-widget", ());
+                            }
+                        }
+                    })
+                    .build(),
+            )?;
+
+            if !initial_shortcut_str.trim().is_empty() {
+                if let Ok(sc) = Shortcut::from_str(initial_shortcut_str.trim()) {
+                    let _ = app.global_shortcut().register(sc);
+                }
             }
 
             if cfg!(debug_assertions) {

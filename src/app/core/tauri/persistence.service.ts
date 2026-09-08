@@ -40,11 +40,7 @@ export class PersistenceService {
   }
 
   public async loadAllData(): Promise<void> {
-    await Promise.all([
-      this.loadNotes(),
-      this.loadTasks(),
-      this.loadSettings(),
-    ]);
+    await Promise.all([this.loadNotes(), this.loadTasks(), this.loadSettings()]);
   }
 
   // --- NOTES / SCRATCHPAD API ---
@@ -52,7 +48,7 @@ export class PersistenceService {
     try {
       const notes = await this.tauriService.invokeCommand<NoteItem[]>('db_get_notes');
       this.notes.set(notes || []);
-      const scratchpad = (notes || []).find(n => n.id === 'main_scratchpad');
+      const scratchpad = (notes || []).find((n) => n.id === 'main_scratchpad');
       if (scratchpad) {
         this.scratchpadText.set(scratchpad.content);
       }
@@ -88,7 +84,6 @@ export class PersistenceService {
   }
 
   public async saveNote(note: NoteItem): Promise<NoteItem | null> {
-
     try {
       const saved = await this.tauriService.invokeCommand<NoteItem>('db_save_note', { note });
       await this.loadNotes();
@@ -173,7 +168,7 @@ export class PersistenceService {
     try {
       const list = await this.tauriService.invokeCommand<SettingItem[]>('db_get_settings');
       const map = new Map<string, string>();
-      (list || []).forEach(item => map.set(item.key, item.value));
+      (list || []).forEach((item) => map.set(item.key, item.value));
       this.settings.set(map);
       // Apply the saved theme immediately so it's live before any component
       // that reads it (e.g. the settings panel) is even instantiated.

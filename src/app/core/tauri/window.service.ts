@@ -19,7 +19,6 @@ export class WindowService {
     }
   }
 
-
   public async minimize(): Promise<void> {
     try {
       await this.tauriService.invokeCommand('window_minimize');
@@ -65,7 +64,7 @@ export class WindowService {
     x: number,
     y: number,
     width: number,
-    height: number,
+    height: number
   ): Promise<void> {
     try {
       await this.tauriService.invokeCommand('set_interactive_area', { x, y, width, height });
@@ -73,6 +72,30 @@ export class WindowService {
       console.warn('Set interactive area failed', e);
     }
   }
+
+  public async setGlobalShortcut(shortcut: string): Promise<boolean> {
+    try {
+      await this.tauriService.invokeCommand('set_global_shortcut', { shortcut });
+      return true;
+    } catch (e) {
+      console.warn('Set global shortcut failed', e);
+      return false;
+    }
+  }
+
+  public async onToggleWidget(callback: () => void): Promise<() => void> {
+    if (!this.tauriService.isTauriAvailable()) {
+      return () => {};
+    }
+    try {
+      const { listen } = await import('@tauri-apps/api/event');
+      const unlisten = await listen('toggle-widget', () => {
+        callback();
+      });
+      return unlisten;
+    } catch (e) {
+      console.warn('Failed to listen to toggle-widget event', e);
+      return () => {};
+    }
+  }
 }
-
-

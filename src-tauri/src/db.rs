@@ -24,7 +24,6 @@ impl fmt::Display for DbError {
 
 impl std::error::Error for DbError {}
 
-
 impl From<DbError> for String {
     fn from(err: DbError) -> Self {
         err.to_string()
@@ -430,7 +429,7 @@ mod tests {
     #[test]
     fn test_persistence_across_restart() {
         let temp_dir = std::env::temp_dir().join(format!("bilet_x_test_{}", std::process::id()));
-        
+
         // 1. First app launch: Save data
         {
             let db1 = Database::init(temp_dir.clone()).expect("Init DB failed");

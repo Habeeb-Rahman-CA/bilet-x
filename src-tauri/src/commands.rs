@@ -137,9 +137,10 @@ pub fn set_widget_position(window: Window, position: String) -> Result<(), Strin
 
     if let Ok(Some(monitor)) = window.primary_monitor() {
         let monitor_size = monitor.size();
-        let window_size = window
-            .outer_size()
-            .unwrap_or(tauri::PhysicalSize { width: 640, height: 440 });
+        let window_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
+            width: 640,
+            height: 440,
+        });
 
         let (x, y) = match position.as_str() {
             "left" => (
@@ -195,19 +196,29 @@ pub fn set_interactive_area(
         .interactive_rect
         .lock()
         .map_err(|e| format!("Lock error: {}", e))?;
-    *rect = Some(InteractiveRect { x, y, width, height });
+    *rect = Some(InteractiveRect {
+        x,
+        y,
+        width,
+        height,
+    });
     Ok(())
 }
 
 // --- SQLITE PERSISTENCE COMMANDS ---
 
 #[tauri::command]
-pub fn db_get_notes(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::NoteItem>, String> {
+pub fn db_get_notes(
+    db: State<'_, crate::db::Database>,
+) -> Result<Vec<crate::models::NoteItem>, String> {
     db.get_all_notes().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn db_save_note(note: crate::models::NoteItem, db: State<'_, crate::db::Database>) -> Result<crate::models::NoteItem, String> {
+pub fn db_save_note(
+    note: crate::models::NoteItem,
+    db: State<'_, crate::db::Database>,
+) -> Result<crate::models::NoteItem, String> {
     validate_id(&note.id, "note.id")?;
     require_max_len(&note.title, MAX_TITLE_LEN, "note.title")?;
     require_max_len(&note.content, MAX_CONTENT_LEN, "note.content")?;
@@ -226,12 +237,17 @@ pub fn db_clear_notes(db: State<'_, crate::db::Database>) -> Result<usize, Strin
 }
 
 #[tauri::command]
-pub fn db_get_tasks(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::TaskItem>, String> {
+pub fn db_get_tasks(
+    db: State<'_, crate::db::Database>,
+) -> Result<Vec<crate::models::TaskItem>, String> {
     db.get_all_tasks().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn db_save_task(task: crate::models::TaskItem, db: State<'_, crate::db::Database>) -> Result<crate::models::TaskItem, String> {
+pub fn db_save_task(
+    task: crate::models::TaskItem,
+    db: State<'_, crate::db::Database>,
+) -> Result<crate::models::TaskItem, String> {
     validate_id(&task.id, "task.id")?;
     require_max_len(&task.title, MAX_TITLE_LEN, "task.title")?;
     require_max_len(&task.description, MAX_DESCRIPTION_LEN, "task.description")?;
@@ -252,12 +268,37 @@ pub fn db_clear_tasks(db: State<'_, crate::db::Database>) -> Result<usize, Strin
 }
 
 #[tauri::command]
-pub fn db_get_settings(db: State<'_, crate::db::Database>) -> Result<Vec<crate::models::SettingItem>, String> {
+pub fn db_get_settings(
+    db: State<'_, crate::db::Database>,
+) -> Result<Vec<crate::models::SettingItem>, String> {
     db.get_all_settings().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn db_set_setting(key: String, value: String, db: State<'_, crate::db::Database>) -> Result<crate::models::SettingItem, String> {
+pub fn db_set_setting(
+    key: String,
+    value: String,
+    db: State<'_, crate::db::Database>,
+) -> Result<crate::models::SettingItem, String> {
     validate_setting(&key, &value)?;
     db.set_setting(&key, &value).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_global_shortcut(app: tauri::AppHandle, shortcut: String) -> Result<(), String> {
+    use std::str::FromStr;
+    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+
+    let global_shortcut = app.global_shortcut();
+    global_shortcut
+        .unregister_all()
+        .map_err(|e| e.to_string())?;
+
+    let trimmed = shortcut.trim();
+    if !trimmed.is_empty() {
+        let sc = Shortcut::from_str(trimmed)
+            .map_err(|e| format!("Invalid shortcut format '{}': {:?}", trimmed, e))?;
+        global_shortcut.register(sc).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }

@@ -4,6 +4,7 @@ import {
   ElementRef,
   HostListener,
   OnDestroy,
+  OnInit,
   ViewChild,
   computed,
   effect,
@@ -45,10 +46,12 @@ import { SettingsComponent } from './components/settings/settings.component';
         <div
           #panelEl
           *ngIf="isPanelExpanded()"
-          class="animate-panel-expand flex w-[380px] h-[calc(100vh-1rem)] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 backdrop-blur-xl shadow-2xl"
+          class="animate-panel-expand flex h-[calc(100vh-1rem)] w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl"
         >
           <!-- PANEL TOP HEADER ACTION CONTROLS -->
-          <div class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3">
+          <div
+            class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3"
+          >
             <!-- Left Header Title -->
             <div class="no-drag flex items-center space-x-1.5">
               <span class="font-mono text-xs font-bold tracking-wider text-neutral-200 uppercase">
@@ -62,15 +65,29 @@ import { SettingsComponent } from './components/settings/settings.component';
                 (click)="collapseToWidget()"
                 type="button"
                 title="Close (ESC)"
-                class="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 hover:bg-white hover:text-black transition"
+                class="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 transition hover:bg-white hover:text-black"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="lucide lucide-x"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
               </button>
             </div>
           </div>
 
           <!-- PANEL MAIN CONTENT BODY -->
-          <div class="mt-3 flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
+          <div class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <!-- VIEW 1: NOTE COMPONENT -->
             <app-note *ngIf="activeTab().id === 'notes'"></app-note>
 
@@ -94,7 +111,7 @@ import { SettingsComponent } from './components/settings/settings.component';
     </div>
   `,
 })
-export class WidgetComponent implements AfterViewInit, OnDestroy {
+export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
 
   // EXACT ORDER: 1. note, 2. task, 3. settings
@@ -109,7 +126,7 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
   // Derived from the saved widget_position setting. Drives dock alignment
   // inside the transparent 640x440 window and the side the panel flies out to.
   public currentPosition = computed(() =>
-    this.persistence.getSettingValue('widget_position', 'right'),
+    this.persistence.getSettingValue('widget_position', 'right')
   );
   public isLeftSide = computed(() => this.currentPosition().includes('left'));
   public isTopSide = computed(() => this.currentPosition().startsWith('top'));
@@ -119,10 +136,11 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
   @ViewChild('panelEl', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
 
   private postAnimationTimer: number | undefined;
+  private unlistenToggleWidget?: () => void;
 
   constructor(
     private windowService: WindowService,
-    private persistence: PersistenceService,
+    private persistence: PersistenceService
   ) {
     // Re-measure whenever the panel expands/collapses. Effects run outside the
     // render lifecycle, so we defer to rAF and also re-measure after the 180ms
@@ -150,6 +168,16 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  public async ngOnInit(): Promise<void> {
+    this.unlistenToggleWidget = await this.windowService.onToggleWidget(() => {
+      const nextState = !this.isPanelExpanded();
+      this.isPanelExpanded.set(nextState);
+      if (nextState) {
+        this.windowService.focusWindow();
+      }
+    });
+  }
+
   public ngAfterViewInit(): void {
     this.scheduleInteractiveAreaUpdate();
   }
@@ -157,6 +185,9 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
   public ngOnDestroy(): void {
     if (this.postAnimationTimer !== undefined) {
       window.clearTimeout(this.postAnimationTimer);
+    }
+    if (this.unlistenToggleWidget) {
+      this.unlistenToggleWidget();
     }
   }
 
@@ -235,7 +266,7 @@ export class WidgetComponent implements AfterViewInit, OnDestroy {
       left - pad,
       top - pad,
       right - left + pad * 2,
-      bottom - top + pad * 2,
+      bottom - top + pad * 2
     );
   }
 }

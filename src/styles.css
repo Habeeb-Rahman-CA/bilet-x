@@ -9,7 +9,9 @@
     --font-mono: 'JetBrains Mono', monospace;
   }
 
-  html, body, app-root {
+  html,
+  body,
+  app-root {
     font-family: var(--font-sans);
     margin: 0;
     padding: 0;
@@ -20,7 +22,6 @@
     background: transparent !important;
     color: #ffffff;
   }
-
 
   /* Global rule to strip all box shadows across the application */
   *,
@@ -210,5 +211,3 @@ html.light .selection\:bg-neutral-700::selection {
 html.light .selection\:text-white::selection {
   color: rgb(23 23 23) !important;
 }
-
-
