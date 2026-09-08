@@ -140,6 +140,23 @@ pub fn set_window_size(window: Window, width: f64, height: f64) -> Result<(), St
 }
 
 #[tauri::command]
+pub fn set_window_position(window: Window, x: f64, y: f64) -> Result<(), String> {
+    if !x.is_finite() || !y.is_finite() {
+        return Err("x and y must be finite".to_string());
+    }
+    // Coarse sanity cap so a rogue caller can't shoot the window to a distant
+    // virtual-desktop coordinate that no user would ever intend. 100_000 logical
+    // pixels covers even large multi-monitor setups.
+    const MAX_COORD: f64 = 100_000.0;
+    if x.abs() > MAX_COORD || y.abs() > MAX_COORD {
+        return Err(format!("x and y must be within +/-{} px", MAX_COORD));
+    }
+    window
+        .set_position(tauri::Position::Logical(tauri::LogicalPosition { x, y }))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn set_widget_position(window: Window, position: String) -> Result<(), String> {
     require_one_of(&position, VALID_WIDGET_POSITIONS, "position")?;
 

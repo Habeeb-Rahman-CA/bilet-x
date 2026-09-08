@@ -13,6 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { WindowService } from '../../core/tauri/window.service';
 import { PersistenceService } from '../../core/tauri/persistence.service';
+import { LayoutService } from '../../core/services/layout.service';
 import { DockComponent, DockTab } from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
@@ -125,6 +126,9 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Derived from the saved widget_position setting. Drives dock alignment
   // inside the transparent 640x440 window and the side the panel flies out to.
+  // Panel-fit is handled separately: LayoutService.ensureVisible() nudges the
+  // whole window into visible bounds at panel-open time so we never need to
+  // flip the internal layout.
   public currentPosition = computed(() =>
     this.persistence.getSettingValue('widget_position', 'right')
   );
@@ -140,7 +144,8 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private windowService: WindowService,
-    private persistence: PersistenceService
+    private persistence: PersistenceService,
+    private layoutService: LayoutService
   ) {
     // Re-measure whenever the panel expands/collapses. Effects run outside the
     // render lifecycle, so we defer to rAF and also re-measure after the 180ms
@@ -152,25 +157,18 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.currentPosition();
       this.scheduleInteractiveAreaUpdate();
     });
-
-    // Restore the saved widget position once settings finish loading from
-    // SQLite. Runs once (guarded) so subsequent settings mutations don't
-    // yank the window back.
-    let positionRestored = false;
-    effect(() => {
-      const map = this.persistence.settings();
-      if (positionRestored || map.size === 0) return;
-      positionRestored = true;
-      const saved = map.get('widget_position');
-      if (saved) {
-        this.windowService.setPosition(saved);
-      }
-    });
+    // Startup positioning is owned by Rust (see lib.rs `compute_initial_position`),
+    // which reads widget_x/widget_y (or the widget_position preset as fallback)
+    // before the webview boots. User-triggered preset changes still flow through
+    // WindowService.setPosition from the settings UI.
   }
 
   public async ngOnInit(): Promise<void> {
-    this.unlistenToggleWidget = await this.windowService.onToggleWidget(() => {
+    this.unlistenToggleWidget = await this.windowService.onToggleWidget(async () => {
       const nextState = !this.isPanelExpanded();
+      if (nextState) {
+        await this.layoutService.ensureVisible();
+      }
       this.isPanelExpanded.set(nextState);
       if (nextState) {
         this.windowService.focusWindow();
@@ -191,10 +189,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  public selectTab(tab: DockTab): void {
+  public async selectTab(tab: DockTab): Promise<void> {
     if (this.activeTab().id === tab.id && this.isPanelExpanded()) {
       this.isPanelExpanded.set(false);
     } else {
+      await this.layoutService.ensureVisible();
       this.activeTab.set(tab);
       this.isPanelExpanded.set(true);
       this.windowService.focusWindow();
@@ -206,10 +205,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   @HostListener('window:keydown', ['$event'])
-  public handleGlobalShortcuts(event: KeyboardEvent): void {
+  public async handleGlobalShortcuts(event: KeyboardEvent): Promise<void> {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      this.isPanelExpanded.set(!this.isPanelExpanded());
+      const opening = !this.isPanelExpanded();
+      if (opening) {
+        await this.layoutService.ensureVisible();
+      }
+      this.isPanelExpanded.set(opening);
     } else if (event.key === 'Escape' && this.isPanelExpanded()) {
       event.preventDefault();
       this.collapseToWidget();

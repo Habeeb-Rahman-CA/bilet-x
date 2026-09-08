@@ -6,12 +6,74 @@ pub mod state;
 use db::SettingsRepository;
 use state::AppState;
 use std::str::FromStr;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+/// Chooses where the widget window should appear on startup.
+///
+/// Preference order:
+/// 1. Saved (widget_x, widget_y) — but only if the window would land with
+///    at least a 40x40 grabable region on some currently-connected monitor.
+///    This protects against a monitor that was unplugged between sessions.
+/// 2. Saved widget_position preset ("left", "top-right", etc.) on the primary monitor.
+/// 3. Default: "right" on the primary monitor.
+fn compute_initial_position(
+    window: &tauri::WebviewWindow,
+    saved_x: Option<i32>,
+    saved_y: Option<i32>,
+    saved_preset: Option<&str>,
+) -> tauri::PhysicalPosition<i32> {
+    let window_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
+        width: 640,
+        height: 440,
+    });
+    let ww = window_size.width as i32;
+    let wh = window_size.height as i32;
+
+    if let (Some(x), Some(y)) = (saved_x, saved_y) {
+        let monitors = window.available_monitors().unwrap_or_default();
+        let visible = monitors.iter().any(|m| {
+            let mp = m.position();
+            let ms = m.size();
+            let mr = mp.x + ms.width as i32;
+            let mb = mp.y + ms.height as i32;
+            let overlap_w = (x + ww).min(mr) - x.max(mp.x);
+            let overlap_h = (y + wh).min(mb) - y.max(mp.y);
+            overlap_w >= 40 && overlap_h >= 40
+        });
+        if visible {
+            return tauri::PhysicalPosition { x, y };
+        }
+    }
+
+    let monitor_size = window
+        .primary_monitor()
+        .ok()
+        .flatten()
+        .map(|m| *m.size())
+        .unwrap_or(tauri::PhysicalSize {
+            width: 1920,
+            height: 1080,
+        });
+    let mw = monitor_size.width as i32;
+    let mh = monitor_size.height as i32;
+
+    let (x, y) = match saved_preset.unwrap_or("right") {
+        "left" => (10, (mh - wh) / 2),
+        "top-left" => (10, 10),
+        "bottom-left" => (10, mh - wh - 10),
+        "top-right" => (mw - ww - 10, 10),
+        "bottom-right" => (mw - ww - 10, mh - wh - 10),
+        _ => (mw - ww - 10, (mh - wh) / 2),
+    };
+    tauri::PhysicalPosition { x, y }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -24,6 +86,7 @@ pub fn run() {
             commands::set_window_size,
             commands::window_set_focus,
             commands::set_widget_position,
+            commands::set_window_position,
             commands::set_interactive_area,
             commands::set_global_shortcut,
             commands::send_desktop_notification,
@@ -53,28 +116,39 @@ pub fn run() {
                 .flatten()
                 .unwrap_or_else(|| "CommandOrControl+Shift+K".to_string());
 
+            let saved_x: Option<i32> = database
+                .get_setting("widget_x")
+                .ok()
+                .flatten()
+                .and_then(|s| s.parse().ok());
+            let saved_y: Option<i32> = database
+                .get_setting("widget_y")
+                .ok()
+                .flatten()
+                .and_then(|s| s.parse().ok());
+            let saved_preset: Option<String> = database.get_setting("widget_position").ok().flatten();
+
             app.manage(database);
 
             // 1. Initial Window Positioning Hook
+            //
+            // Set position from saved x/y (or preset fallback) after a short delay so
+            // the OS finishes creating the window. Doing this in Rust before the
+            // Angular side boots avoids the visible "jump" from an early default
+            // position to the restored one.
             if let Some(main_window) = app.get_webview_window("main") {
                 let positioning_window = main_window.clone();
+                let saved_preset_for_thread = saved_preset.clone();
                 std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(150));
-                    if let Ok(Some(monitor)) = positioning_window.primary_monitor() {
-                        let monitor_size = monitor.size();
-                        let window_size =
-                            positioning_window
-                                .outer_size()
-                                .unwrap_or(tauri::PhysicalSize {
-                                    width: 640,
-                                    height: 440,
-                                });
-                        let x = (monitor_size.width as i32) - (window_size.width as i32) - 10;
-                        let y = ((monitor_size.height as i32) - (window_size.height as i32)) / 2;
-                        let _ = positioning_window.set_position(tauri::Position::Physical(
-                            tauri::PhysicalPosition { x, y },
-                        ));
-                    }
+                    std::thread::sleep(Duration::from_millis(150));
+                    let target = compute_initial_position(
+                        &positioning_window,
+                        saved_x,
+                        saved_y,
+                        saved_preset_for_thread.as_deref(),
+                    );
+                    let _ = positioning_window
+                        .set_position(tauri::Position::Physical(target));
                 });
 
                 // 1a. Cursor Click-Through Polling
@@ -116,6 +190,35 @@ pub fn run() {
                         {
                             current_ignore = should_ignore;
                         }
+                    }
+                });
+
+                // 1b. Auto-persist Window Position on Drag
+                //
+                // The panel header and dock use `-webkit-app-region: drag`, which moves
+                // the OS window directly (no JS mousemove events). We catch the resulting
+                // WindowEvent::Moved and persist widget_x / widget_y so the user's chosen
+                // spot survives a restart. Throttled to at most one write per 300ms so a
+                // rapid drag doesn't hammer SQLite.
+                let app_handle_for_move = app.handle().clone();
+                let last_save: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
+                main_window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::Moved(pos) = event {
+                        let mut ls = match last_save.lock() {
+                            Ok(g) => g,
+                            Err(_) => return,
+                        };
+                        if let Some(t) = *ls {
+                            if t.elapsed() < Duration::from_millis(300) {
+                                return;
+                            }
+                        }
+                        *ls = Some(Instant::now());
+                        drop(ls);
+
+                        let db = app_handle_for_move.state::<db::Database>();
+                        let _ = db.set_setting("widget_x", &pos.x.to_string());
+                        let _ = db.set_setting("widget_y", &pos.y.to_string());
                     }
                 });
             }

@@ -52,6 +52,14 @@ export class WindowService {
     }
   }
 
+  public async setWindowPosition(x: number, y: number): Promise<void> {
+    try {
+      await this.tauriService.invokeCommand('set_window_position', { x, y });
+    } catch (e) {
+      console.warn('Set window position failed', e);
+    }
+  }
+
   public async focusWindow(): Promise<void> {
     try {
       await this.tauriService.invokeCommand('window_set_focus');
