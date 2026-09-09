@@ -26,4 +26,9 @@ tauri-plugin-log = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-notification = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
+ureq = { version = "2", features = ["json"] }
+base64 = "0.22"
+sha2 = "0.10"
+rand = "0.8"
+urlencoding = "2"
 

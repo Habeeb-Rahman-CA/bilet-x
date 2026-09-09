@@ -22,8 +22,11 @@ import {
 } from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
+import { MessagesComponent } from './components/messages/messages.component';
+import { JiraComponent } from './components/jira/jira.component';
 import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import { IntegrationManagerService } from '../../integrations/core/integration-manager.service';
 
 @Component({
   selector: 'app-widget',
@@ -33,6 +36,8 @@ import { SettingsComponent } from './components/settings/settings.component';
     DockComponent,
     NoteComponent,
     TaskComponent,
+    MessagesComponent,
+    JiraComponent,
     ActivityComponent,
     SettingsComponent,
   ],
@@ -116,6 +121,12 @@ import { SettingsComponent } from './components/settings/settings.component';
             <!-- VIEW 2: TASK COMPONENT -->
             <app-task *ngIf="activeTab().id === 'tasks'"></app-task>
 
+            <!-- VIEW 2b: MESSAGES / GMAIL COMPONENT -->
+            <app-messages *ngIf="activeTab().id === 'messages'"></app-messages>
+
+            <!-- VIEW 2c: JIRA COMPONENT -->
+            <app-jira *ngIf="activeTab().id === 'jira'"></app-jira>
+
             <!-- VIEW 3: ACTIVITY COMPONENT -->
             <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
 
@@ -124,7 +135,7 @@ import { SettingsComponent } from './components/settings/settings.component';
           </div>
         </div>
 
-        <!-- DOCK COMPONENT (Notes, Tasks, Activity, Settings) -->
+        <!-- DOCK COMPONENT (Notes, Tasks, Gmail, Activity, Settings) -->
         <app-dock
           #dockEl
           [tabs]="visibleTabs()"
@@ -144,15 +155,46 @@ import { SettingsComponent } from './components/settings/settings.component';
 export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
 
-  // EXACT ORDER: 1. note, 2. task, 3. activity, 4. settings
-  public tabs: DockTab[] = [
+  public unreadMessagesCount = computed(
+    () => this.integrationManager.unifiedMessages().filter((m) => !m.isRead).length
+  );
+
+  // Jira is "Coming Soon" for this release — no live badge count.
+  // Restore alongside the full JiraComponent implementation.
+  // public openJiraCount = computed(
+  //   () =>
+  //     this.integrationManager
+  //       .unifiedTasks()
+  //       .filter(
+  //         (t) => t.providerId === 'jira' && t.status !== 'done' && t.status !== 'cancelled'
+  //       ).length
+  // );
+
+  public allAvailableTabs = computed<DockTab[]>(() => [
     { id: 'notes', label: 'Notes' },
     { id: 'tasks', label: 'Tasks' },
+    {
+      id: 'messages',
+      label: 'Gmail',
+      icon: 'gmail',
+      badgeCount: this.integrationManager.hasCapability('messages')
+        ? this.unreadMessagesCount()
+        : 0,
+    },
+    {
+      id: 'jira',
+      label: 'Jira',
+      icon: 'jira',
+      // Coming Soon — no badge until the full integration is re-enabled.
+      // badgeCount: this.integrationManager.hasCapability('tasks')
+      //   ? this.openJiraCount()
+      //   : 0,
+    },
     { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
-  ];
+  ]);
 
-  public activeTab = signal<DockTab>(this.tabs[0]);
+  public activeTab = signal<DockTab>({ id: 'notes', label: 'Notes' });
 
   // Derived from the saved widget_position setting. Drives dock alignment
   // inside the transparent 640x440 window and the side the panel flies out to.
@@ -189,10 +231,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   // Filter tabs by per-tab visibility settings. Falls back to full list if the
   // user ever hides every tab (never leave the dock unusable).
   public visibleTabs = computed<DockTab[]>(() => {
-    const visible = this.tabs.filter(
+    const all = this.allAvailableTabs();
+    const visible = all.filter(
       (t) => this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
     );
-    return visible.length > 0 ? visible : this.tabs;
+    return visible.length > 0 ? visible : all;
   });
 
   @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;
@@ -206,7 +249,8 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private windowService: WindowService,
     private persistence: PersistenceService,
-    private layoutService: LayoutService
+    private layoutService: LayoutService,
+    public integrationManager: IntegrationManagerService
   ) {
     // Re-measure whenever the panel expands/collapses. Effects run outside the
     // render lifecycle, so we defer to rAF and also re-measure after the 180ms

@@ -1,14 +1,20 @@
 import { Component, OnDestroy, Signal, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { WindowService } from '../../../../core/tauri/window.service';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
 import { NotificationService } from '../../../../core/tauri/notification.service';
 import { DockFlipService } from '../../../../core/services/dock-flip.service';
+import { IntegrationRegistryService } from '../../../../integrations/core/integration-registry.service';
+import { IntegrationManagerService } from '../../../../integrations/core/integration-manager.service';
+import { Integration } from '../../../../integrations/core/integration.interface';
+import { UserConnection } from '../../../../integrations/core/models/connection.model';
+import { IntegrationCategory } from '../../../../integrations/core/capabilities/capability.types';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="space-y-3 text-xs">
       <!-- 1. WIDGET POSITION SETTING -->
@@ -100,7 +106,7 @@ import { DockFlipService } from '../../../../core/services/dock-flip.service';
           <div class="text-[10px] text-neutral-400">Visible tabs</div>
           <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
             <button
-              *ngFor="let tab of allTabs"
+              *ngFor="let tab of allTabs()"
               (click)="toggleTabVisibility(tab.id)"
               type="button"
               [ngClass]="toggleClasses(isTabVisible(tab.id), true)"
@@ -262,7 +268,165 @@ import { DockFlipService } from '../../../../core/services/dock-flip.service';
         </button>
       </div>
 
-      <!-- 6. ABOUT & VERSION SCREEN -->
+      <!-- 6. PLUGGABLE INTEGRATIONS MANAGEMENT -->
+      <div class="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-[11px] font-semibold text-neutral-200">Connected Services</div>
+            <div class="text-[9px] text-neutral-400">Sync external tasks, messages & calendar</div>
+          </div>
+          <button
+            *ngIf="integrationManager.activeConnections().length > 0"
+            (click)="syncAllIntegrations()"
+            type="button"
+            [disabled]="integrationManager.isSyncing()"
+            class="flex items-center space-x-1 rounded-md border border-neutral-800 bg-neutral-800/80 px-2 py-1 font-mono text-[9px] text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
+          >
+            <span [class.animate-spin]="integrationManager.isSyncing()">↻</span>
+            <span>{{ integrationManager.isSyncing() ? 'Syncing...' : 'Sync All' }}</span>
+          </button>
+        </div>
+
+        <!-- CATEGORIES LIST -->
+        <div *ngFor="let cat of integrationCategories()" class="space-y-1.5">
+          <div class="font-mono text-[9px] font-bold uppercase tracking-wider text-neutral-400">
+            {{ cat.label }}
+          </div>
+
+          <!-- PROVIDERS IN CATEGORY -->
+          <div class="space-y-1.5">
+            <div
+              *ngFor="let provider of cat.providers"
+              class="rounded-lg border border-neutral-800/80 bg-neutral-950/60 p-2.5 transition hover:border-neutral-700"
+            >
+              <div class="flex items-start justify-between">
+                <div class="space-y-1">
+                  <div class="flex items-center space-x-1.5">
+                    <span class="font-semibold text-neutral-200">{{ provider.displayName }}</span>
+                    <!-- Capability badges -->
+                    <span
+                      *ngFor="let cap of provider.supportedCapabilities"
+                      class="rounded bg-neutral-800 px-1.5 py-0.2 font-mono text-[8px] text-neutral-400"
+                    >
+                      {{ cap }}
+                    </span>
+                  </div>
+                  <div class="text-[10px] text-neutral-400">{{ provider.description }}</div>
+                </div>
+
+                <!-- Action button: providers with inline tab UI show a hint; others show Connect -->
+                <div>
+                  <!-- All other providers: show Connect button -->
+                  <button
+                    *ngIf="!provider.hasInlineConnectUI && getConnectionsForProvider(provider.id).length === 0"
+                    (click)="openConnectForm(provider)"
+                    type="button"
+                    class="rounded-md bg-white px-2 py-1 font-mono text-[9px] font-medium text-black transition hover:bg-neutral-200"
+                  >
+                    Connect
+                  </button>
+                </div>
+              </div>
+
+              <!-- ACTIVE CONNECTIONS FOR THIS PROVIDER -->
+              <div *ngIf="getConnectionsForProvider(provider.id).length > 0" class="mt-2 space-y-1.5 border-t border-neutral-800/60 pt-2">
+                <div
+                  *ngFor="let conn of getConnectionsForProvider(provider.id)"
+                  class="flex items-center justify-between rounded-md bg-neutral-900 p-1.5 text-[10px]"
+                >
+                  <div class="flex items-center space-x-1.5 overflow-hidden">
+                    <span
+                      class="h-1.5 w-1.5 shrink-0 rounded-full"
+                      [class.bg-emerald-400]="conn.status === 'connected'"
+                      [class.bg-yellow-400]="conn.status === 'connecting' || conn.status === 'syncing'"
+                      [class.bg-red-400]="conn.status === 'error'"
+                    ></span>
+                    <span class="truncate font-mono text-neutral-300">{{ conn.accountName }}</span>
+                    <span *ngIf="conn.accountEmail" class="truncate text-[9px] text-neutral-500">({{ conn.accountEmail }})</span>
+                  </div>
+
+                  <div class="flex items-center space-x-1 shrink-0">
+                    <button
+                      (click)="testConnection(conn.connectionId)"
+                      type="button"
+                      [title]="'Test connection'"
+                      class="rounded px-1.5 py-0.5 font-mono text-[9px] text-neutral-400 transition hover:bg-neutral-800 hover:text-white"
+                    >
+                      {{ getTestStatusLabel(conn.connectionId) }}
+                    </button>
+                    <button
+                      (click)="disconnect(conn.connectionId)"
+                      type="button"
+                      class="rounded px-1.5 py-0.5 font-mono text-[9px] text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- EXPANDABLE CONNECTION CONFIG FORM (not shown for providers with inline tab setup) -->
+              <div
+                *ngIf="!provider.hasInlineConnectUI && activeForm() && activeForm()?.providerId === provider.id"
+                class="mt-2.5 rounded-lg border border-neutral-700 bg-neutral-900 p-2.5 space-y-2 text-xs"
+              >
+                <div class="flex items-center justify-between border-b border-neutral-800 pb-1.5">
+                  <span class="font-semibold text-white">Configure {{ provider.displayName }}</span>
+                  <button
+                    (click)="closeConnectForm()"
+                    type="button"
+                    class="text-neutral-500 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div *ngIf="activeForm()?.error" class="rounded bg-red-500/10 border border-red-500/20 p-1.5 text-[9px] text-red-400">
+                  {{ activeForm()?.error }}
+                </div>
+
+                <!-- DYNAMIC CONFIG FIELDS -->
+                <div *ngFor="let field of provider.configFields" class="space-y-0.5">
+                  <label class="flex items-center justify-between text-[9px] text-neutral-300">
+                    <span>{{ field.label }} <span *ngIf="field.required" class="text-red-400">*</span></span>
+                    <span *ngIf="field.isSecret" class="font-mono text-[8px] text-emerald-400">Encrypted</span>
+                  </label>
+                  <input
+                    [type]="field.type"
+                    [placeholder]="field.placeholder || ''"
+                    [(ngModel)]="activeForm()!.formData[field.key]"
+                    class="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-[10px] text-white placeholder-neutral-600 focus:border-neutral-500 focus:outline-none"
+                  />
+                  <div *ngIf="field.description" class="text-[8px] text-neutral-500">
+                    {{ field.description }}
+                  </div>
+                </div>
+
+                <!-- FORM ACTIONS -->
+                <div class="flex items-center justify-end space-x-1.5 pt-1">
+                  <button
+                    (click)="closeConnectForm()"
+                    type="button"
+                    class="rounded px-2 py-1 font-mono text-[9px] text-neutral-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    (click)="saveConnection(provider)"
+                    type="button"
+                    [disabled]="activeForm()?.isSaving"
+                    class="rounded bg-white px-2.5 py-1 font-mono text-[9px] font-medium text-black hover:bg-neutral-200 disabled:opacity-50"
+                  >
+                    {{ activeForm()?.isSaving ? 'Connecting...' : 'Save & Connect' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. ABOUT & VERSION SCREEN -->
       <div class="space-y-1 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 text-[10px]">
         <div class="flex items-center justify-between">
           <span class="font-mono font-bold text-white uppercase">Bilet-X Utility</span>
@@ -316,12 +480,14 @@ export class SettingsComponent implements OnDestroy {
     { id: 'horizontal', label: 'Horizontal' },
   ];
 
-  public allTabs = [
+  public allTabs = computed(() => [
     { id: 'notes', label: 'Notes' },
     { id: 'tasks', label: 'Tasks' },
+    { id: 'messages', label: 'Gmail' },
+    { id: 'jira', label: 'Jira' },
     { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
-  ];
+  ]);
 
   public currentPosition: Signal<string>;
   public currentTheme: Signal<string>;
@@ -346,11 +512,45 @@ export class SettingsComponent implements OnDestroy {
   private clearTasksTimer: number | undefined;
   private readonly CONFIRM_WINDOW_MS = 3000;
 
+  // Integrations state
+  public activeForm = signal<{
+    providerId: string;
+    connectionId?: string;
+    formData: Record<string, string>;
+    isSaving: boolean;
+    error: string | null;
+  } | null>(null);
+
+  public testStatusMap = signal<Map<string, 'testing' | 'success' | 'failed'>>(new Map());
+
+  public integrationCategories = computed(() => {
+    const providers = this.registry.registeredProviders();
+    const categories: { id: IntegrationCategory; label: string; providers: Integration[] }[] = [
+      { id: 'communication', label: 'Communication & Messages', providers: [] },
+      { id: 'tasks', label: 'Tasks & Issue Trackers', providers: [] },
+      { id: 'calendar', label: 'Calendar & Schedule', providers: [] },
+      { id: 'developer', label: 'Developer Tools', providers: [] },
+    ];
+
+    for (const p of providers) {
+      const match = categories.find((c) => c.id === p.category);
+      if (match) {
+        match.providers.push(p);
+      } else {
+        categories.push({ id: p.category, label: p.category, providers: [p] });
+      }
+    }
+
+    return categories.filter((c) => c.providers.length > 0);
+  });
+
   constructor(
     private windowService: WindowService,
     private persistence: PersistenceService,
     private notificationService: NotificationService,
-    private dockFlip: DockFlipService
+    private dockFlip: DockFlipService,
+    public registry: IntegrationRegistryService,
+    public integrationManager: IntegrationManagerService
   ) {
     this.currentPosition = computed(() =>
       this.persistence.getSettingValue('widget_position', 'right')
@@ -369,7 +569,7 @@ export class SettingsComponent implements OnDestroy {
       () => this.persistence.getSettingValue('dock_auto_hide', 'false') === 'true'
     );
     this.visibleTabCount = computed(
-      () => this.allTabs.filter((t) => this.isTabVisible(t.id)).length
+      () => this.allTabs().filter((t) => this.isTabVisible(t.id)).length
     );
     this.activePositions = computed(() =>
       this.currentDockOrientation() === 'horizontal'
@@ -385,6 +585,90 @@ export class SettingsComponent implements OnDestroy {
     if (this.clearNotesTimer !== undefined) window.clearTimeout(this.clearNotesTimer);
     if (this.clearTasksTimer !== undefined) window.clearTimeout(this.clearTasksTimer);
     if (this.testNotificationTimer !== undefined) window.clearTimeout(this.testNotificationTimer);
+  }
+
+  // Integrations helper methods
+  public getConnectionsForProvider(providerId: string): UserConnection[] {
+    return this.integrationManager.getConnectionsForProvider(providerId);
+  }
+
+  public openConnectForm(provider: Integration, existing?: UserConnection): void {
+    const formData: Record<string, string> = {};
+    for (const field of provider.configFields) {
+      formData[field.key] = existing?.config?.[field.key] || field.defaultValue || '';
+    }
+    this.activeForm.set({
+      providerId: provider.id,
+      connectionId: existing?.connectionId,
+      formData,
+      isSaving: false,
+      error: null,
+    });
+  }
+
+  public closeConnectForm(): void {
+    this.activeForm.set(null);
+  }
+
+  public async saveConnection(provider: Integration): Promise<void> {
+    const form = this.activeForm();
+    if (!form) return;
+
+    // Validate required fields
+    for (const field of provider.configFields) {
+      if (field.required && !form.formData[field.key]?.trim()) {
+        this.activeForm.update((f) => f ? { ...f, error: `${field.label} is required.` } : null);
+        return;
+      }
+    }
+
+    this.activeForm.update((f) => f ? { ...f, isSaving: true, error: null } : null);
+
+    try {
+      const conn = await this.integrationManager.connectProvider(
+        provider.id,
+        form.formData,
+        form.connectionId
+      );
+
+      if (conn.status === 'error') {
+        this.activeForm.update((f) => f ? { ...f, isSaving: false, error: conn.errorMessage || 'Connection failed' } : null);
+      } else {
+        this.closeConnectForm();
+      }
+    } catch (err: any) {
+      this.activeForm.update((f) => f ? { ...f, isSaving: false, error: err?.message || 'Failed to connect' } : null);
+    }
+  }
+
+  public async disconnect(connectionId: string): Promise<void> {
+    await this.integrationManager.disconnectConnection(connectionId);
+  }
+
+  public async testConnection(connectionId: string): Promise<void> {
+    this.testStatusMap.update((m) => new Map(m).set(connectionId, 'testing'));
+    const success = await this.integrationManager.testConnection(connectionId);
+    this.testStatusMap.update((m) => new Map(m).set(connectionId, success ? 'success' : 'failed'));
+
+    setTimeout(() => {
+      this.testStatusMap.update((m) => {
+        const next = new Map(m);
+        next.delete(connectionId);
+        return next;
+      });
+    }, 3000);
+  }
+
+  public getTestStatusLabel(connectionId: string): string {
+    const status = this.testStatusMap().get(connectionId);
+    if (status === 'testing') return 'Testing...';
+    if (status === 'success') return '✓ Valid';
+    if (status === 'failed') return '✕ Failed';
+    return 'Test';
+  }
+
+  public async syncAllIntegrations(): Promise<void> {
+    await this.integrationManager.syncAll();
   }
 
   // Shared toggle-pill classes. Active pills have inverted colors (white bg +
