@@ -20,8 +20,11 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "tab_jira_visible",
     "tab_calendar_visible",
     "tab_calculator_visible",
+    "tab_pomodoro_visible",
     "tab_activity_visible",
     "tab_settings_visible",
+    "pomodoro_focus_minutes",
+    "pomodoro_break_minutes",
 ];
 
 const VALID_TASK_STATUSES: &[&str] = &["pending", "in_progress", "completed"];
@@ -91,6 +94,16 @@ fn require_max_len(value: &str, max: usize, field: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn require_bounded_u32(value: &str, min: u32, max: u32, field: &str) -> Result<(), String> {
+    let n: u32 = value
+        .parse()
+        .map_err(|_| format!("{} must be a positive integer", field))?;
+    if n < min || n > max {
+        return Err(format!("{} must be between {} and {}", field, min, max));
+    }
+    Ok(())
+}
+
 fn validate_setting(key: &str, value: &str) -> Result<(), String> {
     if key.is_empty() {
         return Err("setting key cannot be empty".to_string());
@@ -115,8 +128,11 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
         | "tab_jira_visible"
         | "tab_calendar_visible"
         | "tab_calculator_visible"
+        | "tab_pomodoro_visible"
         | "tab_activity_visible"
         | "tab_settings_visible" => require_one_of(value, VALID_BOOL_STRINGS, key),
+        "pomodoro_focus_minutes" => require_bounded_u32(value, 1, 120, key),
+        "pomodoro_break_minutes" => require_bounded_u32(value, 1, 60, key),
         _ => Ok(()),
     }
 }

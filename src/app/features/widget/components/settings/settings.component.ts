@@ -480,6 +480,8 @@ export class SettingsComponent implements OnDestroy {
     { id: 'horizontal', label: 'Horizontal' },
   ];
 
+  // Settings is intentionally excluded — it must always stay visible so the
+  // user can never lock themselves out of this screen.
   public allTabs = computed(() => [
     { id: 'notes', label: 'Notes' },
     { id: 'tasks', label: 'Tasks' },
@@ -487,8 +489,8 @@ export class SettingsComponent implements OnDestroy {
     { id: 'jira', label: 'Jira' },
     { id: 'calendar', label: 'Calendar' },
     { id: 'calculator', label: 'Calculator' },
+    { id: 'pomodoro', label: 'Pomodoro' },
     { id: 'activity', label: 'Activity' },
-    { id: 'settings', label: 'Settings' },
   ]);
 
   public currentPosition: Signal<string>;

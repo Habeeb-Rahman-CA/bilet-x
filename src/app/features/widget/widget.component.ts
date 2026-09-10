@@ -26,6 +26,7 @@ import { MessagesComponent } from './components/messages/messages.component';
 import { JiraComponent } from './components/jira/jira.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
+import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
 import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { IntegrationManagerService } from '../../integrations/core/integration-manager.service';
@@ -42,6 +43,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     JiraComponent,
     CalendarComponent,
     CalculatorComponent,
+    PomodoroComponent,
     ActivityComponent,
     SettingsComponent,
   ],
@@ -137,6 +139,9 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2e: CALCULATOR COMPONENT -->
             <app-calculator *ngIf="activeTab().id === 'calculator'"></app-calculator>
 
+            <!-- VIEW 2f: POMODORO COMPONENT -->
+            <app-pomodoro *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro>
+
             <!-- VIEW 3: ACTIVITY COMPONENT -->
             <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
 
@@ -202,6 +207,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     },
     { id: 'calendar', label: 'Calendar' },
     { id: 'calculator', label: 'Calculator' },
+    { id: 'pomodoro', label: 'Pomodoro' },
     { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ]);
@@ -240,14 +246,15 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.dockAutoHideEnabled() && !this.isPanelExpanded() && !this.isHoveringDock()
   );
 
-  // Filter tabs by per-tab visibility settings. Falls back to full list if the
-  // user ever hides every tab (never leave the dock unusable).
+  // Filter tabs by per-tab visibility settings. Settings is always included so
+  // the user can never accidentally lock themselves out of the settings screen.
   public visibleTabs = computed<DockTab[]>(() => {
     const all = this.allAvailableTabs();
-    const visible = all.filter(
-      (t) => this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
+    return all.filter(
+      (t) =>
+        t.id === 'settings' ||
+        this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
     );
-    return visible.length > 0 ? visible : all;
   });
 
   @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;
