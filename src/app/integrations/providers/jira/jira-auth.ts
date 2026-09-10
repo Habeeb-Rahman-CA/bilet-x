@@ -1,65 +1,95 @@
 import { AuthHandler, AuthResult } from '../../core/auth/auth-handler.interface';
+import { JiraOAuthService } from '../../core/auth/jira-oauth.service';
 
 /**
- * Jira Atlassian Cloud Authentication Handler.
- * Handles API token authentication via Basic Auth header (email:apiToken base64).
+ * Atlassian Jira OAuth 2.0 (3LO) Authentication Handler.
+ *
+ * Delegates to the Rust-side loopback OAuth flow, then reports back the
+ * access + refresh tokens along with the first accessible Jira site's
+ * cloudId + siteUrl (surfaced via configMetadata so BaseIntegration persists
+ * them on the UserConnection). Subsequent API calls use
+ * https://api.atlassian.com/ex/jira/{cloudId}/rest/api/3/...
  */
 export class JiraAuthHandler implements AuthHandler {
-  public readonly authType = 'api_token' as const;
+  public readonly authType = 'oauth2' as const;
 
-  public async authenticate(credentials: Record<string, string>): Promise<AuthResult> {
-    const domain = credentials['domain']?.trim();
-    const email = credentials['email']?.trim();
-    const apiToken = credentials['apiToken']?.trim();
+  constructor(private oauth?: JiraOAuthService) {}
 
-    if (!domain) {
-      return { success: false, errorMessage: 'Jira domain (e.g. your-domain.atlassian.net) is required.' };
-    }
-    if (!email) {
-      return { success: false, errorMessage: 'Atlassian account email is required.' };
-    }
-    if (!apiToken) {
-      return { success: false, errorMessage: 'Atlassian API token is required.' };
+  public async authenticate(_credentials: Record<string, string>): Promise<AuthResult> {
+    if (!this.oauth) {
+      return {
+        success: false,
+        errorMessage: 'Atlassian OAuth service unavailable in this environment.',
+      };
     }
 
-    // Format domain nicely
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-    const accountName = credentials['accountName'] || `${cleanDomain.split('.')[0]} (${email})`;
+    try {
+      const tokens = await this.oauth.login();
+      const displayName = tokens.displayName || tokens.email || 'Atlassian Account';
+      return {
+        success: true,
+        accountName: displayName,
+        accountEmail: tokens.email,
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn,
+        configMetadata: {
+          cloudId: tokens.cloudId,
+          siteUrl: tokens.siteUrl,
+          siteName: tokens.siteName,
+        },
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        errorMessage:
+          err?.message || 'Atlassian sign-in was cancelled or failed. Please try again.',
+      };
+    }
+  }
 
-    // Verify connection if running with network, or validate syntax
-    const basicToken = btoa(`${email}:${apiToken}`);
-
-    return {
-      success: true,
-      accountName,
-      accountEmail: email,
-      token: basicToken,
-    };
+  public async refreshToken(
+    _config: Record<string, string>,
+    refreshToken: string
+  ): Promise<AuthResult> {
+    if (!this.oauth) {
+      return { success: false, errorMessage: 'OAuth service unavailable.' };
+    }
+    try {
+      const result = await this.oauth.refresh(refreshToken);
+      return {
+        success: true,
+        token: result.accessToken,
+        refreshToken: result.refreshToken,
+        expiresIn: result.expiresIn,
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        errorMessage: err?.message || 'Failed to refresh Atlassian access token.',
+      };
+    }
   }
 
   public async validateConnection(
     config: Record<string, string>,
     token: string
   ): Promise<boolean> {
-    const domain = config['domain'];
-    if (!domain || !token) return false;
+    if (!token) return false;
 
     try {
-      const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-      const url = `https://${cleanDomain}/rest/api/3/myself`;
-      const res = await fetch(url, {
+      const res = await fetch('https://api.atlassian.com/me', {
         headers: this.getAuthHeaders(config, token),
       });
       return res.ok;
     } catch {
-      // In offline / mock desktop mode, if token exists consider it valid syntax
       return !!token;
     }
   }
 
-  public getAuthHeaders(config: Record<string, string>, token: string): Record<string, string> {
+  public getAuthHeaders(_config: Record<string, string>, token: string): Record<string, string> {
     return {
-      Authorization: `Basic ${token}`,
+      Authorization: `Bearer ${token}`,
       Accept: 'application/json',
       'Content-Type': 'application/json',
     };

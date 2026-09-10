@@ -179,16 +179,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     () => this.integrationManager.unifiedMessages().filter((m) => !m.isRead).length
   );
 
-  // Jira is "Coming Soon" for this release — no live badge count.
-  // Restore alongside the full JiraComponent implementation.
-  // public openJiraCount = computed(
-  //   () =>
-  //     this.integrationManager
-  //       .unifiedTasks()
-  //       .filter(
-  //         (t) => t.providerId === 'jira' && t.status !== 'done' && t.status !== 'cancelled'
-  //       ).length
-  // );
+  public openJiraCount = computed(
+    () =>
+      this.integrationManager
+        .unifiedTasks()
+        .filter(
+          (t) => t.providerId === 'jira' && t.status !== 'done' && t.status !== 'cancelled'
+        ).length
+  );
 
   // Release-visible tabs. Tasks / Calculator / Pomodoro / Clipboard / Activity
   // are intentionally hidden until their features are production-ready — the
@@ -210,10 +208,9 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       id: 'jira',
       label: 'Jira',
       icon: 'jira',
-      // Coming Soon — no badge until the full integration is re-enabled.
-      // badgeCount: this.integrationManager.hasCapability('tasks')
-      //   ? this.openJiraCount()
-      //   : 0,
+      badgeCount: this.integrationManager.hasCapability('tasks')
+        ? this.openJiraCount()
+        : 0,
     },
     { id: 'calendar', label: 'Calendar' },
     // { id: 'calculator', label: 'Calculator' },

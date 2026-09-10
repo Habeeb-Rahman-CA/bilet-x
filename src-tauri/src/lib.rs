@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod db;
 pub mod google_oauth;
+pub mod jira_oauth;
 pub mod models;
 pub mod state;
 
@@ -114,6 +115,8 @@ pub fn run() {
             commands::open_external_url,
             commands::google_oauth_login,
             commands::google_oauth_refresh,
+            commands::jira_oauth_login,
+            commands::jira_oauth_refresh,
         ])
         .setup(|app| {
             let app_dir = app

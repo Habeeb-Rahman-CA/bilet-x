@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { Injector } from '@angular/core';
 import { IntegrationRegistryService } from './core/integration-registry.service';
 import { IntegrationManagerService } from './core/integration-manager.service';
 import { JiraIntegration } from './providers/jira/jira.integration';
@@ -11,6 +12,7 @@ import { UnifiedMessage } from './core/models/unified-message.model';
 import { TokenStorage } from './core/auth/token-storage.interface';
 import { AuthHandler } from './core/auth/auth-handler.interface';
 import { CapabilityType } from './core/capabilities/capability.types';
+import { JiraOAuthService } from './core/auth/jira-oauth.service';
 
 // In-memory mock token storage for isolated unit testing
 class MockTokenStorage implements TokenStorage {
@@ -41,6 +43,28 @@ class MockPersistenceService {
   }
 }
 
+// Fake OAuth service that skips the real browser flow. Used so we can
+// exercise the OAuth-only Jira integration in unit tests without opening a
+// browser or hitting Atlassian.
+class MockJiraOAuthService implements Partial<JiraOAuthService> {
+  isAvailable() { return true; }
+  async login() {
+    return {
+      accessToken: 'jira_access_123',
+      refreshToken: 'jira_refresh_456',
+      expiresIn: 3600,
+      email: 'dev@acme.com',
+      displayName: 'Dev Acme',
+      cloudId: 'cloud-abc',
+      siteUrl: 'https://acme.atlassian.net',
+      siteName: 'acme',
+    };
+  }
+  async refresh() {
+    return { accessToken: 'jira_access_refreshed', refreshToken: 'jira_refresh_456', expiresIn: 3600 };
+  }
+}
+
 describe('Pluggable Integration Architecture', () => {
   let registry: IntegrationRegistryService;
   let manager: IntegrationManagerService;
@@ -48,18 +72,26 @@ describe('Pluggable Integration Architecture', () => {
   let persistence: MockPersistenceService;
   let jira: JiraIntegration;
   let gmail: GmailIntegration;
+  let jiraOAuth: MockJiraOAuthService;
+  let injector: Injector;
 
   beforeEach(() => {
     registry = new IntegrationRegistryService();
     tokenStorage = new MockTokenStorage();
     persistence = new MockPersistenceService();
-    jira = new JiraIntegration(tokenStorage as any);
-    gmail = new GmailIntegration(tokenStorage as any);
+    jiraOAuth = new MockJiraOAuthService();
     manager = new IntegrationManagerService(
       registry,
       persistence as any,
       tokenStorage as any
     );
+    // Minimal injector that only knows how to resolve IntegrationManagerService —
+    // enough for JiraIntegration.getConnectionConfig() to find the connection.
+    injector = Injector.create({
+      providers: [{ provide: IntegrationManagerService, useValue: manager }],
+    });
+    jira = new JiraIntegration(tokenStorage as any, injector, jiraOAuth as any);
+    gmail = new GmailIntegration(tokenStorage as any);
   });
 
   describe('1. Capability-Based Isolation', () => {
@@ -153,7 +185,7 @@ describe('Pluggable Integration Architecture', () => {
       const normalized: UnifiedTask = jira.normalizeJiraIssue(
         rawJiraIssue,
         'conn_jira_1',
-        'test.atlassian.net'
+        'https://test.atlassian.net'
       );
 
       expect(normalized.id).toBe('jira:BACKEND-42');
@@ -206,33 +238,32 @@ describe('Pluggable Integration Architecture', () => {
       registry.register(gmail);
     });
 
-    it('should connect provider, store token securely, and register connection', async () => {
-      const conn = await manager.connectProvider('jira', {
-        domain: 'acme.atlassian.net',
-        email: 'dev@acme.com',
-        apiToken: 'secret_token_123',
-      });
+    it('should connect Jira via OAuth, store token securely, and persist site metadata', async () => {
+      // One-click OAuth: no user credentials — the mock oauth service returns
+      // access + refresh tokens plus cloudId/siteUrl in configMetadata.
+      const conn = await manager.connectProvider('jira', {});
 
       expect(conn.status).toBe('connected');
       expect(conn.providerId).toBe('jira');
       expect(conn.hasStoredCredentials).toBe(true);
+      expect(conn.accountEmail).toBe('dev@acme.com');
 
-      // Verify token was saved in TokenStorage and not in plain config
+      // Token is saved in TokenStorage, not on the connection.
       expect(await tokenStorage.hasToken(conn.connectionId)).toBe(true);
-      expect(conn.config['apiToken']).toBeUndefined(); // Secret is stripped from config
-      expect(conn.config['domain']).toBe('acme.atlassian.net');
+
+      // Non-secret site metadata (cloudId/siteUrl/siteName) surfaces on config
+      // so subsequent API calls can build api.atlassian.com/ex/jira/{cloudId} URLs.
+      expect(conn.config['cloudId']).toBe('cloud-abc');
+      expect(conn.config['siteUrl']).toBe('https://acme.atlassian.net');
+      expect(conn.config['siteName']).toBe('acme');
     });
 
     it('should report capability availability based on active connections', async () => {
       expect(manager.hasCapability('tasks')).toBe(false);
       expect(manager.hasCapability('messages')).toBe(false);
 
-      // Connect Jira
-      await manager.connectProvider('jira', {
-        domain: 'acme.atlassian.net',
-        email: 'dev@acme.com',
-        apiToken: 'token_1',
-      });
+      // Connect Jira via one-click OAuth (mock service resolves synchronously).
+      await manager.connectProvider('jira', {});
 
       expect(manager.hasCapability('tasks')).toBe(true);
       expect(manager.hasCapability('messages')).toBe(false);
@@ -255,17 +286,38 @@ describe('Pluggable Integration Architecture', () => {
     });
 
     it('should aggregate tasks across task providers without UI knowing the provider', async () => {
-      await manager.connectProvider('jira', {
-        domain: 'acme.atlassian.net',
-        email: 'dev@acme.com',
-        apiToken: 'token_1',
-      });
+      // Stub the Jira REST search BEFORE connect — manager.connectProvider kicks
+      // off a fire-and-forget syncAll() which fetches too, so a `mockResolvedValueOnce`
+      // races against our own manager.fetchTasks() call below.
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          issues: [
+            {
+              id: '90001',
+              key: 'ACME-1',
+              self: 'https://api.atlassian.com/ex/jira/cloud-abc/rest/api/3/issue/90001',
+              fields: {
+                summary: 'Wire up sign-in flow',
+                created: '2026-09-01T10:00:00Z',
+                updated: '2026-09-05T12:00:00Z',
+                status: { id: '1', name: 'To Do', statusCategory: { id: 2, key: 'new', name: 'To Do' } },
+              },
+            },
+          ],
+        }),
+      } as Response);
+
+      await manager.connectProvider('jira', {});
 
       const tasks = await manager.fetchTasks();
       expect(tasks.length).toBeGreaterThan(0);
       expect(manager.unifiedTasks().length).toBe(tasks.length);
-      expect(tasks[0].title).toBeDefined();
-      expect(tasks[0].status).toBeDefined();
+      expect(tasks[0].title).toBe('Wire up sign-in flow');
+      expect(tasks[0].sourceId).toBe('ACME-1');
+      expect(tasks[0].webUrl).toBe('https://acme.atlassian.net/browse/ACME-1');
+      fetchSpy.mockRestore();
     });
 
     it('should authenticate Gmail, activate messages capability, and fetch user emails', async () => {
@@ -331,11 +383,7 @@ describe('Pluggable Integration Architecture', () => {
     });
 
     it('should cleanly disconnect provider and remove token', async () => {
-      const conn = await manager.connectProvider('jira', {
-        domain: 'acme.atlassian.net',
-        email: 'dev@acme.com',
-        apiToken: 'token_1',
-      });
+      const conn = await manager.connectProvider('jira', {});
 
       expect(manager.activeConnections().length).toBe(1);
       expect(await tokenStorage.hasToken(conn.connectionId)).toBe(true);
