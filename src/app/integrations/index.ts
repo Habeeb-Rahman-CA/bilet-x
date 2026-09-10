@@ -19,6 +19,7 @@ export * from './core/auth/token-storage.interface';
 export * from './core/auth/tauri-token-storage.service';
 export * from './core/auth/stored-credential';
 export * from './core/auth/google-oauth.service';
+export * from './core/auth/jira-oauth.service';
 
 // Core Integration Contracts & Services
 export * from './core/integration.interface';

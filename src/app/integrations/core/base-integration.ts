@@ -64,6 +64,7 @@ export abstract class BaseIntegration implements Integration {
     const nonSecretConfig = {
       ...existingConfig,
       ...this.extractNonSecretConfig(credentials),
+      ...(authResult.configMetadata ?? {}),
     };
 
     return {

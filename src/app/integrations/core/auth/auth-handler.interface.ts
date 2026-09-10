@@ -10,6 +10,12 @@ export interface AuthResult {
   refreshToken?: string;
   expiresIn?: number;
   errorMessage?: string;
+  /**
+   * Non-secret metadata discovered during authentication (e.g. OAuth-returned
+   * cloudId / siteUrl) that the integration needs to persist alongside the
+   * connection. Merged into UserConnection.config by BaseIntegration.
+   */
+  configMetadata?: Record<string, string>;
 }
 
 /**

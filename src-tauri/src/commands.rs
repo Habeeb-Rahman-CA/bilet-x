@@ -2,6 +2,7 @@ use crate::db::{
     ActivityRepository, ClipboardRepository, NoteRepository, SettingsRepository, TaskRepository,
 };
 use crate::google_oauth::{self, GoogleTokens, RefreshedTokens};
+use crate::jira_oauth::{self, JiraTokens, RefreshedJiraTokens};
 use crate::state::{AppState, InteractiveRect};
 use tauri::{State, Window};
 
@@ -576,6 +577,25 @@ pub async fn google_oauth_refresh(refresh_token: String) -> Result<RefreshedToke
     }
     tauri::async_runtime::spawn_blocking(move || {
         google_oauth::refresh_access_token(&refresh_token)
+    })
+    .await
+    .map_err(|e| format!("Refresh task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn jira_oauth_login() -> Result<JiraTokens, String> {
+    tauri::async_runtime::spawn_blocking(jira_oauth::run_login_flow)
+        .await
+        .map_err(|e| format!("OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn jira_oauth_refresh(refresh_token: String) -> Result<RefreshedJiraTokens, String> {
+    if refresh_token.trim().is_empty() {
+        return Err("refresh_token is required".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        jira_oauth::refresh_access_token(&refresh_token)
     })
     .await
     .map_err(|e| format!("Refresh task join error: {}", e))?

@@ -5,48 +5,6 @@ import { IntegrationManagerService } from '../../../../integrations/core/integra
 import { UnifiedTask } from '../../../../integrations/core/models/unified-task.model';
 import { WindowService } from '../../../../core/tauri/window.service';
 
-// ============================================================================
-// TEMPORARY STUB — Jira integration is not shipping in this release.
-// The full connect form + issue list + sync/refresh logic is preserved
-// verbatim in the /* ... */ block at the bottom of this file. To re-enable,
-// delete this stub component and uncomment the block.
-// ============================================================================
-
-@Component({
-  selector: 'app-jira',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div class="flex h-full flex-col items-center justify-center space-y-4 px-4 py-16 text-center">
-      <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900/80">
-        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-neutral-400">
-          <rect width="18" height="18" x="3" y="3" rx="2" />
-          <path d="M8 7v7" />
-          <path d="M12 7v4" />
-          <path d="M16 7v10" />
-        </svg>
-      </div>
-
-      <div class="space-y-1">
-        <div class="text-sm font-semibold text-white">Jira — Coming Soon</div>
-        <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[240px]">
-          Atlassian Jira sync isn't shipping in this release. It'll land in a future update with issue browsing, JQL filters, and status updates.
-        </div>
-      </div>
-
-      <span class="rounded-full border border-neutral-800 bg-neutral-900 px-2.5 py-1 font-mono text-[9px] uppercase tracking-wider text-neutral-500">
-        In development
-      </span>
-    </div>
-  `,
-})
-export class JiraComponent {}
-
-/* ============================================================================
- * FULL JIRA IMPLEMENTATION — DISABLED FOR THIS RELEASE.
- * Restore by deleting the stub above and unwrapping this block.
- * ============================================================================
-
 @Component({
   selector: 'app-jira',
   standalone: true,
@@ -55,15 +13,15 @@ export class JiraComponent {}
     <div class="flex h-full flex-col">
 
       <!-- ==========================================
-           NOT CONNECTED — CONNECT FORM
+           NOT CONNECTED — SIGN IN WITH ATLASSIAN CARD
            ========================================== -->
       <ng-container *ngIf="!isConnected()">
-        <div class="flex flex-1 flex-col space-y-4 overflow-y-auto px-1 py-4">
+        <div class="flex flex-1 flex-col items-center justify-center space-y-5 px-3 py-8">
 
           <div class="flex flex-col items-center space-y-1 text-center">
             <div class="text-sm font-semibold text-white">Connect Jira</div>
-            <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[240px]">
-              Sync your Atlassian Cloud issues with an email + API token. The token is stored securely on this device.
+            <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
+              Sign in once with Atlassian — Bilet-X keeps you signed in and lists everything assigned to you.
             </div>
           </div>
 
@@ -75,108 +33,56 @@ export class JiraComponent {}
             <span class="mr-1">⚠️</span>{{ connectError() }}
           </div>
 
-          <form (submit)="onConnect($event)" class="w-full space-y-2.5">
-            <!-- Domain -->
-            <div class="space-y-1">
-              <label class="block text-[9px] font-medium uppercase tracking-wider text-neutral-400">
-                Atlassian Domain
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="domain"
-                name="domain"
-                placeholder="your-company.atlassian.net"
-                autocomplete="off"
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-[11px] text-white placeholder-neutral-600 transition focus:border-neutral-500 focus:outline-none"
-              />
-            </div>
+          <!-- Sign in with Atlassian button (idle) -->
+          <button
+            *ngIf="!isConnecting()"
+            (click)="onSignInWithAtlassian()"
+            type="button"
+            class="flex w-full items-center justify-center space-x-2 rounded-lg bg-white py-2.5 px-4 font-semibold text-[12px] text-neutral-900 transition hover:bg-neutral-100 active:scale-[0.99]"
+          >
+            <!-- Atlassian mark -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 32 32" aria-hidden="true">
+              <defs>
+                <linearGradient id="jira-grad" x1="98.03" y1="41.58" x2="57.55" y2="82.06" gradientTransform="matrix(0.3125 0 0 -0.3125 -12.03 30.9)" gradientUnits="userSpaceOnUse">
+                  <stop offset="0.18" stop-color="#0052cc"/>
+                  <stop offset="1" stop-color="#2684ff"/>
+                </linearGradient>
+              </defs>
+              <path fill="#2684ff" d="M30.02 15.6L17.4 2.98 16.17 1.76 6.67 11.26l4.32 4.32L16.17 10.4l10.6 10.6z"/>
+              <path fill="url(#jira-grad)" d="M16.17 10.4l4.32 4.32-9.5 9.5 4.32 4.32 9.5-9.5.03-.02.03.02L30.03 15.6l-3.26-3.26z"/>
+            </svg>
+            <span>Sign in with Atlassian</span>
+          </button>
 
-            <!-- Email -->
-            <div class="space-y-1">
-              <label class="block text-[9px] font-medium uppercase tracking-wider text-neutral-400">
-                Account Email
-              </label>
-              <input
-                type="email"
-                [(ngModel)]="email"
-                name="email"
-                placeholder="you@company.com"
-                autocomplete="email"
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-[11px] text-white placeholder-neutral-600 transition focus:border-neutral-500 focus:outline-none"
-              />
+          <!-- Waiting state (with Cancel) -->
+          <div *ngIf="isConnecting()" class="w-full space-y-2">
+            <div class="flex w-full items-center justify-center space-x-2 rounded-lg bg-neutral-800 py-2.5 px-4 font-medium text-[12px] text-neutral-300">
+              <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+              </svg>
+              <span>Waiting for Atlassian...</span>
             </div>
-
-            <!-- API Token -->
-            <div class="space-y-1">
-              <label class="flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-neutral-400">
-                <span>API Token</span>
-                <span class="rounded bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[8px] text-emerald-400 border border-emerald-500/20">Encrypted</span>
-              </label>
-              <div class="relative">
-                <input
-                  [type]="showToken() ? 'text' : 'password'"
-                  [(ngModel)]="apiToken"
-                  name="apiToken"
-                  placeholder="ATATT3xFfGF0..."
-                  class="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 pr-9 text-[11px] text-white placeholder-neutral-600 transition focus:border-neutral-500 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  (click)="showToken.set(!showToken())"
-                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition"
-                  [title]="showToken() ? 'Hide token' : 'Show token'"
-                >
-                  <svg *ngIf="!showToken()" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                  <svg *ngIf="showToken()" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                </button>
-              </div>
-              <p class="text-[9px] leading-relaxed text-neutral-500">
-                Generate at
-                <button type="button" (click)="openTokenPage()" class="underline text-neutral-400 hover:text-white transition">
-                  id.atlassian.com/manage-profile/security/api-tokens
-                </button>
-              </p>
-            </div>
-
-            <!-- Optional JQL -->
-            <div class="space-y-1">
-              <label class="block text-[9px] font-medium uppercase tracking-wider text-neutral-400">
-                Custom JQL <span class="text-neutral-600 normal-case tracking-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                [(ngModel)]="jqlFilter"
-                name="jqlFilter"
-                placeholder="assignee = currentUser() AND resolution = Unresolved"
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-[11px] text-white placeholder-neutral-600 transition focus:border-neutral-500 focus:outline-none"
-              />
-            </div>
-
-            <!-- Submit -->
             <button
-              type="submit"
-              [disabled]="isConnecting()"
-              class="w-full rounded-lg bg-white py-2 font-mono text-[11px] font-semibold text-black transition hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              (click)="cancelSignIn()"
+              type="button"
+              class="w-full rounded-lg border border-neutral-800 bg-neutral-900 py-1.5 px-4 font-mono text-[10px] text-neutral-400 transition hover:border-neutral-700 hover:text-white"
             >
-              <span *ngIf="!isConnecting()">Connect Jira</span>
-              <span *ngIf="isConnecting()" class="flex items-center justify-center space-x-1.5">
-                <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                  <path d="M21 3v5h-5"/>
-                </svg>
-                <span>Connecting...</span>
-              </span>
+              Cancel
             </button>
-          </form>
+          </div>
 
-          <p class="text-center text-[9px] text-neutral-600">
-            Manage or disconnect from Settings → Connected Services
+          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
+            A browser tab will open for consent. Your refresh token is stored securely and never leaves this device.
+          </p>
+          <p *ngIf="isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
+            Complete the sign-in in your browser. If you see an error page, tap Cancel here and try again.
           </p>
         </div>
       </ng-container>
 
       <!-- ==========================================
-           CONNECTED — TASK LIST
+           CONNECTED — ASSIGNED ISSUES LIST
            ========================================== -->
       <ng-container *ngIf="isConnected()">
         <div class="flex h-full flex-col space-y-2.5 text-xs">
@@ -186,6 +92,7 @@ export class JiraComponent {}
             <div class="flex items-center space-x-1.5 font-mono text-[10px] text-neutral-400">
               <span class="flex h-2 w-2 rounded-full bg-emerald-400"></span>
               <span class="font-medium text-neutral-200">Jira</span>
+              <span *ngIf="siteName()" class="truncate text-neutral-500">· {{ siteName() }}</span>
               <span *ngIf="openCount() > 0" class="rounded bg-blue-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-blue-300 border border-blue-500/30">
                 {{ openCount() }} Open
               </span>
@@ -315,7 +222,7 @@ export class JiraComponent {}
               class="py-8 text-center font-mono text-xs text-neutral-500"
             >
               <div class="mb-1 text-sm">📋</div>
-              No issues found.
+              No issues assigned to you.
             </div>
           </div>
         </div>
@@ -335,6 +242,11 @@ export class JiraComponent implements OnInit {
   public isConnected = computed(
     () => this.integrationManager.getConnectionsForProvider('jira').length > 0
   );
+
+  public siteName = computed(() => {
+    const conn = this.integrationManager.getConnectionsForProvider('jira')[0];
+    return conn?.config?.['siteName'] || '';
+  });
 
   public jiraTasks = computed(() =>
     this.integrationManager.unifiedTasks().filter((t) => t.providerId === 'jira')
@@ -357,14 +269,15 @@ export class JiraComponent implements OnInit {
     );
   });
 
-  // Form state
-  public domain = '';
-  public email = '';
-  public apiToken = '';
-  public jqlFilter = '';
-  public showToken = signal<boolean>(false);
   public isConnecting = signal<boolean>(false);
   public connectError = signal<string | null>(null);
+
+  /**
+   * Bumped each time a sign-in attempt starts or is cancelled. Late-arriving
+   * responses from stale attempts (Rust listener finally times out after the
+   * user hit Cancel) check this and no-op instead of clobbering fresh UI state.
+   */
+  private signInSeq = 0;
 
   constructor(
     public integrationManager: IntegrationManagerService,
@@ -377,59 +290,40 @@ export class JiraComponent implements OnInit {
     }
   }
 
-  public async onConnect(event: Event): Promise<void> {
-    event.preventDefault();
-
-    const domain = this.domain.trim();
-    const email = this.email.trim();
-    const apiToken = this.apiToken.trim();
-
-    if (!domain) {
-      this.connectError.set('Atlassian domain is required.');
-      return;
-    }
-    if (!email) {
-      this.connectError.set('Account email is required.');
-      return;
-    }
-    if (!apiToken) {
-      this.connectError.set('API token is required.');
-      return;
-    }
-
+  public async onSignInWithAtlassian(): Promise<void> {
+    if (this.isConnecting()) return;
+    const mySeq = ++this.signInSeq;
     this.isConnecting.set(true);
     this.connectError.set(null);
     this.localError.set(null);
 
     try {
-      const conn = await this.integrationManager.connectProvider('jira', {
-        domain,
-        email,
-        apiToken,
-        jqlFilter: this.jqlFilter.trim(),
-      });
+      const conn = await this.integrationManager.connectProvider('jira', {});
+
+      if (mySeq !== this.signInSeq) return; // cancelled — ignore stale result
 
       if (conn.status === 'error') {
-        this.connectError.set(conn.errorMessage || 'Failed to connect. Check credentials and try again.');
+        this.connectError.set(
+          conn.errorMessage || 'Sign-in failed. Please try again.'
+        );
         return;
       }
 
-      this.domain = '';
-      this.email = '';
-      this.apiToken = '';
-      this.jqlFilter = '';
       await this.refreshTasks();
     } catch (err: any) {
-      this.connectError.set(err?.message || 'Connection failed. Please try again.');
+      if (mySeq !== this.signInSeq) return;
+      this.connectError.set(err?.message || 'Sign-in failed. Please try again.');
     } finally {
-      this.isConnecting.set(false);
+      if (mySeq === this.signInSeq) {
+        this.isConnecting.set(false);
+      }
     }
   }
 
-  public openTokenPage(): void {
-    this.windowService.openExternalUrl(
-      'https://id.atlassian.com/manage-profile/security/api-tokens'
-    );
+  public cancelSignIn(): void {
+    this.signInSeq++;
+    this.isConnecting.set(false);
+    this.connectError.set('Sign-in cancelled. You can try again.');
   }
 
   public async refreshTasks(): Promise<void> {
@@ -451,6 +345,3 @@ export class JiraComponent implements OnInit {
     }
   }
 }
-
- * ============================================================================
- */
