@@ -36,3 +36,10 @@ pub struct ActivityItem {
     pub summary: String,
     pub created_at: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClipboardItem {
+    pub id: String,
+    pub content: String,
+    pub created_at: String,
+}

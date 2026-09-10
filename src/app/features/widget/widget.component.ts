@@ -24,6 +24,10 @@ import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
 import { MessagesComponent } from './components/messages/messages.component';
 import { JiraComponent } from './components/jira/jira.component';
+import { CalendarComponent } from './components/calendar/calendar.component';
+import { CalculatorComponent } from './components/calculator/calculator.component';
+import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
+import { ClipboardComponent } from './components/clipboard/clipboard.component';
 import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { IntegrationManagerService } from '../../integrations/core/integration-manager.service';
@@ -38,6 +42,10 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     TaskComponent,
     MessagesComponent,
     JiraComponent,
+    CalendarComponent,
+    CalculatorComponent,
+    PomodoroComponent,
+    ClipboardComponent,
     ActivityComponent,
     SettingsComponent,
   ],
@@ -127,6 +135,18 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2c: JIRA COMPONENT -->
             <app-jira *ngIf="activeTab().id === 'jira'"></app-jira>
 
+            <!-- VIEW 2d: CALENDAR COMPONENT -->
+            <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
+
+            <!-- VIEW 2e: CALCULATOR COMPONENT -->
+            <app-calculator *ngIf="activeTab().id === 'calculator'"></app-calculator>
+
+            <!-- VIEW 2f: POMODORO COMPONENT -->
+            <app-pomodoro *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro>
+
+            <!-- VIEW 2g: CLIPBOARD COMPONENT -->
+            <app-clipboard *ngIf="activeTab().id === 'clipboard'"></app-clipboard>
+
             <!-- VIEW 3: ACTIVITY COMPONENT -->
             <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
 
@@ -170,9 +190,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   //       ).length
   // );
 
+  // Release-visible tabs. Tasks / Calculator / Pomodoro / Clipboard / Activity
+  // are intentionally hidden until their features are production-ready — the
+  // component code, service wiring, Rust commands, and template views all stay
+  // in place, so re-enabling is just uncommenting the matching line here (and
+  // in settings.component.ts allTabs).
   public allAvailableTabs = computed<DockTab[]>(() => [
     { id: 'notes', label: 'Notes' },
-    { id: 'tasks', label: 'Tasks' },
+    // { id: 'tasks', label: 'Tasks' },
     {
       id: 'messages',
       label: 'Gmail',
@@ -190,7 +215,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       //   ? this.openJiraCount()
       //   : 0,
     },
-    { id: 'activity', label: 'Activity' },
+    { id: 'calendar', label: 'Calendar' },
+    // { id: 'calculator', label: 'Calculator' },
+    // { id: 'pomodoro', label: 'Pomodoro' },
+    // { id: 'clipboard', label: 'Clipboard' },
+    // { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ]);
 
@@ -228,14 +257,15 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.dockAutoHideEnabled() && !this.isPanelExpanded() && !this.isHoveringDock()
   );
 
-  // Filter tabs by per-tab visibility settings. Falls back to full list if the
-  // user ever hides every tab (never leave the dock unusable).
+  // Filter tabs by per-tab visibility settings. Settings is always included so
+  // the user can never accidentally lock themselves out of the settings screen.
   public visibleTabs = computed<DockTab[]>(() => {
     const all = this.allAvailableTabs();
-    const visible = all.filter(
-      (t) => this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
+    return all.filter(
+      (t) =>
+        t.id === 'settings' ||
+        this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
     );
-    return visible.length > 0 ? visible : all;
   });
 
   @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;

@@ -11,7 +11,18 @@ import { CommonModule } from '@angular/common';
 import { DockFlipService } from '../../../../core/services/dock-flip.service';
 
 export interface DockTab {
-  id: 'notes' | 'tasks' | 'messages' | 'jira' | 'activity' | 'settings' | string;
+  id:
+    | 'notes'
+    | 'tasks'
+    | 'messages'
+    | 'jira'
+    | 'calendar'
+    | 'calculator'
+    | 'pomodoro'
+    | 'clipboard'
+    | 'activity'
+    | 'settings'
+    | string;
   label: string;
   icon?: string;
   badgeCount?: number;
@@ -132,7 +143,94 @@ export type DockOrientation = 'vertical' | 'horizontal';
           />
         </svg>
 
-        <!-- 5. Lucide History (Activity) -->
+        <!-- 5. Lucide Calendar -->
+        <svg
+          *ngIf="tab.id === 'calendar'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-calendar"
+        >
+          <rect width="18" height="18" x="3" y="4" rx="2" />
+          <path d="M16 2v4" />
+          <path d="M8 2v4" />
+          <path d="M3 10h18" />
+        </svg>
+
+        <!-- 6. Lucide Calculator -->
+        <svg
+          *ngIf="tab.id === 'calculator'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-calculator"
+        >
+          <rect width="16" height="20" x="4" y="2" rx="2" />
+          <line x1="8" x2="16" y1="6" y2="6" />
+          <line x1="16" x2="16" y1="14" y2="18" />
+          <path d="M16 10h.01" />
+          <path d="M12 10h.01" />
+          <path d="M8 10h.01" />
+          <path d="M12 14h.01" />
+          <path d="M8 14h.01" />
+          <path d="M12 18h.01" />
+          <path d="M8 18h.01" />
+        </svg>
+
+        <!-- 7. Lucide Timer (Pomodoro) -->
+        <svg
+          *ngIf="tab.id === 'pomodoro'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-timer"
+        >
+          <line x1="10" x2="14" y1="2" y2="2" />
+          <line x1="12" x2="15" y1="14" y2="11" />
+          <circle cx="12" cy="14" r="8" />
+        </svg>
+
+        <!-- 8. Lucide ClipboardList (Clipboard history) -->
+        <svg
+          *ngIf="tab.id === 'clipboard'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-clipboard-list"
+        >
+          <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+          <path d="M12 11h4" />
+          <path d="M12 16h4" />
+          <path d="M8 11h.01" />
+          <path d="M8 16h.01" />
+        </svg>
+
+        <!-- 9. Lucide History (Activity) -->
         <svg
           *ngIf="tab.id === 'activity'"
           xmlns="http://www.w3.org/2000/svg"
@@ -151,7 +249,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
           <path d="M12 7v5l4 2" />
         </svg>
 
-        <!-- 6. Lucide Settings (Settings) -->
+        <!-- 10. Lucide Settings (Settings) -->
         <svg
           *ngIf="tab.id === 'settings'"
           xmlns="http://www.w3.org/2000/svg"

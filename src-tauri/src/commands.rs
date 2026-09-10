@@ -1,4 +1,6 @@
-use crate::db::{ActivityRepository, NoteRepository, SettingsRepository, TaskRepository};
+use crate::db::{
+    ActivityRepository, ClipboardRepository, NoteRepository, SettingsRepository, TaskRepository,
+};
 use crate::google_oauth::{self, GoogleTokens, RefreshedTokens};
 use crate::state::{AppState, InteractiveRect};
 use tauri::{State, Window};
@@ -18,8 +20,15 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "tab_tasks_visible",
     "tab_messages_visible",
     "tab_jira_visible",
+    "tab_calendar_visible",
+    "tab_calculator_visible",
+    "tab_pomodoro_visible",
+    "tab_clipboard_visible",
     "tab_activity_visible",
     "tab_settings_visible",
+    "pomodoro_focus_minutes",
+    "pomodoro_break_minutes",
+    "clipboard_capture_enabled",
 ];
 
 const VALID_TASK_STATUSES: &[&str] = &["pending", "in_progress", "completed"];
@@ -89,6 +98,16 @@ fn require_max_len(value: &str, max: usize, field: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn require_bounded_u32(value: &str, min: u32, max: u32, field: &str) -> Result<(), String> {
+    let n: u32 = value
+        .parse()
+        .map_err(|_| format!("{} must be a positive integer", field))?;
+    if n < min || n > max {
+        return Err(format!("{} must be between {} and {}", field, min, max));
+    }
+    Ok(())
+}
+
 fn validate_setting(key: &str, value: &str) -> Result<(), String> {
     if key.is_empty() {
         return Err("setting key cannot be empty".to_string());
@@ -111,8 +130,15 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
         | "tab_tasks_visible"
         | "tab_messages_visible"
         | "tab_jira_visible"
+        | "tab_calendar_visible"
+        | "tab_calculator_visible"
+        | "tab_pomodoro_visible"
+        | "tab_clipboard_visible"
         | "tab_activity_visible"
-        | "tab_settings_visible" => require_one_of(value, VALID_BOOL_STRINGS, key),
+        | "tab_settings_visible"
+        | "clipboard_capture_enabled" => require_one_of(value, VALID_BOOL_STRINGS, key),
+        "pomodoro_focus_minutes" => require_bounded_u32(value, 1, 120, key),
+        "pomodoro_break_minutes" => require_bounded_u32(value, 1, 60, key),
         _ => Ok(()),
     }
 }
@@ -428,6 +454,63 @@ pub fn db_clear_activities(db: State<'_, crate::db::Database>) -> Result<usize, 
     let n = db.clear_activities().map_err(|e| e.to_string())?;
     let _ = db.add_activity("activity", "cleared", &format!("Cleared activity log ({})", n));
     Ok(n)
+}
+
+// --- CLIPBOARD COMMANDS ---
+
+const CLIPBOARD_MAX_ENTRIES: u32 = 100;
+
+// Native clipboard read via `arboard`. Returns "" for non-text/empty clipboard
+// rather than an error so the frontend polling loop stays quiet.
+#[tauri::command]
+pub fn clipboard_read_text() -> Result<String, String> {
+    let mut cb = arboard::Clipboard::new().map_err(|e| e.to_string())?;
+    match cb.get_text() {
+        Ok(s) => Ok(s),
+        Err(arboard::Error::ContentNotAvailable) => Ok(String::new()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn clipboard_write_text(text: String) -> Result<(), String> {
+    require_max_len(&text, MAX_CONTENT_LEN, "clipboard text")?;
+    let mut cb = arboard::Clipboard::new().map_err(|e| e.to_string())?;
+    cb.set_text(text).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_get_clipboard_history(
+    limit: u32,
+    db: State<'_, crate::db::Database>,
+) -> Result<Vec<crate::models::ClipboardItem>, String> {
+    if limit == 0 || limit > CLIPBOARD_MAX_ENTRIES {
+        return Err(format!("limit must be between 1 and {}", CLIPBOARD_MAX_ENTRIES));
+    }
+    db.get_clipboard_history(limit).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_save_clipboard_entry(
+    content: String,
+    db: State<'_, crate::db::Database>,
+) -> Result<Option<crate::models::ClipboardItem>, String> {
+    require_max_len(&content, MAX_CONTENT_LEN, "clipboard content")?;
+    db.add_clipboard_entry(&content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_delete_clipboard_entry(
+    id: String,
+    db: State<'_, crate::db::Database>,
+) -> Result<bool, String> {
+    validate_id(&id, "clipboard id")?;
+    db.delete_clipboard_entry(&id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn db_clear_clipboard_history(db: State<'_, crate::db::Database>) -> Result<usize, String> {
+    db.clear_clipboard_history().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
