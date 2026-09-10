@@ -104,40 +104,32 @@ export type DockOrientation = 'vertical' | 'horizontal';
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
         </svg>
 
-        <!-- 3. Gmail / Messages Icon -->
+        <!-- 3. Gmail brand mark -->
         <svg
           *ngIf="tab.id === 'messages' || tab.icon === 'gmail'"
           xmlns="http://www.w3.org/2000/svg"
           [attr.width]="iconSize"
           [attr.height]="iconSize"
           viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          fill="currentColor"
         >
-          <rect width="20" height="16" x="2" y="4" rx="2" />
-          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          <path
+            d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"
+          />
         </svg>
 
-        <!-- 4. Jira / Kanban Icon -->
+        <!-- 4. Jira brand mark -->
         <svg
           *ngIf="tab.id === 'jira' || tab.icon === 'jira'"
           xmlns="http://www.w3.org/2000/svg"
           [attr.width]="iconSize"
           [attr.height]="iconSize"
           viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          fill="currentColor"
         >
-          <rect width="18" height="18" x="3" y="3" rx="2" />
-          <path d="M8 7v7" />
-          <path d="M12 7v4" />
-          <path d="M16 7v10" />
+          <path
+            d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.762a1.005 1.005 0 0 0-1.001-1.005zM23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.056A5.215 5.215 0 0 0 24 12.483V1.005A1.005 1.005 0 0 0 23.013 0z"
+          />
         </svg>
 
         <!-- 5. Lucide History (Activity) -->
