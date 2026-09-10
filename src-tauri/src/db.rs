@@ -1,4 +1,4 @@
-use crate::models::{ActivityItem, NoteItem, SettingItem, TaskItem};
+use crate::models::{ActivityItem, ClipboardItem, NoteItem, SettingItem, TaskItem};
 use rusqlite::{params, Connection};
 use std::fmt;
 use std::fs;
@@ -150,6 +150,32 @@ impl Database {
             .map_err(|e| DbError::QueryFailed(e.to_string()))?;
         }
 
+        // Version 3: Clipboard history
+        if current_version < 3 {
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS clipboard_history (
+                    id TEXT PRIMARY KEY,
+                    content TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );",
+                [],
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_clipboard_history_created_at
+                    ON clipboard_history (created_at DESC);",
+                [],
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+            conn.execute(
+                "INSERT INTO schema_migrations (version, applied_at) VALUES (3, datetime('now'));",
+                [],
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+        }
+
         Ok(())
     }
 }
@@ -180,6 +206,13 @@ pub trait ActivityRepository {
     fn add_activity(&self, entity: &str, action: &str, summary: &str) -> Result<ActivityItem, DbError>;
     fn get_recent_activities(&self, limit: u32) -> Result<Vec<ActivityItem>, DbError>;
     fn clear_activities(&self) -> Result<usize, DbError>;
+}
+
+pub trait ClipboardRepository {
+    fn add_clipboard_entry(&self, content: &str) -> Result<Option<ClipboardItem>, DbError>;
+    fn get_clipboard_history(&self, limit: u32) -> Result<Vec<ClipboardItem>, DbError>;
+    fn delete_clipboard_entry(&self, id: &str) -> Result<bool, DbError>;
+    fn clear_clipboard_history(&self) -> Result<usize, DbError>;
 }
 
 impl NoteRepository for Database {
@@ -548,6 +581,125 @@ impl ActivityRepository for Database {
             .lock()
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
         conn.execute("DELETE FROM activity_log;", [])
+            .map_err(|e| DbError::QueryFailed(e.to_string()))
+    }
+}
+
+// Soft cap on clipboard_history; oldest rows pruned on each insert.
+const CLIPBOARD_HISTORY_MAX_ROWS: u32 = 50;
+
+impl ClipboardRepository for Database {
+    // Returns Ok(None) when the incoming content matches the most recent entry
+    // (dedupe). Otherwise inserts and prunes to the soft cap.
+    fn add_clipboard_entry(&self, content: &str) -> Result<Option<ClipboardItem>, DbError> {
+        if content.is_empty() {
+            return Ok(None);
+        }
+
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+
+        // Dedupe against the most recent entry.
+        let last: Option<String> = conn
+            .query_row(
+                "SELECT content FROM clipboard_history ORDER BY created_at DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .ok();
+        if last.as_deref() == Some(content) {
+            return Ok(None);
+        }
+
+        let id = format!(
+            "clip_{}_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0),
+            rand_suffix()
+        );
+
+        let saved = conn
+            .query_row(
+                "INSERT INTO clipboard_history (id, content, created_at)
+                 VALUES (?1, ?2, datetime('now'))
+                 RETURNING id, content, created_at;",
+                params![id, content],
+                |row| {
+                    Ok(ClipboardItem {
+                        id: row.get(0)?,
+                        content: row.get(1)?,
+                        created_at: row.get(2)?,
+                    })
+                },
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        conn.execute(
+            "DELETE FROM clipboard_history
+             WHERE id NOT IN (
+                SELECT id FROM clipboard_history
+                ORDER BY created_at DESC
+                LIMIT ?1
+             );",
+            params![CLIPBOARD_HISTORY_MAX_ROWS],
+        )
+        .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        Ok(Some(saved))
+    }
+
+    fn get_clipboard_history(&self, limit: u32) -> Result<Vec<ClipboardItem>, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, content, created_at
+                 FROM clipboard_history
+                 ORDER BY created_at DESC
+                 LIMIT ?1",
+            )
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        let iter = stmt
+            .query_map(params![limit], |row| {
+                Ok(ClipboardItem {
+                    id: row.get(0)?,
+                    content: row.get(1)?,
+                    created_at: row.get(2)?,
+                })
+            })
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+
+        let mut list = Vec::new();
+        for item in iter {
+            list.push(item.map_err(|e| DbError::QueryFailed(e.to_string()))?);
+        }
+        Ok(list)
+    }
+
+    fn delete_clipboard_entry(&self, id: &str) -> Result<bool, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+        let rows = conn
+            .execute("DELETE FROM clipboard_history WHERE id = ?1;", params![id])
+            .map_err(|e| DbError::QueryFailed(e.to_string()))?;
+        Ok(rows > 0)
+    }
+
+    fn clear_clipboard_history(&self) -> Result<usize, DbError> {
+        let conn = self
+            .conn
+            .lock()
+            .map_err(|e| DbError::LockFailed(e.to_string()))?;
+        conn.execute("DELETE FROM clipboard_history;", [])
             .map_err(|e| DbError::QueryFailed(e.to_string()))
     }
 }

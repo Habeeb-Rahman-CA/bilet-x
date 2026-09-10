@@ -482,15 +482,20 @@ export class SettingsComponent implements OnDestroy {
 
   // Settings is intentionally excluded — it must always stay visible so the
   // user can never lock themselves out of this screen.
+  //
+  // Tasks / Calculator / Pomodoro / Clipboard / Activity are hidden for this
+  // release. Kept in the codebase — uncomment when their features ship.
+  // Must stay in sync with `allAvailableTabs` in widget.component.ts.
   public allTabs = computed(() => [
     { id: 'notes', label: 'Notes' },
-    { id: 'tasks', label: 'Tasks' },
+    // { id: 'tasks', label: 'Tasks' },
     { id: 'messages', label: 'Gmail' },
     { id: 'jira', label: 'Jira' },
     { id: 'calendar', label: 'Calendar' },
-    { id: 'calculator', label: 'Calculator' },
-    { id: 'pomodoro', label: 'Pomodoro' },
-    { id: 'activity', label: 'Activity' },
+    // { id: 'calculator', label: 'Calculator' },
+    // { id: 'pomodoro', label: 'Pomodoro' },
+    // { id: 'clipboard', label: 'Clipboard' },
+    // { id: 'activity', label: 'Activity' },
   ]);
 
   public currentPosition: Signal<string>;
