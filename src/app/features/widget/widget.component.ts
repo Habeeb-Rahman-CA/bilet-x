@@ -24,6 +24,7 @@ import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
 import { MessagesComponent } from './components/messages/messages.component';
 import { JiraComponent } from './components/jira/jira.component';
+import { CalendarComponent } from './components/calendar/calendar.component';
 import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { IntegrationManagerService } from '../../integrations/core/integration-manager.service';
@@ -38,6 +39,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     TaskComponent,
     MessagesComponent,
     JiraComponent,
+    CalendarComponent,
     ActivityComponent,
     SettingsComponent,
   ],
@@ -127,6 +129,9 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2c: JIRA COMPONENT -->
             <app-jira *ngIf="activeTab().id === 'jira'"></app-jira>
 
+            <!-- VIEW 2d: CALENDAR COMPONENT -->
+            <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
+
             <!-- VIEW 3: ACTIVITY COMPONENT -->
             <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
 
@@ -190,6 +195,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       //   ? this.openJiraCount()
       //   : 0,
     },
+    { id: 'calendar', label: 'Calendar' },
     { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ]);

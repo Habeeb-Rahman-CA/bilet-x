@@ -18,6 +18,7 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "tab_tasks_visible",
     "tab_messages_visible",
     "tab_jira_visible",
+    "tab_calendar_visible",
     "tab_activity_visible",
     "tab_settings_visible",
 ];
@@ -111,6 +112,7 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
         | "tab_tasks_visible"
         | "tab_messages_visible"
         | "tab_jira_visible"
+        | "tab_calendar_visible"
         | "tab_activity_visible"
         | "tab_settings_visible" => require_one_of(value, VALID_BOOL_STRINGS, key),
         _ => Ok(()),

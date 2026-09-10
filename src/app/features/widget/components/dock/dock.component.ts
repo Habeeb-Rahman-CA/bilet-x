@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
 import { DockFlipService } from '../../../../core/services/dock-flip.service';
 
 export interface DockTab {
-  id: 'notes' | 'tasks' | 'messages' | 'jira' | 'activity' | 'settings' | string;
+  id: 'notes' | 'tasks' | 'messages' | 'jira' | 'calendar' | 'activity' | 'settings' | string;
   label: string;
   icon?: string;
   badgeCount?: number;
@@ -132,7 +132,27 @@ export type DockOrientation = 'vertical' | 'horizontal';
           />
         </svg>
 
-        <!-- 5. Lucide History (Activity) -->
+        <!-- 5. Lucide Calendar -->
+        <svg
+          *ngIf="tab.id === 'calendar'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-calendar"
+        >
+          <rect width="18" height="18" x="3" y="4" rx="2" />
+          <path d="M16 2v4" />
+          <path d="M8 2v4" />
+          <path d="M3 10h18" />
+        </svg>
+
+        <!-- 6. Lucide History (Activity) -->
         <svg
           *ngIf="tab.id === 'activity'"
           xmlns="http://www.w3.org/2000/svg"
@@ -151,7 +171,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
           <path d="M12 7v5l4 2" />
         </svg>
 
-        <!-- 6. Lucide Settings (Settings) -->
+        <!-- 7. Lucide Settings (Settings) -->
         <svg
           *ngIf="tab.id === 'settings'"
           xmlns="http://www.w3.org/2000/svg"
