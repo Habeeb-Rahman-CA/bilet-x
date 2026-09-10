@@ -12,6 +12,7 @@ yarn-error.log
 # Tauri / Rust
 /src-tauri/target
 /src-tauri/gen
+/src-tauri/.cargo/
 
 # IDEs and editors
 .idea/

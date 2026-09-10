@@ -1,4 +1,5 @@
 use crate::db::{ActivityRepository, NoteRepository, SettingsRepository, TaskRepository};
+use crate::google_oauth::{self, GoogleTokens, RefreshedTokens};
 use crate::state::{AppState, InteractiveRect};
 use tauri::{State, Window};
 
@@ -15,6 +16,8 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "dock_orientation",
     "tab_notes_visible",
     "tab_tasks_visible",
+    "tab_messages_visible",
+    "tab_jira_visible",
     "tab_activity_visible",
     "tab_settings_visible",
 ];
@@ -106,6 +109,8 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
         "dock_auto_hide"
         | "tab_notes_visible"
         | "tab_tasks_visible"
+        | "tab_messages_visible"
+        | "tab_jira_visible"
         | "tab_activity_visible"
         | "tab_settings_visible" => require_one_of(value, VALID_BOOL_STRINGS, key),
         _ => Ok(()),
@@ -469,4 +474,58 @@ pub fn send_desktop_notification(
         }
     }
     builder.show().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn google_oauth_login() -> Result<GoogleTokens, String> {
+    // Run the blocking loopback listener on a background thread so the UI
+    // event loop keeps pumping (otherwise Windows marks the window as
+    // "Not Responding" and grays out clicks like Cancel).
+    tauri::async_runtime::spawn_blocking(google_oauth::run_login_flow)
+        .await
+        .map_err(|e| format!("OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn google_oauth_refresh(refresh_token: String) -> Result<RefreshedTokens, String> {
+    if refresh_token.trim().is_empty() {
+        return Err("refresh_token is required".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        google_oauth::refresh_access_token(&refresh_token)
+    })
+    .await
+    .map_err(|e| format!("Refresh task join error: {}", e))?
+}
+
+#[tauri::command]
+pub fn open_external_url(url: String) -> Result<(), String> {
+    require_max_len(&url, 2000, "url")?;
+    if !url.starts_with("https://") && !url.starts_with("http://") && !url.starts_with("mailto:") {
+        return Err("Invalid URL protocol (only http, https, and mailto allowed)".to_string());
+    }
+    #[cfg(target_os = "windows")]
+    {
+        // rundll32 passes the URL to the shell's protocol handler unmodified;
+        // `cmd /c start` mangles URLs whose query strings contain `&`.
+        std::process::Command::new("rundll32.exe")
+            .args(["url.dll,FileProtocolHandler", &url])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }

@@ -9,21 +9,21 @@ import { NotificationService } from '../../../../core/tauri/notification.service
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="flex h-full flex-col space-y-3">
-      <!-- TASK LIST CONTAINER — fills available space, scrolls when overflowed -->
-      <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+    <div class="flex h-full flex-col space-y-2.5">
+      <!-- TASK LIST -->
+      <div class="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
         <div
           *ngFor="let task of persistence.tasks()"
           class="group flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/90 p-2.5 text-xs transition hover:border-neutral-700"
         >
-          <div class="flex items-center space-x-2">
-            <span class="h-2 w-2 rounded-full bg-white"></span>
-            <span class="font-medium text-neutral-200">{{ task.title }}</span>
+          <div class="flex items-center space-x-2 overflow-hidden">
+            <span class="h-2 w-2 shrink-0 rounded-full bg-white"></span>
+            <span class="truncate font-medium text-neutral-200">{{ task.title }}</span>
           </div>
           <button
             (click)="persistence.deleteTask(task.id)"
             type="button"
-            class="text-[10px] text-neutral-500 transition hover:text-white"
+            class="shrink-0 text-[10px] text-neutral-500 transition hover:text-white"
           >
             Delete
           </button>
@@ -37,7 +37,7 @@ import { NotificationService } from '../../../../core/tauri/notification.service
         </div>
       </div>
 
-      <!-- BOTTOM TASK INPUT FORM — pinned to bottom of the panel body -->
+      <!-- BOTTOM TASK INPUT FORM -->
       <form
         (submit)="onTaskSubmit($event)"
         class="flex shrink-0 items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/90 p-2 text-xs"

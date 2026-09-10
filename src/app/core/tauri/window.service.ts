@@ -91,6 +91,19 @@ export class WindowService {
     }
   }
 
+  public async openExternalUrl(url: string): Promise<void> {
+    if (!url) return;
+    try {
+      if (this.tauriService.isTauriAvailable()) {
+        await this.tauriService.invokeCommand('open_external_url', { url });
+        return;
+      }
+    } catch (e) {
+      console.warn('Tauri open_external_url failed, falling back to window.open', e);
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   public async onToggleWidget(callback: () => void): Promise<() => void> {
     if (!this.tauriService.isTauriAvailable()) {
       return () => {};

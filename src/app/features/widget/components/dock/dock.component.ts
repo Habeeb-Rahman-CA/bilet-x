@@ -11,8 +11,10 @@ import { CommonModule } from '@angular/common';
 import { DockFlipService } from '../../../../core/services/dock-flip.service';
 
 export interface DockTab {
-  id: 'notes' | 'tasks' | 'activity' | 'settings';
+  id: 'notes' | 'tasks' | 'messages' | 'jira' | 'activity' | 'settings' | string;
   label: string;
+  icon?: string;
+  badgeCount?: number;
 }
 
 export type DockSize = 'compact' | 'normal' | 'large';
@@ -55,6 +57,14 @@ export type DockOrientation = 'vertical' | 'horizontal';
         }"
         class="no-drag group relative flex items-center justify-center rounded-xl border border-transparent transition-all duration-200 ease-out hover:border-neutral-700"
       >
+        <!-- Unread badge indicator -->
+        <span
+          *ngIf="(tab.badgeCount || 0) > 0"
+          class="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 font-mono text-[8px] font-bold text-white shadow"
+        >
+          {{ tab.badgeCount }}
+        </span>
+
         <!-- 1. Lucide FileText (Note) -->
         <svg
           *ngIf="tab.id === 'notes'"
@@ -94,7 +104,43 @@ export type DockOrientation = 'vertical' | 'horizontal';
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
         </svg>
 
-        <!-- 3. Lucide History (Activity) -->
+        <!-- 3. Gmail / Messages Icon -->
+        <svg
+          *ngIf="tab.id === 'messages' || tab.icon === 'gmail'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect width="20" height="16" x="2" y="4" rx="2" />
+          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+        </svg>
+
+        <!-- 4. Jira / Kanban Icon -->
+        <svg
+          *ngIf="tab.id === 'jira' || tab.icon === 'jira'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+          <path d="M8 7v7" />
+          <path d="M12 7v4" />
+          <path d="M16 7v10" />
+        </svg>
+
+        <!-- 5. Lucide History (Activity) -->
         <svg
           *ngIf="tab.id === 'activity'"
           xmlns="http://www.w3.org/2000/svg"
@@ -113,7 +159,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
           <path d="M12 7v5l4 2" />
         </svg>
 
-        <!-- 4. Lucide Settings (Settings) -->
+        <!-- 6. Lucide Settings (Settings) -->
         <svg
           *ngIf="tab.id === 'settings'"
           xmlns="http://www.w3.org/2000/svg"

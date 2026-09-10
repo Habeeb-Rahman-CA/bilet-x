@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod db;
+pub mod google_oauth;
 pub mod models;
 pub mod state;
 
@@ -104,6 +105,9 @@ pub fn run() {
             commands::db_set_setting,
             commands::db_get_activities,
             commands::db_clear_activities,
+            commands::open_external_url,
+            commands::google_oauth_login,
+            commands::google_oauth_refresh,
         ])
         .setup(|app| {
             let app_dir = app
