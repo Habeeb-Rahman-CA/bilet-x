@@ -25,6 +25,7 @@ import { TaskComponent } from './components/task/task.component';
 import { MessagesComponent } from './components/messages/messages.component';
 import { JiraComponent } from './components/jira/jira.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
+import { CalculatorComponent } from './components/calculator/calculator.component';
 import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { IntegrationManagerService } from '../../integrations/core/integration-manager.service';
@@ -40,6 +41,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     MessagesComponent,
     JiraComponent,
     CalendarComponent,
+    CalculatorComponent,
     ActivityComponent,
     SettingsComponent,
   ],
@@ -132,6 +134,9 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2d: CALENDAR COMPONENT -->
             <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
 
+            <!-- VIEW 2e: CALCULATOR COMPONENT -->
+            <app-calculator *ngIf="activeTab().id === 'calculator'"></app-calculator>
+
             <!-- VIEW 3: ACTIVITY COMPONENT -->
             <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
 
@@ -196,6 +201,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       //   : 0,
     },
     { id: 'calendar', label: 'Calendar' },
+    { id: 'calculator', label: 'Calculator' },
     { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ]);

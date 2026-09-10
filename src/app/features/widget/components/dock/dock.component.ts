@@ -11,7 +11,16 @@ import { CommonModule } from '@angular/common';
 import { DockFlipService } from '../../../../core/services/dock-flip.service';
 
 export interface DockTab {
-  id: 'notes' | 'tasks' | 'messages' | 'jira' | 'calendar' | 'activity' | 'settings' | string;
+  id:
+    | 'notes'
+    | 'tasks'
+    | 'messages'
+    | 'jira'
+    | 'calendar'
+    | 'calculator'
+    | 'activity'
+    | 'settings'
+    | string;
   label: string;
   icon?: string;
   badgeCount?: number;
@@ -152,7 +161,33 @@ export type DockOrientation = 'vertical' | 'horizontal';
           <path d="M3 10h18" />
         </svg>
 
-        <!-- 6. Lucide History (Activity) -->
+        <!-- 6. Lucide Calculator -->
+        <svg
+          *ngIf="tab.id === 'calculator'"
+          xmlns="http://www.w3.org/2000/svg"
+          [attr.width]="iconSize"
+          [attr.height]="iconSize"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="lucide lucide-calculator"
+        >
+          <rect width="16" height="20" x="4" y="2" rx="2" />
+          <line x1="8" x2="16" y1="6" y2="6" />
+          <line x1="16" x2="16" y1="14" y2="18" />
+          <path d="M16 10h.01" />
+          <path d="M12 10h.01" />
+          <path d="M8 10h.01" />
+          <path d="M12 14h.01" />
+          <path d="M8 14h.01" />
+          <path d="M12 18h.01" />
+          <path d="M8 18h.01" />
+        </svg>
+
+        <!-- 7. Lucide History (Activity) -->
         <svg
           *ngIf="tab.id === 'activity'"
           xmlns="http://www.w3.org/2000/svg"
@@ -171,7 +206,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
           <path d="M12 7v5l4 2" />
         </svg>
 
-        <!-- 7. Lucide Settings (Settings) -->
+        <!-- 8. Lucide Settings (Settings) -->
         <svg
           *ngIf="tab.id === 'settings'"
           xmlns="http://www.w3.org/2000/svg"
