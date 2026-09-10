@@ -31,7 +31,7 @@ Bilet-X supports pluggable integrations that you can enable one at a time. When 
 ## Support & contact
 
 - **Issues / bug reports:** [GitHub Issues](https://github.com/Habeeb-Rahman-CA/bilet-x/issues)
-- **Email:** vibeseeroovibe@gmail.com
+- **Email:** habeebrahmanca22@gmail.com
 
 ## Legal
 

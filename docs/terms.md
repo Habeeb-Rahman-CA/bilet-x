@@ -60,5 +60,5 @@ We may update these Terms as the app evolves. Material changes will be reflected
 
 Questions about these Terms:
 
-- **Email:** vibeseeroovibe@gmail.com
+- **Email:** habeebrahmanca22@gmail.com
 - **Issues:** [github.com/Habeeb-Rahman-CA/bilet-x/issues](https://github.com/Habeeb-Rahman-CA/bilet-x/issues)

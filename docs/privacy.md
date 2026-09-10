@@ -67,5 +67,5 @@ We may update this policy as the app evolves. Material changes will be reflected
 
 Questions or requests about this policy:
 
-- **Email:** vibeseeroovibe@gmail.com
+- **Email:** habeebrahmanca22@gmail.com
 - **Issues:** [github.com/Habeeb-Rahman-CA/bilet-x/issues](https://github.com/Habeeb-Rahman-CA/bilet-x/issues)
