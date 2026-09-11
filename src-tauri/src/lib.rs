@@ -6,6 +6,7 @@ pub mod jira_oauth;
 pub mod models;
 pub mod outlook_oauth;
 pub mod state;
+pub mod whatsapp_oauth;
 
 use db::SettingsRepository;
 use state::AppState;
@@ -122,6 +123,7 @@ pub fn run() {
             commands::github_oauth_login,
             commands::outlook_oauth_login,
             commands::outlook_oauth_refresh,
+            commands::whatsapp_oauth_login,
         ])
         .setup(|app| {
             let app_dir = app

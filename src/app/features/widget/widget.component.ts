@@ -26,6 +26,7 @@ import { MessagesComponent } from './components/messages/messages.component';
 import { JiraComponent } from './components/jira/jira.component';
 import { GitHubComponent } from './components/github/github.component';
 import { OutlookComponent } from './components/outlook/outlook.component';
+import { WhatsAppComponent } from './components/whatsapp/whatsapp.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
@@ -46,6 +47,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     JiraComponent,
     GitHubComponent,
     OutlookComponent,
+    WhatsAppComponent,
     CalendarComponent,
     CalculatorComponent,
     PomodoroComponent,
@@ -144,6 +146,9 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
 
             <!-- VIEW 2c3: OUTLOOK COMPONENT -->
             <app-outlook *ngIf="activeTab().id === 'outlook'"></app-outlook>
+
+            <!-- VIEW 2c4: WHATSAPP DEEP-LINK -->
+            <app-whatsapp *ngIf="activeTab().id === 'whatsapp'"></app-whatsapp>
 
             <!-- VIEW 2d: CALENDAR COMPONENT -->
             <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
@@ -259,6 +264,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
         ? this.unreadOutlookCount()
         : 0,
     },
+    { id: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp' },
     { id: 'calendar', label: 'Calendar' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },

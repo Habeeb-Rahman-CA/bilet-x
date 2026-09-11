@@ -12,6 +12,7 @@ import { JiraIntegration } from './integrations/providers/jira/jira.integration'
 import { GmailIntegration } from './integrations/providers/gmail/gmail.integration';
 import { GitHubIntegration } from './integrations/providers/github/github.integration';
 import { OutlookIntegration } from './integrations/providers/outlook/outlook.integration';
+import { WhatsAppIntegration } from './integrations/providers/whatsapp/whatsapp.integration';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,10 +24,12 @@ export const appConfig: ApplicationConfig = {
       const gmail = inject(GmailIntegration);
       const github = inject(GitHubIntegration);
       const outlook = inject(OutlookIntegration);
+      const whatsapp = inject(WhatsAppIntegration);
       registry.register(jira);
       registry.register(gmail);
       registry.register(github);
       registry.register(outlook);
+      registry.register(whatsapp);
     }),
   ],
 };
