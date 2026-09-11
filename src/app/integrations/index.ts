@@ -23,6 +23,7 @@ export * from './core/auth/jira-oauth.service';
 export * from './core/auth/github-oauth.service';
 export * from './core/auth/outlook-oauth.service';
 export * from './core/auth/whatsapp-oauth.service';
+export * from './core/auth/slack-oauth.service';
 
 // Core Integration Contracts & Services
 export * from './core/integration.interface';
@@ -36,3 +37,4 @@ export * from './providers/gmail/gmail.integration';
 export * from './providers/github/github.integration';
 export * from './providers/outlook/outlook.integration';
 export * from './providers/whatsapp/whatsapp.integration';
+export * from './providers/slack/slack.integration';

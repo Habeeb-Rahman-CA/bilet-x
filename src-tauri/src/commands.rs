@@ -6,6 +6,8 @@ use crate::jira_oauth::{self, JiraTokens, RefreshedJiraTokens};
 use crate::github_oauth::{self, GitHubTokens};
 use crate::outlook_oauth::{self, OutlookTokens, RefreshedOutlookTokens};
 use crate::whatsapp_oauth::{self, WhatsAppTokens};
+use crate::slack_oauth::{self, SlackTokens};
+use crate::slack_api;
 use crate::state::{AppState, InteractiveRect};
 use tauri::{State, Window};
 
@@ -27,6 +29,7 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "tab_github_visible",
     "tab_outlook_visible",
     "tab_whatsapp_visible",
+    "tab_slack_visible",
     "tab_calendar_visible",
     "tab_calculator_visible",
     "tab_pomodoro_visible",
@@ -140,6 +143,7 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
         | "tab_github_visible"
         | "tab_outlook_visible"
         | "tab_whatsapp_visible"
+        | "tab_slack_visible"
         | "tab_calendar_visible"
         | "tab_calculator_visible"
         | "tab_pomodoro_visible"
@@ -641,6 +645,41 @@ pub async fn whatsapp_oauth_login() -> Result<WhatsAppTokens, String> {
     tauri::async_runtime::spawn_blocking(whatsapp_oauth::run_login_flow)
         .await
         .map_err(|e| format!("OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn slack_oauth_login() -> Result<SlackTokens, String> {
+    tauri::async_runtime::spawn_blocking(slack_oauth::run_login_flow)
+        .await
+        .map_err(|e| format!("OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn slack_api_get(
+    token: String,
+    path: String,
+    query: String,
+) -> Result<String, String> {
+    if token.trim().is_empty() {
+        return Err("token is required".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || slack_api::api_get(&token, &path, &query))
+        .await
+        .map_err(|e| format!("Slack API task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn slack_api_post(
+    token: String,
+    path: String,
+    body: String,
+) -> Result<String, String> {
+    if token.trim().is_empty() {
+        return Err("token is required".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || slack_api::api_post(&token, &path, &body))
+        .await
+        .map_err(|e| format!("Slack API task join error: {}", e))?
 }
 
 #[tauri::command]

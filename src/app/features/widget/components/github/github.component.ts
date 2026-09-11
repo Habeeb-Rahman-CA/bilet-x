@@ -19,7 +19,12 @@ import { WindowService } from '../../../../core/tauri/window.service';
         <div class="flex flex-1 flex-col items-center justify-center space-y-5 px-3 py-8">
 
           <div class="flex flex-col items-center space-y-1 text-center">
-            <div class="text-sm font-semibold text-white">Connect GitHub</div>
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900/80 text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 .296C5.373.296 0 5.67 0 12.297c0 5.302 3.438 9.8 8.207 11.387.6.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.386-1.333-1.756-1.333-1.756-1.09-.744.083-.729.083-.729 1.205.084 1.84 1.236 1.84 1.236 1.07 1.834 2.807 1.304 3.492.997.108-.774.42-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.467-2.381 1.235-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.51 11.51 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.654 1.653.243 2.874.12 3.176.77.84 1.233 1.911 1.233 3.221 0 4.61-2.807 5.624-5.479 5.921.43.371.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.565 22.092 24 17.598 24 12.297 24 5.67 18.627.296 12 .296z"/>
+              </svg>
+            </div>
+            <div class="text-sm font-semibold text-white pt-1">Connect GitHub</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
               Sign in once with GitHub — Bilet-X shows every open issue and PR assigned to you across all your repos.
             </div>

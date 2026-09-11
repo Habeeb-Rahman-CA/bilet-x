@@ -5,6 +5,8 @@ pub mod google_oauth;
 pub mod jira_oauth;
 pub mod models;
 pub mod outlook_oauth;
+pub mod slack_api;
+pub mod slack_oauth;
 pub mod state;
 pub mod whatsapp_oauth;
 
@@ -124,6 +126,9 @@ pub fn run() {
             commands::outlook_oauth_login,
             commands::outlook_oauth_refresh,
             commands::whatsapp_oauth_login,
+            commands::slack_oauth_login,
+            commands::slack_api_get,
+            commands::slack_api_post,
         ])
         .setup(|app| {
             let app_dir = app

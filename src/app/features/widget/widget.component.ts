@@ -27,6 +27,7 @@ import { JiraComponent } from './components/jira/jira.component';
 import { GitHubComponent } from './components/github/github.component';
 import { OutlookComponent } from './components/outlook/outlook.component';
 import { WhatsAppComponent } from './components/whatsapp/whatsapp.component';
+import { SlackComponent } from './components/slack/slack.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
@@ -48,6 +49,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     GitHubComponent,
     OutlookComponent,
     WhatsAppComponent,
+    SlackComponent,
     CalendarComponent,
     CalculatorComponent,
     PomodoroComponent,
@@ -150,6 +152,9 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2c4: WHATSAPP DEEP-LINK -->
             <app-whatsapp *ngIf="activeTab().id === 'whatsapp'"></app-whatsapp>
 
+            <!-- VIEW 2c5: SLACK COMPONENT -->
+            <app-slack *ngIf="activeTab().id === 'slack'"></app-slack>
+
             <!-- VIEW 2d: CALENDAR COMPONENT -->
             <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
 
@@ -204,6 +209,13 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.integrationManager
         .unifiedMessages()
         .filter((m) => m.providerId === 'outlook' && !m.isRead).length
+  );
+
+  public unreadSlackCount = computed(
+    () =>
+      this.integrationManager
+        .unifiedMessages()
+        .filter((m) => m.providerId === 'slack' && !m.isRead).length
   );
 
   public openJiraCount = computed(
@@ -265,6 +277,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
         : 0,
     },
     { id: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp' },
+    {
+      id: 'slack',
+      label: 'Slack',
+      icon: 'slack',
+      badgeCount: this.integrationManager.hasCapability('messages')
+        ? this.unreadSlackCount()
+        : 0,
+    },
     { id: 'calendar', label: 'Calendar' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },
