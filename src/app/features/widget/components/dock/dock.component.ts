@@ -4,8 +4,13 @@ import {
   ElementRef,
   EventEmitter,
   Input,
+  OnChanges,
   OnDestroy,
   Output,
+  QueryList,
+  SimpleChanges,
+  ViewChildren,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DockFlipService } from '../../../../core/services/dock-flip.service';
@@ -59,18 +64,26 @@ export type DockOrientation = 'vertical' | 'horizontal';
       }"
     >
       <button
-        *ngFor="let tab of tabs"
+        *ngFor="let tab of visualTabs(); let i = index; trackBy: trackTabId"
+        #tabBtn
+        [attr.data-tab-index]="i"
         (click)="onTabClick(tab)"
+        (pointerdown)="onPointerDown($event, tab, i)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp($event)"
+        (pointercancel)="onPointerCancel()"
         type="button"
         [title]="tab.label"
         [ngClass]="{
-          'bg-white text-black hover:text-black': activeTabId === tab.id && isPanelExpanded,
-          'text-neutral-400 hover:text-white': activeTabId !== tab.id || !isPanelExpanded,
+          'bg-white text-black hover:text-black': activeTabId === tab.id && isPanelExpanded && dragIndex() !== i,
+          'text-neutral-400 hover:text-white': !(activeTabId === tab.id && isPanelExpanded) || dragIndex() === i,
           'h-7 w-7': size === 'compact',
           'h-9 w-9': size === 'normal',
-          'h-11 w-11': size === 'large'
+          'h-11 w-11': size === 'large',
+          'shadow-lg shadow-black/50 ring-2 ring-blue-400/70 bg-neutral-800 z-10 brightness-125': isDragging() && dragIndex() === i,
+          'cursor-grabbing': isDragging()
         }"
-        class="no-drag group relative flex items-center justify-center rounded-xl border border-transparent transition-all duration-200 ease-out hover:border-neutral-700"
+        class="no-drag group relative flex cursor-pointer items-center justify-center rounded-xl border border-transparent transition-all duration-200 ease-out hover:border-neutral-700"
       >
         <!-- Unread badge indicator -->
         <span
@@ -332,7 +345,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
     </div>
   `,
 })
-export class DockComponent implements AfterViewInit, OnDestroy {
+export class DockComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() tabs: DockTab[] = [];
   @Input() activeTabId: string = 'notes';
   @Input() isPanelExpanded: boolean = false;
@@ -341,6 +354,47 @@ export class DockComponent implements AfterViewInit, OnDestroy {
   @Input() faded: boolean = false;
 
   @Output() tabSelect = new EventEmitter<DockTab>();
+  @Output() tabReorder = new EventEmitter<{ fromIndex: number; toIndex: number }>();
+
+  @ViewChildren('tabBtn') private tabButtons?: QueryList<ElementRef<HTMLElement>>;
+
+  // Double-click-hold drag reorder state.
+  //
+  // Gesture: click a tab → click it again within DBL_CLICK_MS and *hold*
+  // the second mousedown → move to reorder → release to drop.
+  //
+  // A regular single click still fires tabSelect. A double-click without
+  // holding still fires tabSelect twice (harmless — Angular toggles).
+  private readonly DBL_CLICK_MS = 350;
+  private lastPointerDownAt = 0;
+  private lastPointerDownTabId: string | null = null;
+  private armed = false;
+  private justDragged = false;
+  private dragStartIndex: number | null = null;
+  public dragIndex = signal<number | null>(null);
+  public isDragging = signal<boolean>(false);
+
+  /**
+   * Snapshot of every tab button's screen rect, taken at the moment
+   * dragging begins. Reused for hit-testing throughout the drag session.
+   *
+   * Why not measure live? During FLIP animations the buttons' visual
+   * rects are transitioning between their old and new positions. Live
+   * measurements would return mid-animation rects, so the tab whose
+   * data-tab-index just updated to N+1 might still be visually at
+   * position N — causing hit-tests to keep triggering "revert" reorders
+   * back to the previous state until the animation completes. Static
+   * layout rects avoid the whole ping-pong.
+   */
+  private tabRectSnapshot: DOMRect[] = [];
+
+  /**
+   * Shadow of the @Input `tabs` used to preview live-reorder positions
+   * during a drag session. Kept in sync with `tabs` via ngOnChanges when
+   * not dragging; mutated on each pointermove hop during a drag so the
+   * FLIP service can animate every other tab into its new position.
+   */
+  public visualTabs = signal<DockTab[]>([]);
 
   constructor(
     private el: ElementRef<HTMLElement>,
@@ -349,6 +403,15 @@ export class DockComponent implements AfterViewInit, OnDestroy {
 
   public ngAfterViewInit(): void {
     this.flip.register(this.el.nativeElement);
+  }
+
+  public ngOnChanges(changes: SimpleChanges): void {
+    if (changes['tabs'] && !this.isDragging()) {
+      // Mirror the input into the local visual buffer whenever we're not
+      // mid-drag. If a drag is in progress we intentionally ignore updates
+      // — the local visualTabs is authoritative until pointerup completes.
+      this.visualTabs.set([...this.tabs]);
+    }
   }
 
   public ngOnDestroy(): void {
@@ -360,6 +423,148 @@ export class DockComponent implements AfterViewInit, OnDestroy {
   }
 
   public onTabClick(tab: DockTab): void {
+    // A drag just completed — swallow the trailing click so tabSelect
+    // doesn't fire on the tab the user dropped onto.
+    if (this.justDragged) {
+      this.justDragged = false;
+      return;
+    }
     this.tabSelect.emit(tab);
+  }
+
+  public trackTabId(_index: number, tab: DockTab): string {
+    return tab.id;
+  }
+
+  public onPointerDown(event: PointerEvent, tab: DockTab, index: number): void {
+    // Only handle primary button.
+    if (event.button !== 0) return;
+
+    const now = Date.now();
+    const isSecondClickOnSame =
+      this.lastPointerDownTabId === tab.id &&
+      now - this.lastPointerDownAt < this.DBL_CLICK_MS;
+
+    if (isSecondClickOnSame) {
+      // Arm drag — mouse is currently held (pointerdown just fired). The
+      // next pointermove starts the actual drag session.
+      this.armed = true;
+      this.dragStartIndex = index;
+      this.dragIndex.set(index);
+      const el = event.currentTarget as HTMLElement;
+      try {
+        el.setPointerCapture(event.pointerId);
+      } catch {
+        // Non-fatal — capture failure just means we won't get moves
+        // after the pointer leaves the button, which is acceptable.
+      }
+      // Prevent text-selection while dragging.
+      event.preventDefault();
+    }
+
+    this.lastPointerDownAt = now;
+    this.lastPointerDownTabId = tab.id;
+  }
+
+  public onPointerMove(event: PointerEvent): void {
+    if (!this.armed) return;
+
+    if (!this.isDragging()) {
+      // First move after arming — enter drag mode. Snapshot the current
+      // input into visualTabs so we can mutate it freely without touching
+      // the parent state. Snapshot every button's screen rect too so
+      // hit-testing uses stable layout positions rather than mid-animation
+      // visual positions (see tabRectSnapshot doc).
+      this.isDragging.set(true);
+      this.visualTabs.set([...this.tabs]);
+      this.tabRectSnapshot =
+        this.tabButtons
+          ?.toArray()
+          .map((b) => b.nativeElement.getBoundingClientRect()) ?? [];
+    }
+
+    const overIdx = this.findTabIndexUnderPointer(event.clientX, event.clientY);
+    const currentIdx = this.dragIndex();
+    if (overIdx === null || currentIdx === null || overIdx === currentIdx) {
+      return;
+    }
+
+    // Live reorder: measure current positions → mutate visualTabs → play
+    // FLIP animation so every affected tab slides smoothly to its new spot.
+    this.flip.capture();
+    this.visualTabs.update((tabs) => {
+      const next = [...tabs];
+      const [item] = next.splice(currentIdx, 1);
+      next.splice(overIdx, 0, item);
+      return next;
+    });
+    this.dragIndex.set(overIdx);
+
+    // Fire-and-forget — flip.play awaits its own rAFs internally.
+    void this.flip.play();
+  }
+
+  public onPointerUp(event: PointerEvent): void {
+    const wasDragging = this.isDragging();
+    if (wasDragging) {
+      const from = this.dragStartIndex;
+      const to = this.dragIndex();
+      if (from !== null && to !== null && from !== to) {
+        this.tabReorder.emit({ fromIndex: from, toIndex: to });
+      }
+      // Set the "just dragged" flag so the browser's click event (which
+      // still fires after pointerup) gets swallowed in onTabClick.
+      this.justDragged = true;
+      // Clear the double-click tracker so a rapid click landing within
+      // 350ms of the drop doesn't re-arm the same tab into another drag.
+      this.lastPointerDownAt = 0;
+      this.lastPointerDownTabId = null;
+    }
+
+    this.armed = false;
+    this.isDragging.set(false);
+    this.dragIndex.set(null);
+    this.dragStartIndex = null;
+    this.tabRectSnapshot = [];
+
+    const el = event.currentTarget as HTMLElement;
+    try {
+      el.releasePointerCapture(event.pointerId);
+    } catch {}
+  }
+
+  public onPointerCancel(): void {
+    // Reset state if the browser cancels the pointer sequence (e.g.,
+    // system pop-up, alt-tab). Preserve justDragged if we were dragging
+    // so a stray click after cancel still gets swallowed.
+    if (this.isDragging()) {
+      this.justDragged = true;
+      // Revert the visual preview since the drop was cancelled.
+      this.visualTabs.set([...this.tabs]);
+    }
+    this.armed = false;
+    this.isDragging.set(false);
+    this.dragIndex.set(null);
+    this.dragStartIndex = null;
+    this.tabRectSnapshot = [];
+  }
+
+  /**
+   * Find which tab position the pointer is currently over, using the
+   * static rect snapshot captured at drag start.
+   *
+   * Because these rects don't move during the drag, hit-tests reflect
+   * the fixed screen positions of slots 0..N. Live-reordering swaps
+   * which tab OCCUPIES each slot in `visualTabs`, but the slot itself
+   * (its rect) stays put — exactly what a reorder gesture wants.
+   */
+  private findTabIndexUnderPointer(x: number, y: number): number | null {
+    for (let i = 0; i < this.tabRectSnapshot.length; i++) {
+      const rect = this.tabRectSnapshot[i];
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return i;
+      }
+    }
+    return null;
   }
 }

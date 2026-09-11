@@ -185,6 +185,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
           [orientation]="dockOrientation()"
           [faded]="dockFaded()"
           (tabSelect)="selectTab($event)"
+          (tabReorder)="onTabReorder($event)"
           (mouseenter)="onDockMouseEnter()"
           (mouseleave)="onDockMouseLeave()"
         ></app-dock>
@@ -327,11 +328,33 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.dockAutoHideEnabled() && !this.isPanelExpanded() && !this.isHoveringDock()
   );
 
+  // Apply the user's persisted drag-reorder before filtering by visibility.
+  // Tabs added in later releases that aren't yet in the saved order simply
+  // appear at the end (preserving their declaration order relative to each
+  // other), so upgrades don't silently hide new features.
+  public sortedTabs = computed<DockTab[]>(() => {
+    const all = this.allAvailableTabs();
+    const orderStr = this.persistence.getSettingValue('dock_tab_order', '');
+    if (!orderStr) return all;
+
+    const savedIds = orderStr.split(',').map((s) => s.trim()).filter(Boolean);
+    const remaining = new Map(all.map((t) => [t.id, t]));
+    const ordered: DockTab[] = [];
+    for (const id of savedIds) {
+      const t = remaining.get(id);
+      if (t) {
+        ordered.push(t);
+        remaining.delete(id);
+      }
+    }
+    return [...ordered, ...remaining.values()];
+  });
+
   // Filter tabs by per-tab visibility settings. Settings is always included so
   // the user can never accidentally lock themselves out of the settings screen.
   public visibleTabs = computed<DockTab[]>(() => {
-    const all = this.allAvailableTabs();
-    return all.filter(
+    const sorted = this.sortedTabs();
+    return sorted.filter(
       (t) =>
         t.id === 'settings' ||
         this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
@@ -405,6 +428,50 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.unlistenToggleWidget) {
       this.unlistenToggleWidget();
     }
+  }
+
+  /**
+   * Persist a drag-reorder emitted by the dock. `fromIndex` and `toIndex`
+   * are indices into visibleTabs; we translate them into a new full-list
+   * order (preserving hidden tabs at their pre-existing positions) and
+   * write the flat comma-separated ID string to settings.
+   */
+  public async onTabReorder(evt: { fromIndex: number; toIndex: number }): Promise<void> {
+    const visible = this.visibleTabs();
+    if (
+      evt.fromIndex < 0 ||
+      evt.toIndex < 0 ||
+      evt.fromIndex >= visible.length ||
+      evt.toIndex >= visible.length ||
+      evt.fromIndex === evt.toIndex
+    ) {
+      return;
+    }
+
+    // Move within the visible list.
+    const movedVisible = [...visible];
+    const [item] = movedVisible.splice(evt.fromIndex, 1);
+    movedVisible.splice(evt.toIndex, 0, item);
+
+    // Merge back into the full sorted list: hidden tabs stay put, visible
+    // tabs are pulled in the new order.
+    const sorted = this.sortedTabs();
+    const visibleIdSet = new Set(visible.map((t) => t.id));
+    const nextVisibleIter = movedVisible[Symbol.iterator]();
+    const newFullOrder: DockTab[] = [];
+    for (const t of sorted) {
+      if (visibleIdSet.has(t.id)) {
+        const nxt = nextVisibleIter.next();
+        if (!nxt.done) newFullOrder.push(nxt.value);
+      } else {
+        newFullOrder.push(t);
+      }
+    }
+
+    await this.persistence.setSetting(
+      'dock_tab_order',
+      newFullOrder.map((t) => t.id).join(',')
+    );
   }
 
   public async selectTab(tab: DockTab): Promise<void> {
