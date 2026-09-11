@@ -24,6 +24,7 @@ import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
 import { MessagesComponent } from './components/messages/messages.component';
 import { JiraComponent } from './components/jira/jira.component';
+import { GitHubComponent } from './components/github/github.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
@@ -42,6 +43,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     TaskComponent,
     MessagesComponent,
     JiraComponent,
+    GitHubComponent,
     CalendarComponent,
     CalculatorComponent,
     PomodoroComponent,
@@ -135,6 +137,9 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2c: JIRA COMPONENT -->
             <app-jira *ngIf="activeTab().id === 'jira'"></app-jira>
 
+            <!-- VIEW 2c2: GITHUB COMPONENT -->
+            <app-github *ngIf="activeTab().id === 'github'"></app-github>
+
             <!-- VIEW 2d: CALENDAR COMPONENT -->
             <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
 
@@ -188,6 +193,15 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
         ).length
   );
 
+  public openGitHubCount = computed(
+    () =>
+      this.integrationManager
+        .unifiedTasks()
+        .filter(
+          (t) => t.providerId === 'github' && t.status !== 'done' && t.status !== 'cancelled'
+        ).length
+  );
+
   // Release-visible tabs. Tasks / Calculator / Pomodoro / Clipboard / Activity
   // are intentionally hidden until their features are production-ready — the
   // component code, service wiring, Rust commands, and template views all stay
@@ -210,6 +224,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       icon: 'jira',
       badgeCount: this.integrationManager.hasCapability('tasks')
         ? this.openJiraCount()
+        : 0,
+    },
+    {
+      id: 'github',
+      label: 'GitHub',
+      icon: 'github',
+      badgeCount: this.integrationManager.hasCapability('tasks')
+        ? this.openGitHubCount()
         : 0,
     },
     { id: 'calendar', label: 'Calendar' },
