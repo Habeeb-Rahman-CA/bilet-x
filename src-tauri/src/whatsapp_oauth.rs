@@ -56,9 +56,16 @@ const BUSINESSES_ENDPOINT: &str = "https://graph.facebook.com/v20.0/me/businesse
 // Delegated Meta scopes for WhatsApp Business Cloud API:
 //   whatsapp_business_management — read WABA + template metadata
 //   whatsapp_business_messaging  — send/receive messages via Cloud API
-//   business_management          — read Business Manager entities to
-//                                  discover which WABAs the user owns
-const SCOPES: &str = "whatsapp_business_management,whatsapp_business_messaging,business_management";
+//
+// business_management would let us auto-discover WABAs via /me/businesses,
+// but Meta doesn't enable it by default on new apps — requesting it triggers
+// "Invalid Scopes: business_management" unless the app owner explicitly adds
+// it under App Review → Permissions and Features. Skipping it keeps the flow
+// working on a fresh app; auto-discovery becomes best-effort and simply
+// returns empty on apps without the scope granted. The UI already handles
+// the "no WABA linked" state and prompts the user to configure via Meta
+// Business Manager.
+const SCOPES: &str = "whatsapp_business_management,whatsapp_business_messaging";
 
 const CALLBACK_TIMEOUT_SECS: u64 = 120;
 

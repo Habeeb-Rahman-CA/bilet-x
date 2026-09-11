@@ -7,27 +7,27 @@ import { UnifiedMessage } from '../../../../integrations/core/models/unified-mes
 import { WindowService } from '../../../../core/tauri/window.service';
 
 @Component({
-  selector: 'app-messages',
+  selector: 'app-slack',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="flex h-full flex-col">
 
       <!-- ==========================================
-           NOT CONNECTED — SIGN IN WITH GOOGLE CARD
+           NOT CONNECTED — SIGN IN WITH SLACK CARD
            ========================================== -->
       <ng-container *ngIf="!isConnected()">
         <div class="flex flex-1 flex-col items-center justify-center space-y-5 px-3 py-8">
 
           <div class="flex flex-col items-center space-y-1 text-center">
-            <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900/80 text-[#EA4335]">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900/80 text-[#ECB22E]">
               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+                <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
               </svg>
             </div>
-            <div class="text-sm font-semibold text-white pt-1">Connect Gmail</div>
+            <div class="text-sm font-semibold text-white pt-1">Connect Slack</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with Google — Bilet-X keeps you signed in and refreshes your session automatically.
+              Sign in once with Slack — Bilet-X shows your latest DMs and group DMs. Personal messages stay on your workspace.
             </div>
           </div>
 
@@ -39,20 +39,21 @@ import { WindowService } from '../../../../core/tauri/window.service';
             <span class="mr-1">⚠️</span>{{ connectError() }}
           </div>
 
-          <!-- Sign in with Google button (idle) -->
+          <!-- Sign in with Slack button (idle) -->
           <button
             *ngIf="!isConnecting()"
-            (click)="onSignInWithGoogle()"
+            (click)="onSignInWithSlack()"
             type="button"
-            class="flex w-full items-center justify-center space-x-2 rounded-lg bg-white py-2.5 px-4 font-semibold text-[12px] text-neutral-900 transition hover:bg-neutral-100 active:scale-[0.99]"
+            class="flex w-full items-center justify-center space-x-2 rounded-lg bg-[#4A154B] py-2.5 px-4 font-semibold text-[12px] text-white transition hover:bg-[#611f62] active:scale-[0.99]"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23 12.24c0-.79-.07-1.55-.2-2.28H12v4.32h6.16c-.27 1.44-1.08 2.66-2.29 3.48v2.88h3.7c2.16-1.99 3.43-4.92 3.43-8.4z"/>
-              <path fill="#34A853" d="M12 23c3.1 0 5.7-1.03 7.57-2.78l-3.7-2.88c-1.03.69-2.34 1.1-3.87 1.1-2.98 0-5.5-2.01-6.4-4.71H1.75v2.96C3.6 20.53 7.5 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.6 13.73C5.37 13.04 5.24 12.3 5.24 11.5s.13-1.54.36-2.23V6.31H1.75C1.02 7.77.6 9.58.6 11.5s.42 3.73 1.15 5.19l3.85-2.96z"/>
-              <path fill="#EA4335" d="M12 4.75c1.68 0 3.19.58 4.38 1.72l3.28-3.28C17.7 1.19 15.1 0 12 0 7.5 0 3.6 2.47 1.75 6.31l3.85 2.96c.9-2.7 3.42-4.52 6.4-4.52z"/>
+            <!-- Slack brand mark -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#E01E5A" d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313z"/>
+              <path fill="#36C5F0" d="M8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312z"/>
+              <path fill="#2EB67D" d="M18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312z"/>
+              <path fill="#ECB22E" d="M15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
             </svg>
-            <span>Sign in with Google</span>
+            <span>Sign in with Slack</span>
           </button>
 
           <!-- Waiting state (with Cancel) -->
@@ -62,7 +63,7 @@ import { WindowService } from '../../../../core/tauri/window.service';
                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
                 <path d="M21 3v5h-5"/>
               </svg>
-              <span>Waiting for Google...</span>
+              <span>Waiting for Slack...</span>
             </div>
             <button
               (click)="cancelSignIn()"
@@ -74,48 +75,41 @@ import { WindowService } from '../../../../core/tauri/window.service';
           </div>
 
           <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Your refresh token is stored securely and never leaves this device.
-          </p>
-          <p *ngIf="isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            Complete the sign-in in your browser. If you see a Google error page, tap Cancel here and try again.
+            A browser tab will open for consent. Slack asks you to pick a workspace and confirm the requested scopes.
           </p>
         </div>
       </ng-container>
 
       <!-- ==========================================
-           CONNECTED — INBOX VIEW
+           CONNECTED — DM FEED
            ========================================== -->
       <ng-container *ngIf="isConnected()">
         <div class="flex h-full flex-col space-y-2.5 text-xs">
 
-          <!-- HEADER CONTROLS -->
+          <!-- HEADER -->
           <div class="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/90 p-2 text-xs">
-            <div class="flex items-center space-x-1.5 font-mono text-[10px] text-neutral-400">
-              <span class="flex h-2 w-2 rounded-full bg-emerald-400"></span>
-              <span class="font-medium text-neutral-200">Gmail</span>
-              <span *ngIf="unreadCount() > 0" class="rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-red-400 border border-red-500/30">
-                {{ unreadCount() }} Unread
-              </span>
+            <div class="flex items-center space-x-1.5 font-mono text-[10px] text-neutral-400 overflow-hidden">
+              <span class="flex h-2 w-2 shrink-0 rounded-full bg-emerald-400"></span>
+              <span class="font-medium text-neutral-200">Slack</span>
+              <span *ngIf="teamName()" class="truncate text-neutral-500">· {{ teamName() }}</span>
             </div>
 
             <div class="flex items-center space-x-1">
-              <!-- Compose -->
               <button
-                (click)="openCompose()"
+                (click)="openSlackApp()"
                 type="button"
-                title="Compose Email"
+                title="Open Slack"
                 class="flex h-6 items-center space-x-1 rounded-lg border border-neutral-800 bg-neutral-800 px-2 font-mono text-[9px] text-neutral-300 transition hover:bg-neutral-700 hover:text-white"
               >
-                <span>+</span>
-                <span>Compose</span>
+                <span>↗</span>
+                <span>Slack</span>
               </button>
 
-              <!-- Refresh -->
               <button
                 (click)="refreshMessages()"
                 type="button"
                 [disabled]="isLoading()"
-                title="Sync Gmail"
+                title="Sync Slack"
                 class="flex h-6 w-6 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
               >
                 <svg
@@ -140,12 +134,12 @@ import { WindowService } from '../../../../core/tauri/window.service';
           >
             <div class="flex items-center space-x-1.5 font-semibold text-red-400">
               <span>⚠️</span>
-              <span>Google Sync Notice</span>
+              <span>Slack Sync Notice</span>
             </div>
             <div class="leading-relaxed">{{ errorMessage() }}</div>
           </div>
 
-          <!-- SEARCH / FILTER BAR -->
+          <!-- SEARCH -->
           <div class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 px-2.5 py-1.5 text-xs">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
               viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -158,7 +152,7 @@ import { WindowService } from '../../../../core/tauri/window.service';
             <input
               type="text"
               [(ngModel)]="searchQuery"
-              placeholder="Search subjects, senders, snippets..."
+              placeholder="Search by sender, channel, text..."
               class="w-full bg-transparent text-xs text-white placeholder-neutral-500 focus:outline-none"
             />
             <button
@@ -174,76 +168,51 @@ import { WindowService } from '../../../../core/tauri/window.service';
           <!-- MESSAGES LIST -->
           <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
             <div
-              *ngFor="let mail of filteredMessages()"
-              (click)="openMailDetail(mail)"
+              *ngFor="let msg of filteredMessages()"
+              (click)="openInSlack(msg)"
               role="button"
               tabindex="0"
-              (keydown.enter)="openMailDetail(mail)"
-              title="Click to open email thread in browser"
+              (keydown.enter)="openInSlack(msg)"
+              title="Click to open in Slack"
               class="group cursor-pointer rounded-xl border border-neutral-800/90 bg-neutral-900/80 p-3 text-xs transition-all duration-150 hover:border-neutral-600 hover:bg-neutral-800/90 active:scale-[0.99]"
-              [class.border-l-2]="!mail.isRead"
-              [class.border-l-red-500]="!mail.isRead"
-              [class.bg-neutral-900/95]="!mail.isRead"
+              [class.border-l-2]="!msg.isRead"
+              [class.border-l-purple-500]="!msg.isRead"
+              [class.bg-neutral-900/95]="!msg.isRead"
             >
-              <!-- Sender & Timestamp -->
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2 overflow-hidden">
                   <div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-800 font-mono text-[9px] font-bold text-neutral-300">
-                    {{ getInitials(mail.sender.name) }}
+                    {{ getInitials(msg.sender.name) }}
                   </div>
                   <span class="truncate font-semibold"
-                    [class.text-white]="!mail.isRead"
-                    [class.text-neutral-300]="mail.isRead"
-                  >{{ mail.sender.name }}</span>
+                    [class.text-white]="!msg.isRead"
+                    [class.text-neutral-300]="msg.isRead"
+                  >{{ msg.sender.name }}</span>
                 </div>
 
-                <div class="flex items-center space-x-1.5 shrink-0">
-                  <span class="font-mono text-[9px] text-neutral-500">
-                    {{ formatRelativeTime(mail.timestamp) }}
-                  </span>
-                  <!-- Star -->
-                  <button
-                    (click)="$event.stopPropagation(); toggleStar(mail)"
-                    type="button"
-                    [title]="mail.isStarred ? 'Starred' : 'Star'"
-                    class="rounded p-0.5 text-neutral-500 transition hover:text-yellow-400"
-                    [class.text-yellow-400]="mail.isStarred"
-                  >★</button>
-                  <!-- Open icon -->
-                  <button
-                    *ngIf="mail.webUrl"
-                    (click)="$event.stopPropagation(); openMailDetail(mail)"
-                    type="button"
-                    class="rounded p-1 text-neutral-500 transition hover:bg-neutral-700 hover:text-white"
-                    title="Open in Gmail"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                      <polyline points="15 3 21 3 21 9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                  </button>
-                </div>
+                <span class="font-mono text-[9px] text-neutral-500">
+                  {{ formatRelativeTime(msg.timestamp) }}
+                </span>
               </div>
 
-              <!-- Subject -->
-              <div class="mt-1 font-medium truncate"
-                [class.text-neutral-100]="!mail.isRead"
-                [class.text-neutral-400]="mail.isRead"
-              >{{ mail.subject }}</div>
+              <!-- Channel / subject label -->
+              <div class="mt-1 flex items-center space-x-1.5 font-mono text-[9px] text-neutral-400">
+                <span
+                  class="rounded px-1.5 py-0.5"
+                  [ngClass]="{
+                    'bg-purple-500/10 text-purple-300 border border-purple-500/30': isMpim(msg),
+                    'bg-neutral-800 text-neutral-300': !isMpim(msg)
+                  }"
+                >
+                  {{ isMpim(msg) ? 'group DM' : 'DM' }}
+                </span>
+                <span *ngIf="isMpim(msg)" class="truncate text-neutral-400">{{ msg.subject }}</span>
+              </div>
 
               <!-- Snippet -->
-              <p class="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-neutral-400">
-                {{ mail.snippet }}
+              <p class="mt-1 line-clamp-3 text-[11px] leading-relaxed text-neutral-300">
+                {{ msg.snippet }}
               </p>
-
-              <!-- Labels -->
-              <div *ngIf="mail.labels && mail.labels.length > 0" class="mt-2 flex flex-wrap gap-1 font-mono text-[8px]">
-                <span
-                  *ngFor="let label of filterLabels(mail.labels)"
-                  class="rounded bg-neutral-800/80 px-1.5 py-0.5 text-neutral-400"
-                >{{ label }}</span>
-              </div>
             </div>
 
             <!-- EMPTY STATE -->
@@ -251,8 +220,8 @@ import { WindowService } from '../../../../core/tauri/window.service';
               *ngIf="filteredMessages().length === 0 && !isLoading()"
               class="py-8 text-center font-mono text-xs text-neutral-500"
             >
-              <div class="mb-1 text-sm">📭</div>
-              No messages found.
+              <div class="mb-1 text-sm">💬</div>
+              No recent DMs.
             </div>
           </div>
         </div>
@@ -261,7 +230,7 @@ import { WindowService } from '../../../../core/tauri/window.service';
     </div>
   `,
 })
-export class MessagesComponent implements OnInit {
+export class SlackComponent implements OnInit {
   public searchQuery = '';
   public isLoading = signal<boolean>(false);
   private localError = signal<string | null>(null);
@@ -271,15 +240,23 @@ export class MessagesComponent implements OnInit {
   );
 
   public isConnected = computed(
-    () => this.integrationManager.getConnectionsForProvider('gmail').length > 0
+    () => this.integrationManager.getConnectionsForProvider('slack').length > 0
   );
 
-  public unreadCount = computed(
-    () => this.integrationManager.unifiedMessages().filter((m) => !m.isRead).length
+  private currentConnection = computed(
+    () => this.integrationManager.getConnectionsForProvider('slack')[0]
+  );
+
+  public teamName = computed(() => this.currentConnection()?.config?.['teamName'] || '');
+  public teamDomain = computed(() => this.currentConnection()?.config?.['teamDomain'] || '');
+  public teamId = computed(() => this.currentConnection()?.config?.['teamId'] || '');
+
+  public slackMessages = computed(() =>
+    this.integrationManager.unifiedMessages().filter((m) => m.providerId === 'slack')
   );
 
   public filteredMessages = computed(() => {
-    const list = this.integrationManager.unifiedMessages();
+    const list = this.slackMessages();
     const q = this.searchQuery.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
@@ -293,11 +270,6 @@ export class MessagesComponent implements OnInit {
   public isConnecting = signal<boolean>(false);
   public connectError = signal<string | null>(null);
 
-  /**
-   * Bumped each time a sign-in attempt starts or is cancelled. Late-arriving
-   * responses from stale attempts (Rust listener finally times out after the
-   * user hit Cancel) check this and no-op instead of clobbering fresh UI state.
-   */
   private signInSeq = 0;
 
   constructor(
@@ -311,7 +283,7 @@ export class MessagesComponent implements OnInit {
     }
   }
 
-  public async onSignInWithGoogle(): Promise<void> {
+  public async onSignInWithSlack(): Promise<void> {
     if (this.isConnecting()) return;
     const mySeq = ++this.signInSeq;
     this.isConnecting.set(true);
@@ -319,11 +291,9 @@ export class MessagesComponent implements OnInit {
     this.localError.set(null);
 
     try {
-      const conn = await this.integrationManager.connectProvider('gmail', {
-        queryFilter: 'is:unread in:inbox',
-      });
+      const conn = await this.integrationManager.connectProvider('slack', {});
 
-      if (mySeq !== this.signInSeq) return; // cancelled — ignore stale result
+      if (mySeq !== this.signInSeq) return;
 
       if (conn.status === 'error') {
         this.connectError.set(
@@ -332,7 +302,6 @@ export class MessagesComponent implements OnInit {
         return;
       }
 
-      // Explicitly refresh so any provider error surfaces in the inbox banner.
       await this.refreshMessages();
     } catch (err: any) {
       if (mySeq !== this.signInSeq) return;
@@ -345,9 +314,6 @@ export class MessagesComponent implements OnInit {
   }
 
   public cancelSignIn(): void {
-    // Bump the sequence so any in-flight OAuth response gets discarded.
-    // The Rust listener keeps draining in the background until its timeout —
-    // harmless because we ignore the eventual response.
     this.signInSeq++;
     this.isConnecting.set(false);
     this.connectError.set('Sign-in cancelled. You can try again.');
@@ -360,61 +326,55 @@ export class MessagesComponent implements OnInit {
     try {
       await this.integrationManager.fetchMessages();
     } catch (err: any) {
-      this.localError.set(err?.message || 'Failed to fetch Gmail messages.');
+      this.localError.set(err?.message || 'Failed to fetch Slack messages.');
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  public openMailDetail(mail: UnifiedMessage): void {
-    if (mail.webUrl) {
-      this.windowService.openExternalUrl(mail.webUrl);
+  public openInSlack(msg: UnifiedMessage): void {
+    // Prefer the slack:// deep link so the desktop client focuses if the
+    // user has it installed; fall back to app.slack.com.
+    const teamId = this.teamId();
+    const channelId = (msg.metadata?.['channelId'] as string) || msg.threadId;
+    if (teamId && channelId) {
+      const deep = `slack://channel?team=${encodeURIComponent(teamId)}&id=${encodeURIComponent(channelId)}`;
+      this.windowService.openExternalUrl(deep);
+    } else if (msg.webUrl) {
+      this.windowService.openExternalUrl(msg.webUrl);
     }
-    if (!mail.isRead) {
-      mail.isRead = true;
-      this.markAsRead(mail).catch((err) =>
-        console.warn('[Messages] Mark-as-read remote sync:', err)
+
+    if (!msg.isRead) {
+      msg.isRead = true;
+      this.markAsRead(msg).catch((err) =>
+        console.warn('[Slack] Mark-as-read remote sync:', err)
       );
     }
   }
 
-  public openCompose(): void {
-    this.windowService.openExternalUrl(
-      'https://mail.google.com/mail/u/0/#inbox?compose=new'
-    );
+  public openSlackApp(): void {
+    const teamId = this.teamId();
+    const url = teamId
+      ? `slack://open?team=${encodeURIComponent(teamId)}`
+      : 'https://app.slack.com';
+    this.windowService.openExternalUrl(url);
   }
 
-  public async markAsRead(mail: UnifiedMessage): Promise<void> {
+  public async markAsRead(msg: UnifiedMessage): Promise<void> {
     const providers =
       this.integrationManager.getConnectedCapabilityProviders<MessageProvider>('messages');
     for (const p of providers) {
       if (
-        p.connection.connectionId === mail.connectionId &&
+        p.connection.connectionId === msg.connectionId &&
         p.capabilityInstance.markAsRead
       ) {
-        await p.capabilityInstance.markAsRead(p.connection.connectionId, mail.sourceId);
+        await p.capabilityInstance.markAsRead(p.connection.connectionId, msg.sourceId);
       }
     }
   }
 
-  public async toggleStar(mail: UnifiedMessage): Promise<void> {
-    const nextState = !mail.isStarred;
-    mail.isStarred = nextState;
-
-    const providers =
-      this.integrationManager.getConnectedCapabilityProviders<MessageProvider>('messages');
-    for (const p of providers) {
-      if (
-        p.connection.connectionId === mail.connectionId &&
-        p.capabilityInstance.toggleStarred
-      ) {
-        await p.capabilityInstance.toggleStarred(
-          p.connection.connectionId,
-          mail.sourceId,
-          nextState
-        );
-      }
-    }
+  public isMpim(msg: UnifiedMessage): boolean {
+    return (msg.metadata?.['channelType'] as string) === 'mpim';
   }
 
   public getInitials(name: string): string {
@@ -424,10 +384,6 @@ export class MessagesComponent implements OnInit {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     return name.slice(0, 2).toUpperCase();
-  }
-
-  public filterLabels(labels: string[]): string[] {
-    return labels.filter((l) => l !== 'UNREAD' && l !== 'INBOX');
   }
 
   public formatRelativeTime(isoString: string): string {
