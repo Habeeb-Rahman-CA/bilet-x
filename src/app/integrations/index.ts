@@ -20,6 +20,7 @@ export * from './core/auth/tauri-token-storage.service';
 export * from './core/auth/stored-credential';
 export * from './core/auth/google-oauth.service';
 export * from './core/auth/jira-oauth.service';
+export * from './core/auth/github-oauth.service';
 
 // Core Integration Contracts & Services
 export * from './core/integration.interface';
@@ -30,3 +31,4 @@ export * from './core/integration-manager.service';
 // Provider Adapters
 export * from './providers/jira/jira.integration';
 export * from './providers/gmail/gmail.integration';
+export * from './providers/github/github.integration';
