@@ -4,6 +4,7 @@ pub mod github_oauth;
 pub mod google_oauth;
 pub mod jira_oauth;
 pub mod models;
+pub mod outlook_oauth;
 pub mod state;
 
 use db::SettingsRepository;
@@ -119,6 +120,8 @@ pub fn run() {
             commands::jira_oauth_login,
             commands::jira_oauth_refresh,
             commands::github_oauth_login,
+            commands::outlook_oauth_login,
+            commands::outlook_oauth_refresh,
         ])
         .setup(|app| {
             let app_dir = app

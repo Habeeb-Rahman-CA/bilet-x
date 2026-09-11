@@ -4,6 +4,7 @@ use crate::db::{
 use crate::google_oauth::{self, GoogleTokens, RefreshedTokens};
 use crate::jira_oauth::{self, JiraTokens, RefreshedJiraTokens};
 use crate::github_oauth::{self, GitHubTokens};
+use crate::outlook_oauth::{self, OutlookTokens, RefreshedOutlookTokens};
 use crate::state::{AppState, InteractiveRect};
 use tauri::{State, Window};
 
@@ -23,6 +24,7 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "tab_messages_visible",
     "tab_jira_visible",
     "tab_github_visible",
+    "tab_outlook_visible",
     "tab_calendar_visible",
     "tab_calculator_visible",
     "tab_pomodoro_visible",
@@ -134,6 +136,7 @@ fn validate_setting(key: &str, value: &str) -> Result<(), String> {
         | "tab_messages_visible"
         | "tab_jira_visible"
         | "tab_github_visible"
+        | "tab_outlook_visible"
         | "tab_calendar_visible"
         | "tab_calculator_visible"
         | "tab_pomodoro_visible"
@@ -609,6 +612,25 @@ pub async fn github_oauth_login() -> Result<GitHubTokens, String> {
     tauri::async_runtime::spawn_blocking(github_oauth::run_login_flow)
         .await
         .map_err(|e| format!("OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn outlook_oauth_login() -> Result<OutlookTokens, String> {
+    tauri::async_runtime::spawn_blocking(outlook_oauth::run_login_flow)
+        .await
+        .map_err(|e| format!("OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn outlook_oauth_refresh(refresh_token: String) -> Result<RefreshedOutlookTokens, String> {
+    if refresh_token.trim().is_empty() {
+        return Err("refresh_token is required".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        outlook_oauth::refresh_access_token(&refresh_token)
+    })
+    .await
+    .map_err(|e| format!("Refresh task join error: {}", e))?
 }
 
 #[tauri::command]
