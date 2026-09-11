@@ -493,6 +493,7 @@ export class SettingsComponent implements OnDestroy {
     { id: 'jira', label: 'Jira' },
     { id: 'github', label: 'GitHub' },
     { id: 'outlook', label: 'Outlook' },
+    { id: 'whatsapp', label: 'WhatsApp' },
     { id: 'calendar', label: 'Calendar' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },
