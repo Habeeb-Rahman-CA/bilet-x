@@ -11,6 +11,7 @@ import { IntegrationRegistryService } from './integrations/core/integration-regi
 import { JiraIntegration } from './integrations/providers/jira/jira.integration';
 import { GmailIntegration } from './integrations/providers/gmail/gmail.integration';
 import { GitHubIntegration } from './integrations/providers/github/github.integration';
+import { OutlookIntegration } from './integrations/providers/outlook/outlook.integration';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,9 +22,11 @@ export const appConfig: ApplicationConfig = {
       const jira = inject(JiraIntegration);
       const gmail = inject(GmailIntegration);
       const github = inject(GitHubIntegration);
+      const outlook = inject(OutlookIntegration);
       registry.register(jira);
       registry.register(gmail);
       registry.register(github);
+      registry.register(outlook);
     }),
   ],
 };

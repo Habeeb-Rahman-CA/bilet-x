@@ -25,6 +25,7 @@ import { TaskComponent } from './components/task/task.component';
 import { MessagesComponent } from './components/messages/messages.component';
 import { JiraComponent } from './components/jira/jira.component';
 import { GitHubComponent } from './components/github/github.component';
+import { OutlookComponent } from './components/outlook/outlook.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
@@ -44,6 +45,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     MessagesComponent,
     JiraComponent,
     GitHubComponent,
+    OutlookComponent,
     CalendarComponent,
     CalculatorComponent,
     PomodoroComponent,
@@ -140,6 +142,9 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2c2: GITHUB COMPONENT -->
             <app-github *ngIf="activeTab().id === 'github'"></app-github>
 
+            <!-- VIEW 2c3: OUTLOOK COMPONENT -->
+            <app-outlook *ngIf="activeTab().id === 'outlook'"></app-outlook>
+
             <!-- VIEW 2d: CALENDAR COMPONENT -->
             <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
 
@@ -180,8 +185,20 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
 export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
 
-  public unreadMessagesCount = computed(
-    () => this.integrationManager.unifiedMessages().filter((m) => !m.isRead).length
+  // Per-provider unread counts — otherwise the Gmail badge would double-
+  // count Outlook mail (and vice versa) once both are connected.
+  public unreadGmailCount = computed(
+    () =>
+      this.integrationManager
+        .unifiedMessages()
+        .filter((m) => m.providerId === 'gmail' && !m.isRead).length
+  );
+
+  public unreadOutlookCount = computed(
+    () =>
+      this.integrationManager
+        .unifiedMessages()
+        .filter((m) => m.providerId === 'outlook' && !m.isRead).length
   );
 
   public openJiraCount = computed(
@@ -215,7 +232,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       label: 'Gmail',
       icon: 'gmail',
       badgeCount: this.integrationManager.hasCapability('messages')
-        ? this.unreadMessagesCount()
+        ? this.unreadGmailCount()
         : 0,
     },
     {
@@ -232,6 +249,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       icon: 'github',
       badgeCount: this.integrationManager.hasCapability('tasks')
         ? this.openGitHubCount()
+        : 0,
+    },
+    {
+      id: 'outlook',
+      label: 'Outlook',
+      icon: 'outlook',
+      badgeCount: this.integrationManager.hasCapability('messages')
+        ? this.unreadOutlookCount()
         : 0,
     },
     { id: 'calendar', label: 'Calendar' },
