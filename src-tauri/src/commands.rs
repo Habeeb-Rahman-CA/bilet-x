@@ -22,6 +22,7 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "dock_size",
     "dock_auto_hide",
     "dock_orientation",
+    "dock_tab_order",
     "tab_notes_visible",
     "tab_tasks_visible",
     "tab_messages_visible",

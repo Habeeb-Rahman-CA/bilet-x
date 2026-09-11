@@ -222,32 +222,48 @@ pub fn run() {
                     }
                 });
 
-                // 1b. Auto-persist Window Position on Drag
+                // 1b. Auto-persist Window Position on Drag + Anti-Maximize Guard
                 //
                 // The panel header and dock use `-webkit-app-region: drag`, which moves
                 // the OS window directly (no JS mousemove events). We catch the resulting
                 // WindowEvent::Moved and persist widget_x / widget_y so the user's chosen
                 // spot survives a restart. Throttled to at most one write per 300ms so a
                 // rapid drag doesn't hammer SQLite.
+                //
+                // We also watch WindowEvent::Resized here as a safety net: even with
+                // maximizable:false in tauri.conf.json, Windows may still fire
+                // WM_NCLBUTTONDBLCLK on `-webkit-app-region: drag` regions and toggle
+                // maximize under specific version/DWM combos. If we ever end up
+                // maximized, immediately unmaximize — a floating widget should never
+                // fill the screen.
                 let app_handle_for_move = app.handle().clone();
                 let last_save: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
+                let anti_maximize_window = main_window.clone();
                 main_window.on_window_event(move |event| {
-                    if let tauri::WindowEvent::Moved(pos) = event {
-                        let mut ls = match last_save.lock() {
-                            Ok(g) => g,
-                            Err(_) => return,
-                        };
-                        if let Some(t) = *ls {
-                            if t.elapsed() < Duration::from_millis(300) {
-                                return;
+                    match event {
+                        tauri::WindowEvent::Moved(pos) => {
+                            let mut ls = match last_save.lock() {
+                                Ok(g) => g,
+                                Err(_) => return,
+                            };
+                            if let Some(t) = *ls {
+                                if t.elapsed() < Duration::from_millis(300) {
+                                    return;
+                                }
+                            }
+                            *ls = Some(Instant::now());
+                            drop(ls);
+
+                            let db = app_handle_for_move.state::<db::Database>();
+                            let _ = db.set_setting("widget_x", &pos.x.to_string());
+                            let _ = db.set_setting("widget_y", &pos.y.to_string());
+                        }
+                        tauri::WindowEvent::Resized(_) => {
+                            if anti_maximize_window.is_maximized().unwrap_or(false) {
+                                let _ = anti_maximize_window.unmaximize();
                             }
                         }
-                        *ls = Some(Instant::now());
-                        drop(ls);
-
-                        let db = app_handle_for_move.state::<db::Database>();
-                        let _ = db.set_setting("widget_x", &pos.x.to_string());
-                        let _ = db.set_setting("widget_y", &pos.y.to_string());
+                        _ => {}
                     }
                 });
             }
