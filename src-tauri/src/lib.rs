@@ -94,6 +94,7 @@ pub fn run() {
             commands::window_close,
             commands::set_window_size,
             commands::window_set_focus,
+            commands::get_widget_position,
             commands::set_widget_position,
             commands::set_window_position,
             commands::set_interactive_area,

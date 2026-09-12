@@ -119,4 +119,25 @@ export class WindowService {
       return () => {};
     }
   }
+
+  /**
+   * Fires whenever the OS window is moved (native drag OR programmatic
+   * set_position). Payload is [x, y] in physical pixels. Frontend
+   * subscribes to detect drag-end (via debounce) so it can snap the
+   * widget to the nearest preset position.
+   */
+  /**
+   * Returns the widget window's current outer position (top-left) in
+   * physical pixels. Frontend polls this to detect drag-end (see
+   * WidgetComponent.pollWidgetPosition).
+   */
+  public async getWidgetPosition(): Promise<[number, number]> {
+    if (!this.tauriService.isTauriAvailable()) return [0, 0];
+    try {
+      return await this.tauriService.invokeCommand<[number, number]>('get_widget_position');
+    } catch (e) {
+      console.warn('get_widget_position failed', e);
+      return [0, 0];
+    }
+  }
 }
