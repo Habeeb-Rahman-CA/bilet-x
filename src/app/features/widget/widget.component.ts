@@ -59,14 +59,16 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
   ],
   template: `
     <div
-      class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 select-none"
+      class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 select-none transition-opacity duration-100 ease-out"
       [class.justify-start]="isLeftSide()"
       [class.justify-center]="isHorizontallyCentered()"
       [class.justify-end]="!isLeftSide() && !isHorizontallyCentered()"
       [class.items-start]="isTopSide()"
       [class.items-end]="isBottomSide()"
       [class.items-center]="!isTopSide() && !isBottomSide()"
+      [class.opacity-20]="isOrientationChanging()"
     >
+
       <!-- Inner container: flex-row for vertical dock (panel + dock side by side),
            flex-col for horizontal dock (panel + dock stacked). -->
       <div
@@ -184,8 +186,16 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
           [size]="dockSize()"
           [orientation]="dockOrientation()"
           [faded]="dockFaded()"
+          [isEditMode]="isEditMode()"
+          [hiddenTabs]="hiddenTabs()"
+          [popoverDirection]="popoverDirection()"
           (tabSelect)="selectTab($event)"
           (tabReorder)="onTabReorder($event)"
+          (enterEditMode)="isEditMode.set(true)"
+          (addTab)="onAddTab($event)"
+          (removeTab)="onRemoveTab($event)"
+          (cycleDockSize)="onCycleDockSize()"
+          (toggleDockOrientation)="onToggleDockOrientation()"
           (mouseenter)="onDockMouseEnter()"
           (mouseleave)="onDockMouseLeave()"
         ></app-dock>
@@ -195,6 +205,46 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
 })
 export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
+
+  /**
+   * Global "edit mode" — entered by a long-press on any dock tab. In this
+   * mode tabs jiggle, drag-to-reorder is enabled without any timing
+   * gesture, a + button appears to add hidden tabs, and top/bottom resize
+   * handles show on the panel. Exit by selecting a tab, pressing ESC, or
+   * clicking outside the dock.
+   */
+  public isEditMode = signal<boolean>(false);
+
+  /**
+   * True during the ~450ms V↔H orientation transition. Fades the widget
+   * out and back in so the internal flex-direction snap (which CSS can't
+   * interpolate) is invisible; the OS window slide happens concurrently.
+   */
+  public isOrientationChanging = signal<boolean>(false);
+
+  /**
+   * True while a programmatic set_widget_position is animating. The
+   * animation itself fires WindowEvent::Moved on the Rust side, which
+   * writes back to widget_x/widget_y — the snap-detect effect must
+   * ignore those or we get a feedback loop.
+   */
+  private isProgrammaticMove = false;
+
+  /**
+   * Debounce timer for drag-end detection. Reset every time widget_x/y
+   * changes; when it fires quietly, we know the user released the drag.
+   */
+  private dragEndTimer: number | undefined;
+
+  /**
+   * Last window position reported by Rust's WindowEvent::Moved. Physical
+   * pixels — divide by devicePixelRatio to compare with CSS-pixel screen
+   * dimensions. window.screenX/Y is unreliable in Tauri webviews on
+   * Windows (often returns 0), so we take the value straight from the
+   * event payload instead.
+   */
+  private lastMovedX = 0;
+  private lastMovedY = 0;
 
   // Per-provider unread counts — otherwise the Gmail badge would double-
   // count Outlook mail (and vice versa) once both are connected.
@@ -311,6 +361,22 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     return p === 'top' || p === 'bottom';
   });
 
+  /**
+   * Where the add-tab popover should open, relative to the + button in
+   * the dock. Popover has to open toward the interior of the widget
+   * window — opening toward the screen edge would render it outside the
+   * 640-wide transparent window and get clipped.
+   */
+  public popoverDirection = computed<'left' | 'right' | 'up' | 'down'>(() => {
+    const p = this.currentPosition();
+    if (p === 'top') return 'down';
+    if (p === 'bottom') return 'up';
+    if (p.includes('left')) return 'right';
+    // Everything else ('right', 'top-right', 'bottom-right', fallback) puts
+    // the dock on the right side of the window; popover has to open left.
+    return 'left';
+  });
+
   // Dock customization signals (Task 5)
   public dockSize = computed<DockSize>(
     () => (this.persistence.getSettingValue('dock_size', 'normal') as DockSize)
@@ -350,16 +416,26 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     return [...ordered, ...remaining.values()];
   });
 
-  // Filter tabs by per-tab visibility settings. Settings is always included so
-  // the user can never accidentally lock themselves out of the settings screen.
+  // Filter tabs by per-tab visibility settings.
+  //
+  // Settings defaults to HIDDEN — users get to it via edit mode's + button.
+  // Every other tab defaults to visible, so upgrades don't hide anything a
+  // user was already using.
   public visibleTabs = computed<DockTab[]>(() => {
     const sorted = this.sortedTabs();
-    return sorted.filter(
-      (t) =>
-        t.id === 'settings' ||
-        this.persistence.getSettingValue(`tab_${t.id}_visible`, 'true') === 'true'
-    );
+    return sorted.filter((t) => this.isTabVisible(t));
   });
+
+  /** Tabs that exist in allAvailableTabs but aren't currently visible. */
+  public hiddenTabs = computed<DockTab[]>(() => {
+    const sorted = this.sortedTabs();
+    return sorted.filter((t) => !this.isTabVisible(t));
+  });
+
+  private isTabVisible(t: DockTab): boolean {
+    const defaultVisible = t.id === 'settings' ? 'false' : 'true';
+    return this.persistence.getSettingValue(`tab_${t.id}_visible`, defaultVisible) === 'true';
+  }
 
   @ViewChild('dockEl', { read: ElementRef }) private dockRef?: ElementRef<HTMLElement>;
   @ViewChild('panelEl', { read: ElementRef }) private panelRef?: ElementRef<HTMLElement>;
@@ -367,6 +443,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   private postAnimationTimer: number | undefined;
   private hoverLeaveTimer: number | undefined;
   private unlistenToggleWidget?: () => void;
+  private positionPollTimer: number | undefined;
+  private lastPolledX = 0;
+  private lastPolledY = 0;
+  private stationarySince = 0;
+  private hasPolledOnce = false;
   private readonly HOVER_LEAVE_MS = 600;
 
   constructor(
@@ -387,6 +468,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.dockOrientation();
       this.dockSize();
       this.visibleTabs();
+      // Edit mode expands the interactive rect to the whole window so the
+      // + popover and resize handles (which sit outside the dock/panel
+      // bounds) still receive clicks instead of falling into a click-
+      // through region.
+      this.isEditMode();
       this.scheduleInteractiveAreaUpdate();
     });
 
@@ -399,6 +485,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
         this.activeTab.set(tabs[0]);
       }
     });
+
   }
 
   public async ngOnInit(): Promise<void> {
@@ -412,7 +499,16 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
         this.windowService.focusWindow();
       }
     });
+
+    // Drag-end detection via polling. Rust events from WindowEvent::Moved
+    // don't consistently reach the webview in this Tauri build, so we
+    // poll the window position instead — same command that Rust uses
+    // internally, called through Tauri IPC every 100ms. Once the position
+    // has been unchanged for 400ms, the user has released the drag →
+    // snap to the nearest configured preset.
+    this.positionPollTimer = window.setInterval(() => this.pollWidgetPosition(), 100);
   }
+
 
   public ngAfterViewInit(): void {
     this.scheduleInteractiveAreaUpdate();
@@ -427,6 +523,9 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.unlistenToggleWidget) {
       this.unlistenToggleWidget();
+    }
+    if (this.positionPollTimer !== undefined) {
+      window.clearInterval(this.positionPollTimer);
     }
   }
 
@@ -474,7 +573,245 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
+  /**
+   * Called from the dock's + popover: flip a hidden tab's visibility to
+   * true. Persisted through the same setting the settings screen uses,
+   * so the two paths stay in sync.
+   */
+  public async onAddTab(tab: DockTab): Promise<void> {
+    await this.persistence.setSetting(`tab_${tab.id}_visible`, 'true');
+  }
+
+  /**
+   * Called when a tab is dragged onto the X (was +) inside the dock while
+   * in edit mode. Hides the tab (visible=false) — the tab moves into the
+   * hidden-tabs popover, from which it can be re-added.
+   */
+  public async onRemoveTab(tab: DockTab): Promise<void> {
+    await this.persistence.setSetting(`tab_${tab.id}_visible`, 'false');
+    // If the currently active tab just got hidden, switch to the first
+    // remaining visible tab so the panel doesn't show a stale view.
+    if (this.activeTab().id === tab.id) {
+      const first = this.visibleTabs()[0];
+      if (first) this.activeTab.set(first);
+    }
+  }
+
+  /** Cycle dock size: compact → normal → large → compact. */
+  public async onCycleDockSize(): Promise<void> {
+    const cycle: DockSize[] = ['compact', 'normal', 'large'];
+    const current = this.dockSize();
+    const idx = cycle.indexOf(current);
+    const next = cycle[(idx === -1 ? 0 : idx + 1) % cycle.length];
+    await this.persistence.setSetting('dock_size', next);
+  }
+
+  /**
+   * Move the widget to a preset position with the same fade+slide timeline
+   * the orientation toggle uses. isProgrammaticMove is flipped for the
+   * duration of the Rust animation so the drag-end effect doesn't try to
+   * snap while our own slide is midway.
+   */
+  public async onSetWidgetPosition(pos: string): Promise<void> {
+    if (pos === this.currentPosition()) return;
+
+    this.isProgrammaticMove = true;
+    void this.windowService.setPosition(pos);
+
+    this.isOrientationChanging.set(true);
+    await new Promise((r) => setTimeout(r, 100));
+    await this.persistence.setSetting('widget_position', pos);
+    this.isOrientationChanging.set(false);
+
+    // Give the Rust slide time to settle before releasing the guard.
+    // set_widget_position runs for 180ms; add margin.
+    await new Promise((r) => setTimeout(r, 250));
+    this.isProgrammaticMove = false;
+  }
+
+  /**
+   * Polled every 100ms — asks Rust for the window's current position and
+   * compares to the previous poll. If the position has been unchanged for
+   * 400ms, the user has released a drag and we snap to the nearest preset.
+   * Short-circuited during our own animated slides via isProgrammaticMove.
+   */
+  private async pollWidgetPosition(): Promise<void> {
+    if (this.isProgrammaticMove) return;
+
+    const [x, y] = await this.windowService.getWidgetPosition();
+
+    if (!this.hasPolledOnce) {
+      // First poll — just capture baseline. Position is where the widget
+      // started this session; not a drag.
+      this.lastPolledX = x;
+      this.lastPolledY = y;
+      this.lastMovedX = x;
+      this.lastMovedY = y;
+      this.hasPolledOnce = true;
+      return;
+    }
+
+    if (x === this.lastPolledX && y === this.lastPolledY) {
+      if (this.stationarySince > 0 && Date.now() - this.stationarySince >= 400) {
+        // Been still long enough — snap. Zero out stationarySince so we
+        // don't re-fire until the position changes again.
+        this.stationarySince = 0;
+        await this.snapToNearestPreset();
+      }
+    } else {
+      // Position changed — user is dragging. Reset the stationary counter.
+      this.lastPolledX = x;
+      this.lastPolledY = y;
+      this.lastMovedX = x;
+      this.lastMovedY = y;
+      this.stationarySince = Date.now();
+    }
+  }
+
+  /**
+   * On drag-end (400ms of quiet after the last poll saw movement), work
+   * out which preset position the widget's center is closest to and slide
+   * there. Rust reports positions in physical pixels; we convert to CSS
+   * pixels so the comparison against screen dimensions is apples-to-apples.
+   */
+  private async snapToNearestPreset(): Promise<void> {
+    if (this.isProgrammaticMove) return;
+
+    const scale = window.devicePixelRatio || 1;
+    // Widget top-left in CSS pixels (Rust reports physical).
+    const posX = this.lastMovedX / scale;
+    const posY = this.lastMovedY / scale;
+    const centerX = posX + window.innerWidth / 2;
+    const centerY = posY + window.innerHeight / 2;
+
+    const valid: string[] =
+      this.dockOrientation() === 'horizontal'
+        ? ['top-left', 'top', 'top-right', 'bottom-left', 'bottom', 'bottom-right']
+        : ['top-left', 'top-right', 'left', 'right', 'bottom-left', 'bottom-right'];
+
+    let nearest = valid[0];
+    let minDist = Infinity;
+    for (const pos of valid) {
+      const c = this.presetCenter(pos);
+      if (!c) continue;
+      const dx = c.x - centerX;
+      const dy = c.y - centerY;
+      const d = dx * dx + dy * dy;
+      if (d < minDist) {
+        minDist = d;
+        nearest = pos;
+      }
+    }
+
+    console.debug('[Widget] snap', {
+      cursorPos: { x: posX, y: posY },
+      center: { x: centerX, y: centerY },
+      current: this.currentPosition(),
+      nearest,
+      distances: valid.map((p) => {
+        const c = this.presetCenter(p);
+        return c
+          ? { p, d: Math.round(Math.hypot(c.x - centerX, c.y - centerY)) }
+          : null;
+      }),
+    });
+
+    if (nearest !== this.currentPosition()) {
+      await this.onSetWidgetPosition(nearest);
+    }
+  }
+
+  /**
+   * CSS-pixel center of the widget window if it were sitting at the given
+   * preset. Mirrors set_widget_position in Rust: 10px inset from edges,
+   * side centers on the perpendicular axis.
+   */
+  private presetCenter(pos: string): { x: number; y: number } | null {
+    const sw = window.screen.availWidth;
+    const sh = window.screen.availHeight;
+    const ww = window.innerWidth;
+    const wh = window.innerHeight;
+    const hx = ww / 2;
+    const hy = wh / 2;
+    switch (pos) {
+      case 'left':         return { x: 10 + hx,      y: sh / 2 };
+      case 'right':        return { x: sw - 10 - hx, y: sh / 2 };
+      case 'top':          return { x: sw / 2,       y: 10 + hy };
+      case 'bottom':       return { x: sw / 2,       y: sh - 10 - hy };
+      case 'top-left':     return { x: 10 + hx,      y: 10 + hy };
+      case 'top-right':    return { x: sw - 10 - hx, y: 10 + hy };
+      case 'bottom-left':  return { x: 10 + hx,      y: sh - 10 - hy };
+      case 'bottom-right': return { x: sw - 10 - hx, y: sh - 10 - hy };
+    }
+    return null;
+  }
+
+  /**
+   * Flip dock orientation: vertical ↔ horizontal. Also snap the widget to
+   * a sensible screen edge for the new orientation — a horizontal dock on
+   * the left/right sides of the screen looks broken, so pushing it to the
+   * bottom (and vice versa: sides-in-vertical) restores a coherent layout.
+   * Corner positions ("top-right", "bottom-left", etc.) work in both modes
+   * and are left alone.
+   *
+   * Timeline (everything runs in parallel — no dead pauses = no perceived
+   * lag). The 100ms fade is short enough to read as a wink, and it overlaps
+   * the OS window slide so *something* is always moving:
+   *
+   *   t=0    click:  start OS window slide (Rust animates ~250ms)
+   *                  start fade out (100ms → opacity-20)
+   *   t=100  fade at trough → apply layout changes invisibly
+   *                            → start fade-in (100ms)
+   *   t=200  fade done; window still gliding
+   *   t=250  window slide complete
+   */
+  public async onToggleDockOrientation(): Promise<void> {
+    const nextOrientation: DockOrientation =
+      this.dockOrientation() === 'vertical' ? 'horizontal' : 'vertical';
+
+    let nextPosition: string | null = null;
+    const cur = this.currentPosition();
+    if (nextOrientation === 'horizontal' && (cur === 'left' || cur === 'right')) {
+      nextPosition = 'bottom';
+    } else if (nextOrientation === 'vertical' && (cur === 'top' || cur === 'bottom')) {
+      nextPosition = 'right';
+    }
+
+    // Kick off the OS window slide IMMEDIATELY (concurrent with fade) —
+    // visible motion from t=0 kills the "did anything happen?" feeling.
+    if (nextPosition) {
+      this.isProgrammaticMove = true;
+      void this.windowService.setPosition(nextPosition);
+    }
+
+    // Start fade out. transition-opacity duration-100 on the root.
+    this.isOrientationChanging.set(true);
+    await new Promise((r) => setTimeout(r, 100));
+
+    // At the trough of the fade, apply the layout changes. The flex
+    // reflow is invisible while the widget is at opacity 0.2.
+    await this.persistence.setSetting('dock_orientation', nextOrientation);
+    if (nextPosition) {
+      await this.persistence.setSetting('widget_position', nextPosition);
+    }
+
+    // Release opacity — new layout emerges as the OS window is still
+    // finishing its slide. The eye reads the whole thing as one motion.
+    this.isOrientationChanging.set(false);
+
+    if (nextPosition) {
+      await new Promise((r) => setTimeout(r, 250));
+      this.isProgrammaticMove = false;
+    }
+  }
+
+
   public async selectTab(tab: DockTab): Promise<void> {
+    // Selecting a tab always exits edit mode — the user's clearly moved
+    // on from configuring the dock to using it.
+    if (this.isEditMode()) {
+      this.isEditMode.set(false);
+    }
     if (this.activeTab().id === tab.id && this.isPanelExpanded()) {
       this.isPanelExpanded.set(false);
     } else {
@@ -513,9 +850,16 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
         await this.layoutService.ensureVisible();
       }
       this.isPanelExpanded.set(opening);
-    } else if (event.key === 'Escape' && this.isPanelExpanded()) {
-      event.preventDefault();
-      this.collapseToWidget();
+    } else if (event.key === 'Escape') {
+      // ESC unwinds the widget state one level at a time: first exit edit
+      // mode (if active), then collapse the expanded panel (if open).
+      if (this.isEditMode()) {
+        event.preventDefault();
+        this.isEditMode.set(false);
+      } else if (this.isPanelExpanded()) {
+        event.preventDefault();
+        this.collapseToWidget();
+      }
     }
   }
 
@@ -530,6 +874,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   // will always transfer focus away from us.
   @HostListener('window:blur')
   public onWindowBlur(): void {
+    // Focus loss also exits edit mode — any interaction outside the
+    // widget counts as "moved on".
+    if (this.isEditMode()) {
+      this.isEditMode.set(false);
+    }
     if (this.isPanelExpanded()) {
       this.collapseToWidget();
     }
@@ -546,6 +895,16 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private reportInteractiveArea(): void {
+    // Edit mode: make the whole window interactive. The + popover extends
+    // outside the dock's own rect (into the transparent area to the left of
+    // the dock), and the resize handles live at the panel edges — both would
+    // fall into the click-through zone under the normal rules, so clicks on
+    // them would pass through to the desktop underneath.
+    if (this.isEditMode()) {
+      this.windowService.setInteractiveArea(0, 0, window.innerWidth, window.innerHeight);
+      return;
+    }
+
     const dock = this.dockRef?.nativeElement?.getBoundingClientRect();
     if (!dock) return;
 

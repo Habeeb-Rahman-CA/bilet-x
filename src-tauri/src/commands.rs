@@ -186,6 +186,18 @@ pub fn window_set_focus(window: Window) -> Result<(), String> {
     window.set_focus().map_err(|e| e.to_string())
 }
 
+/// Returns the widget window's current outer position (top-left) in physical
+/// pixels. Frontend polls this to detect drag-end — when the value stops
+/// changing for a debounce window, the user has released the drag and we
+/// snap to the nearest configured preset position. Cheaper and more reliable
+/// than trying to emit WindowEvent::Moved events all the way to the webview,
+/// which has been unreliable in this Tauri build.
+#[tauri::command]
+pub fn get_widget_position(window: Window) -> Result<(i32, i32), String> {
+    let pos = window.outer_position().map_err(|e| e.to_string())?;
+    Ok((pos.x, pos.y))
+}
+
 #[tauri::command]
 pub fn set_window_size(window: Window, width: f64, height: f64) -> Result<(), String> {
     if !width.is_finite() || !height.is_finite() || width <= 0.0 || height <= 0.0 {
@@ -289,7 +301,10 @@ pub fn set_widget_position(window: Window, position: String) -> Result<(), Strin
     let win = window.clone();
     std::thread::spawn(move || {
         const FRAMES: u32 = 15;
-        const TOTAL_MS: u64 = 250;
+        // 180ms lands snappier than the old 250 without losing the sense
+        // of a slide — the eye still tracks continuous motion at this speed
+        // (~90fps of updates over ~180ms) rather than reading it as a snap.
+        const TOTAL_MS: u64 = 180;
         let frame_ms = TOTAL_MS / FRAMES as u64;
         for i in 1..=FRAMES {
             let t = i as f64 / FRAMES as f64;
