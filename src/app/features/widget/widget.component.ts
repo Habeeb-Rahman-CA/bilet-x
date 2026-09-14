@@ -88,47 +88,27 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
         <div
           #panelEl
           *ngIf="isPanelExpanded()"
-          class="animate-panel-expand flex w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl transition-[height] duration-300 ease-out"
+          class="animate-panel-expand glass-surface flex w-[380px] flex-col overflow-hidden rounded-3xl p-4 text-neutral-100 transition-[height] duration-300 ease-out"
           [style.height]="
             dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
           "
         >
-          <!-- PANEL TOP HEADER ACTION CONTROLS -->
-          <div
-            class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3"
-          >
-            <!-- Left Header Title -->
-            <div class="no-drag flex items-center space-x-1.5">
-              <span class="font-mono text-xs font-bold tracking-wider text-neutral-200 uppercase">
-                {{ activeTab().label }}
-              </span>
-            </div>
-
-            <!-- Right Header Close Button -->
-            <div class="no-drag flex items-center space-x-1.5">
-              <button
-                (click)="collapseToWidget()"
-                type="button"
-                title="Close (ESC)"
-                class="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 transition hover:bg-white hover:text-black"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="lucide lucide-x"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
+          <!-- PANEL TOP HEADER — plain close button, right-aligned.
+               No tab title, no divider line. Each tab component owns its
+               own content styling; this header only provides the close
+               affordance so it's uniform across every tab. -->
+          <div class="titlebar-drag-region flex shrink-0 items-center justify-end">
+            <button
+              (click)="collapseToWidget()"
+              type="button"
+              title="Close (ESC)"
+              class="no-drag flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-neutral-200 transition hover:bg-white/[0.12]"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
           </div>
 
           <!-- PANEL MAIN CONTENT BODY -->
@@ -368,13 +348,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
    * 640-wide transparent window and get clipped.
    */
   public popoverDirection = computed<'left' | 'right' | 'up' | 'down'>(() => {
-    const p = this.currentPosition();
-    if (p === 'top') return 'down';
-    if (p === 'bottom') return 'up';
-    if (p.includes('left')) return 'right';
-    // Everything else ('right', 'top-right', 'bottom-right', fallback) puts
-    // the dock on the right side of the window; popover has to open left.
-    return 'left';
+    // Popover extends perpendicular to the dock's flex direction so the two
+    // strips meet at the + button in a clean L. Direction points AWAY from
+    // the screen edge the widget hugs, so the popover stays inside the
+    // transparent widget window.
+    if (this.dockOrientation() === 'horizontal') {
+      return this.isTopSide() ? 'down' : 'up';
+    }
+    return this.isLeftSide() ? 'right' : 'left';
   });
 
   // Dock customization signals (Task 5)
@@ -882,6 +863,19 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.isPanelExpanded()) {
       this.collapseToWidget();
     }
+  }
+
+  // Any pointerdown that lands outside the dock exits edit mode. Covers
+  // clicks on the panel body and clicks on the transparent widget area that
+  // still resolve to a DOM target inside our window. Clicks that truly fall
+  // outside the widget rect are handled by window:blur above.
+  @HostListener('window:pointerdown', ['$event'])
+  public onWindowPointerDown(event: PointerEvent): void {
+    if (!this.isEditMode()) return;
+    const target = event.target as HTMLElement | null;
+    const dockEl = this.dockRef?.nativeElement;
+    if (dockEl && target && dockEl.contains(target)) return;
+    this.isEditMode.set(false);
   }
 
   private scheduleInteractiveAreaUpdate(): void {

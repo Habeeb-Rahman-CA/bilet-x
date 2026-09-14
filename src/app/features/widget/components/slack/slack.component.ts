@@ -5,11 +5,12 @@ import { IntegrationManagerService } from '../../../../integrations/core/integra
 import { MessageProvider } from '../../../../integrations/core/capabilities/message-provider.interface';
 import { UnifiedMessage } from '../../../../integrations/core/models/unified-message.model';
 import { WindowService } from '../../../../core/tauri/window.service';
+import { DisconnectButtonComponent } from '../../../../shared/components/disconnect-button/disconnect-button.component';
 
 @Component({
   selector: 'app-slack',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DisconnectButtonComponent],
   template: `
     <div class="flex h-full flex-col">
 
@@ -124,6 +125,8 @@ import { WindowService } from '../../../../core/tauri/window.service';
                   <path d="M8 16H3v5" />
                 </svg>
               </button>
+
+              <app-disconnect-button providerId="slack"></app-disconnect-button>
             </div>
           </div>
 

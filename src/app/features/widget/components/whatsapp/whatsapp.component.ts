@@ -7,11 +7,12 @@ import {
 } from '../../../../integrations/providers/whatsapp/whatsapp.integration';
 import { WhatsAppPhoneNumber } from '../../../../integrations/core/auth/whatsapp-oauth.service';
 import { WindowService } from '../../../../core/tauri/window.service';
+import { DisconnectButtonComponent } from '../../../../shared/components/disconnect-button/disconnect-button.component';
 
 @Component({
   selector: 'app-whatsapp',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DisconnectButtonComponent],
   template: `
     <div class="flex h-full flex-col">
 
@@ -93,25 +94,29 @@ import { WindowService } from '../../../../core/tauri/window.service';
               <span *ngIf="businessName()" class="truncate text-neutral-500">· {{ businessName() }}</span>
             </div>
 
-            <button
-              (click)="refresh()"
-              type="button"
-              [disabled]="isLoading()"
-              title="Sync"
-              class="flex h-6 w-6 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
-            >
-              <svg
-                [class.animate-spin]="isLoading()"
-                xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            <div class="flex items-center space-x-1">
+              <button
+                (click)="refresh()"
+                type="button"
+                [disabled]="isLoading()"
+                title="Sync"
+                class="flex h-6 w-6 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
               >
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                <path d="M8 16H3v5" />
-              </svg>
-            </button>
+                <svg
+                  [class.animate-spin]="isLoading()"
+                  xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                >
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M8 16H3v5" />
+                </svg>
+              </button>
+
+              <app-disconnect-button providerId="whatsapp"></app-disconnect-button>
+            </div>
           </div>
 
           <!-- ERROR BANNER -->

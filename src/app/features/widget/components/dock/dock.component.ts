@@ -63,11 +63,47 @@ export type DockOrientation = 'vertical' | 'horizontal';
       .jiggle:nth-child(even) {
         animation-delay: -0.16s;
       }
+
+      /* Add-tab popover positioning. Scoped CSS instead of Tailwind ngClass
+         so v4's content scanner can't drop these transform utilities. Each
+         class sits the popover flush against the + button with a 6px gap
+         (the visual "seam" at the L-corner) and pins the perpendicular axis
+         so icons land exactly on the same line as the + icon.
+         flex-direction is also set here — depending on Tailwind's flex-col /
+         flex-row from ngClass string keys turned out to be unreliable. */
+      .popover-left {
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-right: 6px;
+        flex-direction: row;
+      }
+      .popover-right {
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: 6px;
+        flex-direction: row;
+      }
+      .popover-up {
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 6px;
+        flex-direction: column;
+      }
+      .popover-down {
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: 6px;
+        flex-direction: column;
+      }
     `,
   ],
   template: `
     <div
-      class="titlebar-drag-region flex items-center rounded-2xl border border-neutral-800 bg-neutral-950/90 shadow-2xl backdrop-blur-xl transition-all duration-300 ease-out select-none"
+      class="titlebar-drag-region glass-surface flex items-center rounded-3xl transition-all duration-300 ease-out select-none"
       [ngClass]="{
         'flex-col': orientation === 'vertical',
         'flex-row': orientation === 'horizontal',
@@ -84,6 +120,9 @@ export type DockOrientation = 'vertical' | 'horizontal';
         'opacity-100': !faded || isEditMode,
         'ring-2 ring-blue-400/60 ring-offset-2 ring-offset-black/60': isEditMode
       }"
+      (pointerdown)="onContainerPointerDown($event)"
+      (pointerup)="onContainerPointerUp()"
+      (pointercancel)="onContainerPointerUp()"
     >
       <!-- Edit-mode dock config buttons (size cycle + orientation toggle).
            Prepended before the tabs so they read as a small toolbar at the
@@ -241,20 +280,26 @@ export type DockOrientation = 'vertical' | 'horizontal';
           </svg>
         </button>
 
-        <!-- Add-tab popover: horizontal icon strip. Icons only, no labels.
-             The dock (vertical column of tab buttons) plus this popover
-             (horizontal strip extending left of the + button) forms an
-             inverted-L. Click on a hidden tab's icon to make it visible. -->
+        <!-- Add-tab popover: perpendicular icon strip forming an L with the
+             dock. For a vertical dock (+ at bottom), the popover is a
+             horizontal row extending left/right from the +; for a horizontal
+             dock (+ at right), it's a vertical column extending up/down. The
+             popover sits flush against the + button — no gap — so the two
+             strips share the L-corner cleanly. Padding + gap match the dock's
+             size so icons land on the same axis as the + icon. -->
         <div
           *ngIf="isAddPopoverOpen() && !isDragging()"
           (click)="$event.stopPropagation()"
           (pointerdown)="$event.stopPropagation()"
-          class="no-drag absolute z-30 flex items-center gap-1 rounded-xl border border-neutral-800 bg-neutral-950/95 p-1.5 shadow-2xl backdrop-blur-xl"
+          class="no-drag glass-surface absolute z-30 flex items-center rounded-2xl"
           [ngClass]="{
-            'right-full mr-2 top-1/2 -translate-y-1/2 flex-row': popoverDirection === 'left',
-            'left-full ml-2 top-1/2 -translate-y-1/2 flex-row': popoverDirection === 'right',
-            'bottom-full mb-2 right-0 flex-row': popoverDirection === 'up',
-            'top-full mt-2 right-0 flex-row': popoverDirection === 'down'
+            'p-1.5 gap-2': size === 'compact',
+            'p-2 gap-2.5': size === 'normal',
+            'p-2.5 gap-3': size === 'large',
+            'popover-left': popoverDirection === 'left',
+            'popover-right': popoverDirection === 'right',
+            'popover-up': popoverDirection === 'up',
+            'popover-down': popoverDirection === 'down'
           }"
         >
           <div
@@ -408,6 +453,40 @@ export class DockComponent implements AfterViewInit, OnChanges, OnDestroy {
   public onAddTab(tab: DockTab): void {
     this.addTab.emit(tab);
     this.isAddPopoverOpen.set(false);
+  }
+
+  /**
+   * Long-press-anywhere-on-dock → edit mode. Fires on pointerdown against
+   * the dock container itself (padding, gaps between icons). Presses that
+   * land on a button — tabs, edit-mode toolbar buttons, + — bubble up
+   * here too, but we skip them so their own handlers own the interaction
+   * (tabs need long-press-and-arm; toolbar buttons need plain click).
+   *
+   * The dock container has `-webkit-app-region: drag` for window-drag
+   * support, so if the user starts moving during the 500ms hold, Tauri
+   * takes over and JS stops receiving pointermove events. The timer then
+   * fires anyway, which is intentional: any 500ms hold on the dock reads
+   * as "I want to edit," and users who wanted to drag will typically
+   * release well before the timer.
+   */
+  public onContainerPointerDown(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    if (this.isEditMode) return;
+
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button')) return;
+
+    this.pressStartX = event.clientX;
+    this.pressStartY = event.clientY;
+    this.pressIndex = null;
+    this.pressTimerId = window.setTimeout(
+      () => this.onLongPressFired(),
+      this.LONG_PRESS_MS
+    );
+  }
+
+  public onContainerPointerUp(): void {
+    this.cancelLongPress();
   }
 
   public onPointerDown(event: PointerEvent, _tab: DockTab, index: number): void {

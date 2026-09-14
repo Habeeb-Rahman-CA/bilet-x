@@ -152,6 +152,38 @@ html.light .bg-neutral-800 {
   background-color: rgb(229 229 229) !important;
 }
 
+/* =========================================================================
+   GLASS SURFACES — Apple-style frosted glass for the dock, panel, popover.
+   The global `* { box-shadow: none !important }` above strips shadows from
+   everything, so .glass-surface carries its own !important shadow to
+   restore the floating-above-desktop effect on just these three surfaces.
+
+   Layered visual:
+     • 85% neutral fill so text stays crisp (per Apple ~80–90% guidance)
+     • 1px translucent white border for the glass edge
+     • Outer ambient shadow (soft floating look)
+     • Inset top highlight (light catching the top edge)
+     • saturate() on the backdrop makes colors bleed through more
+       vibrantly, which is what sells the "vibrancy" in Apple glass.
+   ========================================================================= */
+.glass-surface {
+  background-color: rgba(24, 24, 27, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: saturate(180%) blur(30px);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+html.light .glass-surface {
+  background-color: rgba(255, 255, 255, 0.78) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+}
+
 /* Borders */
 html.light .border-neutral-800,
 html.light .border-neutral-800\/80 {
