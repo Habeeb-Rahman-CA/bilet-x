@@ -258,8 +258,13 @@ export type DockOrientation = 'vertical' | 'horizontal';
       <!-- + button + popover (edit mode only). Wrapped in a relative
            positioning container so the popover renders as a sibling of
            the button — nesting a <div> with buttons inside a <button>
-           is invalid HTML and some browsers refuse to render it. -->
-      <div *ngIf="isEditMode" class="no-drag relative">
+           is invalid HTML and some browsers refuse to render it.
+
+           TEMP (release scope): the + "add service" button and its icon
+           strip popover are disabled for this release. All services are
+           shown; there's no hide/show flow. Kept intact behind *ngIf="false"
+           so it can be re-enabled once the flow is ready. -->
+      <div *ngIf="false && isEditMode" class="no-drag relative">
         <button
           #addBtn
           (click)="toggleAddPopover(); $event.stopPropagation()"
