@@ -8,7 +8,7 @@ export interface CalendarFilter extends BaseCapabilityFilter {
 
 /**
  * CalendarProvider capability contract.
- * Implemented by Google Calendar, Outlook Calendar, Apple Calendar, etc.
+ * Implemented by Google Calendar, Outlook Calendar, Calendar, etc.
  */
 export interface CalendarProvider {
   fetchEvents(connectionId: string, filter?: CalendarFilter): Promise<UnifiedCalendarEvent[]>;

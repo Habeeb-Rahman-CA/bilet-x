@@ -84,11 +84,19 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
         "
         (click)="$event.stopPropagation()"
       >
-        <!-- FLYOUT QUICK PANEL -->
+        <!-- FLYOUT QUICK PANEL.
+             Stays mounted while isPanelClosing() is true so the reverse
+             spring (animate-panel-collapse) has a live node to animate.
+             Class binding — not a static class — flips the animation
+             direction; the browser re-runs the animation on class change,
+             which is exactly what we want for a mount-time entrance and
+             a signal-driven exit. -->
         <div
           #panelEl
-          *ngIf="isPanelExpanded()"
-          class="animate-panel-expand glass-surface flex w-[380px] flex-col overflow-hidden rounded-3xl p-4 text-neutral-100 transition-[height] duration-300 ease-out"
+          *ngIf="isPanelExpanded() || isPanelClosing()"
+          class="glass-surface flex w-[380px] flex-col overflow-hidden rounded-[22px] p-4 text-neutral-100 transition-[height] duration-300 ease-out"
+          [class.animate-panel-expand]="!isPanelClosing()"
+          [class.animate-panel-collapse]="isPanelClosing()"
           [style.height]="
             dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
           "
@@ -102,58 +110,63 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
               (click)="collapseToWidget()"
               type="button"
               title="Close (ESC)"
-              class="no-drag flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-neutral-200 transition hover:bg-white/[0.12]"
+              class="no-drag glass-btn flex h-7 w-7 items-center justify-center rounded-full"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 6 6 18" />
                 <path d="m6 6 12 12" />
               </svg>
             </button>
           </div>
 
-          <!-- PANEL MAIN CONTENT BODY -->
+          <!-- PANEL MAIN CONTENT BODY.
+               Each tab component wears animate-content-enter so its
+               entrance (opacity + subtle translate/scale) runs on mount.
+               The glass shell above is persistent across tab switches —
+               only the inner content transitions, matching the "one
+               physical material" behavior. -->
           <div class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <!-- VIEW 1: NOTE COMPONENT -->
-            <app-note *ngIf="activeTab().id === 'notes'"></app-note>
+            <app-note class="animate-content-enter block h-full" *ngIf="activeTab().id === 'notes'"></app-note>
 
             <!-- VIEW 2: TASK COMPONENT -->
-            <app-task *ngIf="activeTab().id === 'tasks'"></app-task>
+            <app-task class="animate-content-enter block h-full" *ngIf="activeTab().id === 'tasks'"></app-task>
 
             <!-- VIEW 2b: MESSAGES / GMAIL COMPONENT -->
-            <app-messages *ngIf="activeTab().id === 'messages'"></app-messages>
+            <app-messages class="animate-content-enter block h-full" *ngIf="activeTab().id === 'messages'"></app-messages>
 
             <!-- VIEW 2c: JIRA COMPONENT -->
-            <app-jira *ngIf="activeTab().id === 'jira'"></app-jira>
+            <app-jira class="animate-content-enter block h-full" *ngIf="activeTab().id === 'jira'"></app-jira>
 
             <!-- VIEW 2c2: GITHUB COMPONENT -->
-            <app-github *ngIf="activeTab().id === 'github'"></app-github>
+            <app-github class="animate-content-enter block h-full" *ngIf="activeTab().id === 'github'"></app-github>
 
             <!-- VIEW 2c3: OUTLOOK COMPONENT -->
-            <app-outlook *ngIf="activeTab().id === 'outlook'"></app-outlook>
+            <app-outlook class="animate-content-enter block h-full" *ngIf="activeTab().id === 'outlook'"></app-outlook>
 
             <!-- VIEW 2c4: WHATSAPP DEEP-LINK -->
-            <app-whatsapp *ngIf="activeTab().id === 'whatsapp'"></app-whatsapp>
+            <app-whatsapp class="animate-content-enter block h-full" *ngIf="activeTab().id === 'whatsapp'"></app-whatsapp>
 
             <!-- VIEW 2c5: SLACK COMPONENT -->
-            <app-slack *ngIf="activeTab().id === 'slack'"></app-slack>
+            <app-slack class="animate-content-enter block h-full" *ngIf="activeTab().id === 'slack'"></app-slack>
 
             <!-- VIEW 2d: CALENDAR COMPONENT -->
-            <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
+            <app-calendar class="animate-content-enter block h-full" *ngIf="activeTab().id === 'calendar'"></app-calendar>
 
             <!-- VIEW 2e: CALCULATOR COMPONENT -->
-            <app-calculator *ngIf="activeTab().id === 'calculator'"></app-calculator>
+            <app-calculator class="animate-content-enter block h-full" *ngIf="activeTab().id === 'calculator'"></app-calculator>
 
             <!-- VIEW 2f: POMODORO COMPONENT -->
-            <app-pomodoro *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro>
+            <app-pomodoro class="animate-content-enter block h-full" *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro>
 
             <!-- VIEW 2g: CLIPBOARD COMPONENT -->
-            <app-clipboard *ngIf="activeTab().id === 'clipboard'"></app-clipboard>
+            <app-clipboard class="animate-content-enter block h-full" *ngIf="activeTab().id === 'clipboard'"></app-clipboard>
 
             <!-- VIEW 3: ACTIVITY COMPONENT -->
-            <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
+            <app-activity class="animate-content-enter block h-full" *ngIf="activeTab().id === 'activity'"></app-activity>
 
             <!-- VIEW 4: SETTINGS COMPONENT -->
-            <app-settings *ngIf="activeTab().id === 'settings'"></app-settings>
+            <app-settings class="animate-content-enter block h-full" *ngIf="activeTab().id === 'settings'"></app-settings>
           </div>
         </div>
 
@@ -185,6 +198,18 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
 })
 export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
+
+  /**
+   * True during the ~140ms panel collapse animation. The template keeps
+   * the panel mounted while either isPanelExpanded or isPanelClosing is
+   * true, so the reverse spring can play instead of the DOM node vanishing
+   * the instant the user hits close. Kept as a separate signal (rather
+   * than a tri-state enum) so the reactive click-through re-measure effect
+   * doesn't have to distinguish "actively open" from "unwinding".
+   */
+  public isPanelClosing = signal<boolean>(false);
+  private closeAnimTimer: number | undefined;
+  private readonly CLOSE_ANIM_MS = 140;
 
   /**
    * Global "edit mode" — entered by a long-press on any dock tab. In this
@@ -474,10 +499,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       const nextState = !this.isPanelExpanded();
       if (nextState) {
         await this.layoutService.ensureVisible();
-      }
-      this.isPanelExpanded.set(nextState);
-      if (nextState) {
+        this.cancelPendingClose();
+        this.isPanelExpanded.set(true);
         this.windowService.focusWindow();
+      } else {
+        this.collapseToWidget();
       }
     });
 
@@ -507,6 +533,9 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.positionPollTimer !== undefined) {
       window.clearInterval(this.positionPollTimer);
+    }
+    if (this.closeAnimTimer !== undefined) {
+      window.clearTimeout(this.closeAnimTimer);
     }
   }
 
@@ -653,7 +682,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
    * On drag-end (400ms of quiet after the last poll saw movement), work
    * out which preset position the widget's center is closest to and slide
    * there. Rust reports positions in physical pixels; we convert to CSS
-   * pixels so the comparison against screen dimensions is apples-to-apples.
+   * pixels so the comparison against screen dimensions.
    */
   private async snapToNearestPreset(): Promise<void> {
     if (this.isProgrammaticMove) return;
@@ -794,17 +823,47 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isEditMode.set(false);
     }
     if (this.activeTab().id === tab.id && this.isPanelExpanded()) {
-      this.isPanelExpanded.set(false);
+      this.collapseToWidget();
     } else {
       await this.layoutService.ensureVisible();
+      // Reopening mid-close cancels the pending unmount so we don't wait
+      // for the collapse tail before showing the new content.
+      this.cancelPendingClose();
       this.activeTab.set(tab);
       this.isPanelExpanded.set(true);
       this.windowService.focusWindow();
     }
   }
 
+  /**
+   * Trigger the reverse spring, then unmount once it completes. The panel
+   * stays in the DOM for CLOSE_ANIM_MS so the css keyframes have something
+   * to animate — a plain `set(false)` would rip the element out mid-frame.
+   * Re-entry (selectTab / onToggleWidget) cancels the pending unmount and
+   * reopens instantly instead of waiting for the tail.
+   */
   public collapseToWidget(): void {
-    this.isPanelExpanded.set(false);
+    if (!this.isPanelExpanded() || this.isPanelClosing()) return;
+    this.isPanelClosing.set(true);
+    if (this.closeAnimTimer !== undefined) {
+      window.clearTimeout(this.closeAnimTimer);
+    }
+    this.closeAnimTimer = window.setTimeout(() => {
+      this.isPanelExpanded.set(false);
+      this.isPanelClosing.set(false);
+      this.closeAnimTimer = undefined;
+    }, this.CLOSE_ANIM_MS);
+  }
+
+  /** Cancel any in-flight collapse so a reopen feels instant. */
+  private cancelPendingClose(): void {
+    if (this.closeAnimTimer !== undefined) {
+      window.clearTimeout(this.closeAnimTimer);
+      this.closeAnimTimer = undefined;
+    }
+    if (this.isPanelClosing()) {
+      this.isPanelClosing.set(false);
+    }
   }
 
   public onDockMouseEnter(): void {

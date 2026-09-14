@@ -7,6 +7,51 @@
     --font-sans:
       'Open Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* =====================================================================
+       LIQUID GLASS DESIGN TOKENS
+       Single source of truth for every glass surface. Overridden inside
+       html.light further down for the light palette. Tune here to retone
+       the whole material system in one place.
+       ===================================================================== */
+    --glass-bg: 22, 22, 26;                 /* rgb triplet — outer shell fill */
+    --glass-opacity: 0.55;                  /* alpha applied to --glass-bg */
+    --glass-blur: 22px;                     /* backdrop blur radius */
+    --glass-saturation: 180%;                /* backdrop color-punch */
+    --glass-border: rgba(255, 255, 255, 0.09);
+    --glass-highlight: rgba(255, 255, 255, 0.11);   /* top edge light-catch */
+    --glass-inner-shadow: rgba(0, 0, 0, 0.15);       /* bottom depth line */
+    --glass-shadow:
+      0 20px 50px -12px rgba(0, 0, 0, 0.55),
+      0 4px 14px -4px rgba(0, 0, 0, 0.35);
+    --glass-gloss: radial-gradient(
+      140% 60% at 50% -20%,
+      rgba(255, 255, 255, 0.09),
+      rgba(255, 255, 255, 0) 55%
+    );
+    --glass-radius: 22px;
+    --glass-refraction: url(#lg-refraction);
+    /* Spring-in with a small overshoot; ease-out flavor for the exit. */
+    --glass-ease-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
+    --glass-ease-out:    cubic-bezier(0.4, 0, 1, 1);
+    --glass-in-duration:  260ms;
+    --glass-out-duration: 140ms;
+  }
+
+  html.light {
+    --glass-bg: 255, 255, 255;
+    --glass-opacity: 0.55;
+    --glass-border: rgba(255, 255, 255, 0.65);
+    --glass-highlight: rgba(255, 255, 255, 0.85);
+    --glass-inner-shadow: rgba(20, 20, 30, 0.06);
+    --glass-shadow:
+      0 18px 40px -12px rgba(20, 20, 30, 0.22),
+      0 3px 10px -4px rgba(20, 20, 30, 0.12);
+    --glass-gloss: radial-gradient(
+      140% 60% at 50% -20%,
+      rgba(255, 255, 255, 0.65),
+      rgba(255, 255, 255, 0) 55%
+    );
   }
 
   html,
@@ -82,35 +127,90 @@
   -webkit-app-region: no-drag;
 }
 
-/* Animations for Panel & Widget Expansion / Collapse */
+/* =========================================================================
+   PANEL + WIDGET MOTION
+   Spring-shaped entrance (0.94 → 1.02 → 1.00) so the shell reads as a
+   physical object being placed, not a rectangle fading in. Closing runs
+   shorter and without overshoot — the eye tolerates a snappy exit but
+   punishes a slow one.
+
+   Content transitions on tab switches are separate: the glass shell stays
+   mounted (see WidgetComponent), so only the inner content wrapper animates.
+   ========================================================================= */
 @keyframes panelExpand {
-  0% {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0%   { opacity: 0; transform: scale(0.94); }
+  60%  { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes panelCollapse {
+  0%   { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(0.96); }
 }
 
 @keyframes widgetPop {
-  0% {
-    opacity: 0.6;
-    transform: scale(0.92);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0%   { opacity: 0.6; transform: scale(0.92); }
+  100% { opacity: 1;   transform: scale(1);    }
+}
+
+@keyframes contentEnter {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0)   scale(1);    }
 }
 
 .animate-panel-expand {
-  animation: panelExpand 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: panelExpand var(--glass-in-duration) var(--glass-ease-spring) forwards;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.animate-panel-collapse {
+  animation: panelCollapse var(--glass-out-duration) var(--glass-ease-out) forwards;
+  transform-origin: center;
+  will-change: transform, opacity;
 }
 
 .animate-widget-pop {
   animation: widgetPop 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-content-enter {
+  animation: contentEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+/* =========================================================================
+   REDUCED MOTION
+   Users with prefers-reduced-motion get straight opacity fades with no
+   overshoot, translate, or scale. The glass material itself still renders
+   — motion sensitivity doesn't imply the whole aesthetic is unwelcome —
+   but the physical spring cues are stripped.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .animate-panel-expand,
+  .animate-panel-collapse,
+  .animate-widget-pop,
+  .animate-content-enter {
+    animation-duration: 120ms;
+    animation-timing-function: linear;
+    transform: none !important;
+  }
+
+  .animate-panel-expand,
+  .animate-widget-pop,
+  .animate-content-enter {
+    animation-name: rmFadeIn;
+  }
+
+  .animate-panel-collapse {
+    animation-name: rmFadeOut;
+  }
+
+  @keyframes rmFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rmFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+  /* Kill dock jiggle so edit mode is still functional but not distracting. */
+  .jiggle { animation: none !important; }
 }
 
 /* Snappier default for View Transitions API. Default is 250ms which reads
@@ -153,35 +253,182 @@ html.light .bg-neutral-800 {
 }
 
 /* =========================================================================
-   GLASS SURFACES — Apple-style frosted glass for the dock, panel, popover.
-   The global `* { box-shadow: none !important }` above strips shadows from
-   everything, so .glass-surface carries its own !important shadow to
-   restore the floating-above-desktop effect on just these three surfaces.
+   LIQUID GLASS — the main outer shells (dock, panel, popover).
+   Only three surfaces in the app carry .glass-surface. They are treated
+   as a physical translucent material, not a UI card, so every layer of
+   the composite (fill, refraction, blur, edge highlights, ambient
+   shadow, inner top gloss) is applied here and *only* here. Internal
+   UI uses the lighter .glass-card / .glass-btn primitives further
+   below — refraction is deliberately confined to the shell to keep
+   GPU cost bounded.
 
-   Layered visual:
-     • 85% neutral fill so text stays crisp (per Apple ~80–90% guidance)
-     • 1px translucent white border for the glass edge
-     • Outer ambient shadow (soft floating look)
-     • Inset top highlight (light catching the top edge)
-     • saturate() on the backdrop makes colors bleed through more
-       vibrantly, which is what sells the "vibrancy" in Apple glass.
+   The composite, top-down:
+     1. Refracted backdrop        (backdrop-filter: url(#lg-refraction))
+     2. Blur + saturation         (backdrop-filter: blur + saturate)
+     3. Neutral translucent fill  (background-color)
+     4. 1px outer edge highlight  (border, near-transparent white)
+     5. Inset top light-catch     (inset box-shadow, thin bright line)
+     6. Inset bottom soft dark    (inset box-shadow, subtle depth)
+     7. Ambient floating shadow   (outer box-shadow, wide + soft)
+     8. Radial top gloss          (::before pseudo, low-opacity)
+
+   The global `* { box-shadow: none !important }` rule higher up strips
+   shadows from everything, so this class carries its own !important
+   shadow to reassert the floating-above-desktop effect.
    ========================================================================= */
 .glass-surface {
-  background-color: rgba(24, 24, 27, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: saturate(180%) blur(30px);
-  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  position: relative;
+  isolation: isolate;
+  background-color: rgba(var(--glass-bg), var(--glass-opacity));
+  border: 1px solid var(--glass-border);
+  /* Displacement + blur + saturation. Refraction runs FIRST so the
+     subsequent blur softens its edges — otherwise the distortion reads
+     as sharp warp, not as a bent surface. Non-prefixed backdrop-filter
+     supports url() references in modern Chromium (WebView2). The
+     -webkit- alias omits the url() term since Safari can't chain SVG
+     filters in backdrop-filter reliably; it degrades to a plain blur,
+     which is an acceptable fallback. */
+  backdrop-filter: var(--glass-refraction) blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
   box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 var(--glass-inner-shadow) !important;
+  /* Keep the refraction filter's paintwork inside the shell's box so it
+     can't force re-layout of surrounding elements when the widget resizes
+     or slides. `paint` is the safest containment level here — `strict`
+     would break absolutely-positioned children like the +popover. */
+  contain: paint;
 }
 
-html.light .glass-surface {
-  background-color: rgba(255, 255, 255, 0.78) !important;
-  border-color: rgba(0, 0, 0, 0.06) !important;
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+/* Radial top gloss. Applied as a pseudo-element instead of another
+   inset shadow so the highlight can gradient smoothly across the upper
+   quarter of the surface, not just cling to the edge. */
+.glass-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: var(--glass-gloss);
+}
+
+/* Ensure the shell's own children paint above the pseudo-element gloss.
+   Scoped to > * so we don't disturb the stacking of components several
+   levels deeper. */
+.glass-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fallback for environments that can't chain an SVG filter through
+   backdrop-filter (Safari today, and Chromium builds where the feature
+   ships behind a flag). We can't feature-detect `backdrop-filter: url()`
+   directly, but we can detect the plain form; if the browser doesn't
+   support it at all, we replace refraction+blur with a translucent
+   fill + border + shadow so text stays readable and the shell still
+   feels like a defined surface, just without the physical depth cues. */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-surface {
+    background-color: rgba(var(--glass-bg), 0.9);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* =========================================================================
+   INTERNAL GLASS PRIMITIVES — used for cards, buttons, separators
+   inside the main shell. Deliberately simpler than .glass-surface:
+     • No SVG refraction (perf).
+     • Moderate blur only.
+     • Subtle borders + hover/active states via translucent overlays.
+     • No outer shadow — they sit ON the shell, they don't float above it.
+   ========================================================================= */
+.glass-card {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-radius: 14px;
+}
+
+html.light .glass-card {
+  background-color: rgba(255, 255, 255, 0.55) !important;
+  border-color: rgba(20, 20, 30, 0.06) !important;
+}
+
+.glass-btn {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgb(229, 229, 229);
+  transition:
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.glass-btn:hover {
+  background-color: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.glass-btn:active {
+  background-color: rgba(0, 0, 0, 0.12);
+  transform: scale(0.97);
+}
+
+.glass-btn.is-selected {
+  background-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgb(255, 255, 255);
+}
+
+html.light .glass-btn {
+  background-color: rgba(20, 20, 30, 0.04);
+  border-color: rgba(20, 20, 30, 0.06);
+  color: rgb(38, 38, 42);
+}
+
+html.light .glass-btn:hover {
+  background-color: rgba(20, 20, 30, 0.09);
+  border-color: rgba(20, 20, 30, 0.10);
+}
+
+html.light .glass-btn:active {
+  background-color: rgba(20, 20, 30, 0.14);
+}
+
+html.light .glass-btn.is-selected {
+  background-color: rgba(20, 20, 30, 0.85);
+  border-color: rgba(20, 20, 30, 0.9);
+  color: rgb(255, 255, 255);
+}
+
+.glass-sep {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 0;
+}
+
+html.light .glass-sep {
+  background-color: rgba(20, 20, 30, 0.08);
+}
+
+/* =========================================================================
+   LIQUID MERGE — opt-in container filter.
+   Wrap 2+ decorative child shapes in an element with .liquid-merge and
+   nearby shapes will bleed into one gooey mass through #lg-merge. Do NOT
+   apply to the whole shell or to any container with UI text — the alpha-
+   contrast step will chew edges to bits. Reserve for decorative accents.
+   ========================================================================= */
+.liquid-merge {
+  filter: url(#lg-merge);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Drop the expensive filter when reduced motion is on. The shapes will
+     render individually, which is a fine visual degradation. */
+  .liquid-merge { filter: none; }
 }
 
 /* Borders */

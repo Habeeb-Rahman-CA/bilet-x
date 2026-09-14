@@ -103,7 +103,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
   ],
   template: `
     <div
-      class="titlebar-drag-region glass-surface flex items-center rounded-3xl transition-all duration-300 ease-out select-none"
+      class="titlebar-drag-region glass-surface flex items-center rounded-[22px] transition-all duration-300 ease-out select-none"
       [ngClass]="{
         'flex-col': orientation === 'vertical',
         'flex-row': orientation === 'horizontal',
@@ -118,7 +118,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
         'p-2.5': size === 'large',
         'opacity-20': faded && !isEditMode,
         'opacity-100': !faded || isEditMode,
-        'ring-2 ring-blue-400/60 ring-offset-2 ring-offset-black/60': isEditMode
+        'ring-1 ring-white/25': isEditMode
       }"
       (pointerdown)="onContainerPointerDown($event)"
       (pointerup)="onContainerPointerUp()"
@@ -138,7 +138,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
             'h-9 w-9': size === 'normal',
             'h-11 w-11': size === 'large'
           }"
-          class="no-drag relative flex items-center justify-center rounded-xl border-2 border-dashed border-neutral-800 text-neutral-500 transition-all duration-150 ease-out hover:border-neutral-600 hover:text-white"
+          class="no-drag glass-btn relative flex items-center justify-center rounded-full"
         >
           <!-- "Density" glyph: three horizontal bars, each thicker/taller than
                the last, hinting at the size ladder. -->
@@ -167,7 +167,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
             'h-9 w-9': size === 'normal',
             'h-11 w-11': size === 'large'
           }"
-          class="no-drag relative flex items-center justify-center rounded-xl border-2 border-dashed border-neutral-800 text-neutral-500 transition-all duration-150 ease-out hover:border-neutral-600 hover:text-white"
+          class="no-drag glass-btn relative flex items-center justify-center rounded-full"
         >
           <!-- Rotates 90° to mirror current orientation state, so the icon
                itself reflects vertical vs horizontal at a glance. -->
@@ -203,16 +203,15 @@ export type DockOrientation = 'vertical' | 'horizontal';
         type="button"
         [title]="tab.label"
         [ngClass]="{
-          'bg-white text-black hover:text-black': activeTabId === tab.id && isPanelExpanded && dragIndex() !== i,
-          'text-neutral-400 hover:text-white': !(activeTabId === tab.id && isPanelExpanded) || dragIndex() === i,
+          'is-selected': activeTabId === tab.id && isPanelExpanded && dragIndex() !== i,
           'h-7 w-7': size === 'compact',
           'h-9 w-9': size === 'normal',
           'h-11 w-11': size === 'large',
-          'shadow-lg shadow-black/50 ring-2 ring-blue-400/70 bg-neutral-800 z-10 brightness-125': isDragging() && dragIndex() === i,
+          'z-10 ring-1 ring-white/40 bg-white/[0.14]': isDragging() && dragIndex() === i,
           'jiggle': isEditMode && !(isDragging() && dragIndex() === i),
           'cursor-grabbing': isDragging()
         }"
-        class="no-drag group relative flex cursor-pointer items-center justify-center rounded-xl border border-transparent transition-all duration-200 ease-out hover:border-neutral-700"
+        class="no-drag glass-btn group relative flex cursor-pointer items-center justify-center rounded-full"
       >
         <!-- Unread badge indicator -->
         <span
@@ -239,13 +238,12 @@ export type DockOrientation = 'vertical' | 'horizontal';
             'h-7 w-7': size === 'compact',
             'h-9 w-9': size === 'normal',
             'h-11 w-11': size === 'large',
-            'bg-red-500/25 text-red-100 border-red-500/70 scale-110': isDragging() && isOverAddBtn(),
-            'bg-red-500/10 text-red-300 border-red-500/50': isDragging() && !isOverAddBtn(),
-            'bg-blue-500/20 text-blue-200 border-blue-500/60': !isDragging() && isAddPopoverOpen(),
-            'text-neutral-500 hover:text-white border-neutral-800 border-dashed':
-              !isDragging() && !isAddPopoverOpen()
+            'bg-red-500/20 text-red-50 ring-1 ring-red-400/60 scale-110': isDragging() && isOverAddBtn(),
+            'bg-red-500/10 text-red-200 ring-1 ring-red-400/30': isDragging() && !isOverAddBtn(),
+            'is-selected': !isDragging() && isAddPopoverOpen(),
+            'glass-btn': !isDragging() && !isAddPopoverOpen()
           }"
-          class="flex items-center justify-center rounded-xl border-2 transition-all duration-150 ease-out hover:border-neutral-600"
+          class="flex items-center justify-center rounded-full transition-all duration-150 ease-out"
         >
           <!-- + when idle, × when a drag is in progress -->
           <svg
@@ -320,7 +318,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
               'h-9 w-9': size === 'normal',
               'h-11 w-11': size === 'large'
             }"
-            class="no-drag flex shrink-0 items-center justify-center rounded-xl border border-transparent text-neutral-400 transition hover:border-neutral-700 hover:bg-neutral-800 hover:text-white"
+            class="no-drag glass-btn flex shrink-0 items-center justify-center rounded-full"
           >
             <app-tab-icon [tab]="hidden" [size]="iconSize"></app-tab-icon>
           </button>
