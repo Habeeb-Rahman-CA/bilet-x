@@ -1,12 +1,14 @@
 @import '@fontsource-variable/open-sans';
 @import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/fira-code';
 @import 'tailwindcss';
 
 @layer base {
   :root {
     --font-sans:
-      'Open Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+      'Fira Code Variable', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --font-mono:
+      'Fira Code Variable', 'Fira Code', monospace;
 
     /* =====================================================================
        LIQUID GLASS DESIGN TOKENS

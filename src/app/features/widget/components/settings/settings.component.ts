@@ -38,7 +38,7 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
         <div class="text-[11px] font-semibold text-neutral-300">Dock</div>
 
         <!-- Size picker -->
-        <div class="space-y-1">
+        <!-- <div class="space-y-1">
           <div class="text-[10px] text-neutral-400">Size</div>
           <div class="grid grid-cols-3 gap-1.5 font-mono text-[10px]">
             <button
@@ -51,10 +51,10 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
               {{ opt.label }}
             </button>
           </div>
-        </div>
+        </div> -->
 
         <!-- Orientation picker -->
-        <div class="space-y-1">
+        <!-- <div class="space-y-1">
           <div class="text-[10px] text-neutral-400">Orientation</div>
           <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
             <button
@@ -67,7 +67,7 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
               {{ opt.label }}
             </button>
           </div>
-        </div>
+        </div> -->
 
         <!-- Auto-hide toggle -->
         <div class="space-y-1">
@@ -101,8 +101,11 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
           </div>
         </div>
 
-        <!-- Tab visibility toggles -->
-        <div class="space-y-1">
+        <!-- Tab visibility toggles.
+             TEMP (release scope): hidden for this release — all tabs are
+             always shown, so there's no hide/show setting to surface.
+             Kept intact behind *ngIf="false" for easy re-enable later. -->
+        <div *ngIf="false" class="space-y-1">
           <div class="text-[10px] text-neutral-400">Visible tabs</div>
           <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
             <button
@@ -145,7 +148,7 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
       </div>
 
       <!-- 3. DATA / PERSISTENCE MANAGEMENT -->
-      <div class="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+      <!-- <div class="space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
         <div class="text-[11px] font-semibold text-neutral-300">Data</div>
 
         <div class="flex items-center justify-between font-mono text-[10px]">
@@ -183,10 +186,10 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
             {{ clearTasksArmed() ? 'Confirm?' : 'Clear' }}
           </button>
         </div>
-      </div>
+      </div> -->
 
       <!-- 4. GLOBAL SHORTCUT CONFIGURATION -->
-      <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+      <!-- <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
         <div class="flex items-center justify-between">
           <div class="text-[11px] font-semibold text-neutral-300">Global Shortcut</div>
           <span
@@ -222,7 +225,7 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
           <span>System Tray</span>
           <span class="font-medium text-emerald-400">Active (Minimize/Restore)</span>
         </div>
-      </div>
+      </div> -->
 
       <!-- 5. DESKTOP NOTIFICATIONS SETTING -->
       <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
@@ -269,7 +272,7 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
       </div>
 
       <!-- 6. PLUGGABLE INTEGRATIONS MANAGEMENT -->
-      <div class="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+      <!-- <div class="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
         <div class="flex items-center justify-between">
           <div>
             <div class="text-[11px] font-semibold text-neutral-200">Connected Services</div>
@@ -285,26 +288,26 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
             <span [class.animate-spin]="integrationManager.isSyncing()">↻</span>
             <span>{{ integrationManager.isSyncing() ? 'Syncing...' : 'Sync All' }}</span>
           </button>
-        </div>
+        </div> -->
 
         <!-- CATEGORIES LIST -->
-        <div *ngFor="let cat of integrationCategories()" class="space-y-1.5">
+        <!-- <div *ngFor="let cat of integrationCategories()" class="space-y-1.5">
           <div class="font-mono text-[9px] font-bold uppercase tracking-wider text-neutral-400">
             {{ cat.label }}
-          </div>
+          </div> -->
 
           <!-- PROVIDERS IN CATEGORY -->
-          <div class="space-y-1.5">
+          <!-- <div class="space-y-1.5">
             <div
               *ngFor="let provider of cat.providers"
               class="rounded-lg border border-neutral-800/80 bg-neutral-950/60 p-2.5 transition hover:border-neutral-700"
             >
               <div class="flex items-start justify-between">
                 <div class="space-y-1">
-                  <div class="flex items-center space-x-1.5">
-                    <span class="font-semibold text-neutral-200">{{ provider.displayName }}</span>
+                  <div class="flex items-center space-x-1.5"> -->
+                    <!-- <span class="font-semibold text-neutral-200">{{ provider.displayName }}</span> -->
                     <!-- Capability badges -->
-                    <span
+                    <!-- <span
                       *ngFor="let cap of provider.supportedCapabilities"
                       class="rounded bg-neutral-800 px-1.5 py-0.2 font-mono text-[8px] text-neutral-400"
                     >
@@ -312,12 +315,12 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                     </span>
                   </div>
                   <div class="text-[10px] text-neutral-400">{{ provider.description }}</div>
-                </div>
+                </div> -->
 
                 <!-- Action button: providers with inline tab UI show a hint; others show Connect -->
-                <div>
+                <!-- <div> -->
                   <!-- All other providers: show Connect button -->
-                  <button
+                  <!-- <button
                     *ngIf="!provider.hasInlineConnectUI && getConnectionsForProvider(provider.id).length === 0"
                     (click)="openConnectForm(provider)"
                     type="button"
@@ -326,10 +329,10 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                     Connect
                   </button>
                 </div>
-              </div>
+              </div> -->
 
               <!-- ACTIVE CONNECTIONS FOR THIS PROVIDER -->
-              <div *ngIf="getConnectionsForProvider(provider.id).length > 0" class="mt-2 space-y-1.5 border-t border-neutral-800/60 pt-2">
+              <!-- <div *ngIf="getConnectionsForProvider(provider.id).length > 0" class="mt-2 space-y-1.5 border-t border-neutral-800/60 pt-2">
                 <div
                   *ngFor="let conn of getConnectionsForProvider(provider.id)"
                   class="flex items-center justify-between rounded-md bg-neutral-900 p-1.5 text-[10px]"
@@ -363,10 +366,10 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                     </button>
                   </div>
                 </div>
-              </div>
+              </div> -->
 
               <!-- EXPANDABLE CONNECTION CONFIG FORM (not shown for providers with inline tab setup) -->
-              <div
+              <!-- <div
                 *ngIf="!provider.hasInlineConnectUI && activeForm() && activeForm()?.providerId === provider.id"
                 class="mt-2.5 rounded-lg border border-neutral-700 bg-neutral-900 p-2.5 space-y-2 text-xs"
               >
@@ -383,10 +386,10 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
 
                 <div *ngIf="activeForm()?.error" class="rounded bg-red-500/10 border border-red-500/20 p-1.5 text-[9px] text-red-400">
                   {{ activeForm()?.error }}
-                </div>
+                </div> -->
 
                 <!-- DYNAMIC CONFIG FIELDS -->
-                <div *ngFor="let field of provider.configFields" class="space-y-0.5">
+                <!-- <div *ngFor="let field of provider.configFields" class="space-y-0.5">
                   <label class="flex items-center justify-between text-[9px] text-neutral-300">
                     <span>{{ field.label }} <span *ngIf="field.required" class="text-red-400">*</span></span>
                     <span *ngIf="field.isSecret" class="font-mono text-[8px] text-emerald-400">Encrypted</span>
@@ -400,10 +403,10 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                   <div *ngIf="field.description" class="text-[8px] text-neutral-500">
                     {{ field.description }}
                   </div>
-                </div>
+                </div> -->
 
                 <!-- FORM ACTIONS -->
-                <div class="flex items-center justify-end space-x-1.5 pt-1">
+                <!-- <div class="flex items-center justify-end space-x-1.5 pt-1">
                   <button
                     (click)="closeConnectForm()"
                     type="button"
@@ -420,24 +423,24 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                     {{ activeForm()?.isSaving ? 'Connecting...' : 'Save & Connect' }}
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+              </div> -->
+            <!-- </div> -->
+          <!-- </div> -->
+        <!-- </div> -->
+      <!-- </div> -->
 
       <!-- 7. ABOUT & VERSION SCREEN -->
       <div class="space-y-1 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3 text-[10px]">
         <div class="flex items-center justify-between">
-          <span class="font-mono font-bold text-white uppercase">Bilet-X Utility</span>
+          <span class="font-mono font-bold text-white uppercase">Bilet-X</span>
           <span class="rounded bg-neutral-800 px-1.5 py-0.5 font-mono text-neutral-300"
-            >v1.0.2</span
+            >v1.0.3</span
           >
         </div>
-        <p class="pt-1 leading-relaxed text-neutral-400">
+        <!-- <p class="pt-1 leading-relaxed text-neutral-400">
           Always-on-top desktop widget for notes, tasks, and quick actions. Runs
           locally, follows you across workspaces via a global hotkey.
-        </p>
+        </p> -->
       </div>
     </div>
   `,
