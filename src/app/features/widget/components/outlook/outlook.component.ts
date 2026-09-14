@@ -28,7 +28,7 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect Outlook</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with Microsoft — Bilet-X shows your Outlook inbox and refreshes the session automatically.
+              Sign in once with Microsoft
             </div>
           </div>
 
@@ -75,9 +75,6 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </button>
           </div>
 
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Your refresh token is stored securely and never leaves this device.
-          </p>
           <p *ngIf="isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
             Complete the sign-in in your browser. If you see an error page, tap Cancel here and try again.
           </p>

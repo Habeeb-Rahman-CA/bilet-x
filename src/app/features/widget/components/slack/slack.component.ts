@@ -28,7 +28,7 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect Slack</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with Slack — Bilet-X shows your latest DMs and group DMs. Personal messages stay on your workspace.
+              Sign in once with Slack
             </div>
           </div>
 
@@ -75,9 +75,6 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </button>
           </div>
 
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Slack asks you to pick a workspace and confirm the requested scopes.
-          </p>
         </div>
       </ng-container>
 

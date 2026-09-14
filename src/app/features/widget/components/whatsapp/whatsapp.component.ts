@@ -30,7 +30,7 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect WhatsApp Business</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[240px]">
-              Sign in with Meta to manage your WhatsApp Business Account. This links a WABA — personal WhatsApp chats aren't available via the Cloud API.
+              Sign in with Meta
             </div>
           </div>
 
@@ -74,9 +74,6 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </button>
           </div>
 
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[240px]">
-            A browser tab will open for Meta consent. You'll be asked to grant WhatsApp Business permissions to Bilet-X.
-          </p>
         </div>
       </ng-container>
 

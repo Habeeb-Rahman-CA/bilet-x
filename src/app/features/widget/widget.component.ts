@@ -22,12 +22,8 @@ import {
 } from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
-import { MessagesComponent } from './components/messages/messages.component';
-import { JiraComponent } from './components/jira/jira.component';
-import { GitHubComponent } from './components/github/github.component';
-import { OutlookComponent } from './components/outlook/outlook.component';
-import { WhatsAppComponent } from './components/whatsapp/whatsapp.component';
-import { SlackComponent } from './components/slack/slack.component';
+import { InboxComponent } from './components/inbox/inbox.component';
+import { InboxSwitcherComponent } from './components/inbox/inbox-switcher.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
@@ -44,12 +40,8 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     DockComponent,
     NoteComponent,
     TaskComponent,
-    MessagesComponent,
-    JiraComponent,
-    GitHubComponent,
-    OutlookComponent,
-    WhatsAppComponent,
-    SlackComponent,
+    InboxComponent,
+    InboxSwitcherComponent,
     CalendarComponent,
     CalculatorComponent,
     PomodoroComponent,
@@ -101,16 +93,21 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
           "
         >
-          <!-- PANEL TOP HEADER — plain close button, right-aligned.
-               No tab title, no divider line. Each tab component owns its
-               own content styling; this header only provides the close
-               affordance so it's uniform across every tab. -->
-          <div class="titlebar-drag-region flex shrink-0 items-center justify-end">
+          <!-- PANEL TOP HEADER.
+               Left slot is per-tab: the inbox contributes its service
+               switcher here so the icons sit parallel to the close
+               button on the same row, matching the reference design.
+               Other tabs leave the left slot empty so the close button
+               stays right-aligned as it was. -->
+          <div class="titlebar-drag-region flex shrink-0 items-center gap-2">
+            <div class="no-drag min-w-0 flex-1">
+              <app-inbox-switcher *ngIf="activeTab().id === 'inbox'"></app-inbox-switcher>
+            </div>
             <button
               (click)="collapseToWidget()"
               type="button"
               title="Close (ESC)"
-              class="no-drag glass-btn flex h-7 w-7 items-center justify-center rounded-full"
+              class="no-drag glass-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 6 6 18" />
@@ -132,23 +129,10 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
             <!-- VIEW 2: TASK COMPONENT -->
             <app-task class="animate-content-enter block h-full" *ngIf="activeTab().id === 'tasks'"></app-task>
 
-            <!-- VIEW 2b: MESSAGES / GMAIL COMPONENT -->
-            <app-messages class="animate-content-enter block h-full" *ngIf="activeTab().id === 'messages'"></app-messages>
-
-            <!-- VIEW 2c: JIRA COMPONENT -->
-            <app-jira class="animate-content-enter block h-full" *ngIf="activeTab().id === 'jira'"></app-jira>
-
-            <!-- VIEW 2c2: GITHUB COMPONENT -->
-            <app-github class="animate-content-enter block h-full" *ngIf="activeTab().id === 'github'"></app-github>
-
-            <!-- VIEW 2c3: OUTLOOK COMPONENT -->
-            <app-outlook class="animate-content-enter block h-full" *ngIf="activeTab().id === 'outlook'"></app-outlook>
-
-            <!-- VIEW 2c4: WHATSAPP DEEP-LINK -->
-            <app-whatsapp class="animate-content-enter block h-full" *ngIf="activeTab().id === 'whatsapp'"></app-whatsapp>
-
-            <!-- VIEW 2c5: SLACK COMPONENT -->
-            <app-slack class="animate-content-enter block h-full" *ngIf="activeTab().id === 'slack'"></app-slack>
+            <!-- VIEW 2b: UNIFIED INBOX (Gmail, Outlook, Slack, WhatsApp, Jira, GitHub).
+                 Inbox owns its own service-switcher strip at the top and
+                 delegates the body to the existing per-service components. -->
+            <app-inbox class="animate-content-enter block h-full" *ngIf="activeTab().id === 'inbox'"></app-inbox>
 
             <!-- VIEW 2d: CALENDAR COMPONENT -->
             <app-calendar class="animate-content-enter block h-full" *ngIf="activeTab().id === 'calendar'"></app-calendar>
@@ -251,96 +235,33 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   private lastMovedX = 0;
   private lastMovedY = 0;
 
-  // Per-provider unread counts — otherwise the Gmail badge would double-
-  // count Outlook mail (and vice versa) once both are connected.
-  public unreadGmailCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedMessages()
-        .filter((m) => m.providerId === 'gmail' && !m.isRead).length
-  );
+  // Combined badge count for the unified inbox tab. Sums every provider's
+  // unread messages and every task provider's open items, so the single
+  // dot on the inbox tab summarizes "there is stuff waiting" across
+  // Gmail / Outlook / Slack / Jira / GitHub. The service-switcher strip
+  // inside the inbox breaks it back down per-provider.
+  public inboxBadgeCount = computed(() => {
+    const unreadMessages = this.integrationManager
+      .unifiedMessages()
+      .filter((m) => !m.isRead).length;
+    const openTasks = this.integrationManager
+      .unifiedTasks()
+      .filter((t) => t.status !== 'done' && t.status !== 'cancelled').length;
+    return unreadMessages + openTasks;
+  });
 
-  public unreadOutlookCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedMessages()
-        .filter((m) => m.providerId === 'outlook' && !m.isRead).length
-  );
-
-  public unreadSlackCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedMessages()
-        .filter((m) => m.providerId === 'slack' && !m.isRead).length
-  );
-
-  public openJiraCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedTasks()
-        .filter(
-          (t) => t.providerId === 'jira' && t.status !== 'done' && t.status !== 'cancelled'
-        ).length
-  );
-
-  public openGitHubCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedTasks()
-        .filter(
-          (t) => t.providerId === 'github' && t.status !== 'done' && t.status !== 'cancelled'
-        ).length
-  );
-
-  // Release-visible tabs. Tasks / Calculator / Pomodoro / Clipboard / Activity
-  // are intentionally hidden until their features are production-ready — the
-  // component code, service wiring, Rust commands, and template views all stay
-  // in place, so re-enabling is just uncommenting the matching line here (and
-  // in settings.component.ts allTabs).
+  // Release-visible tabs. Gmail / Outlook / Slack / WhatsApp / Jira / GitHub
+  // are folded into the single Inbox tab — the inbox owns a top service
+  // switcher and reuses each provider's existing component in its body.
+  // Tasks / Calculator / Pomodoro / Clipboard / Activity are intentionally
+  // hidden until their features are production-ready — the component code,
+  // service wiring, Rust commands, and template views all stay in place, so
+  // re-enabling is just uncommenting the matching line here (and in
+  // settings.component.ts allTabs).
   public allAvailableTabs = computed<DockTab[]>(() => [
     { id: 'notes', label: 'Notes' },
     // { id: 'tasks', label: 'Tasks' },
-    {
-      id: 'messages',
-      label: 'Gmail',
-      icon: 'gmail',
-      badgeCount: this.integrationManager.hasCapability('messages')
-        ? this.unreadGmailCount()
-        : 0,
-    },
-    {
-      id: 'jira',
-      label: 'Jira',
-      icon: 'jira',
-      badgeCount: this.integrationManager.hasCapability('tasks')
-        ? this.openJiraCount()
-        : 0,
-    },
-    {
-      id: 'github',
-      label: 'GitHub',
-      icon: 'github',
-      badgeCount: this.integrationManager.hasCapability('tasks')
-        ? this.openGitHubCount()
-        : 0,
-    },
-    {
-      id: 'outlook',
-      label: 'Outlook',
-      icon: 'outlook',
-      badgeCount: this.integrationManager.hasCapability('messages')
-        ? this.unreadOutlookCount()
-        : 0,
-    },
-    { id: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp' },
-    {
-      id: 'slack',
-      label: 'Slack',
-      icon: 'slack',
-      badgeCount: this.integrationManager.hasCapability('messages')
-        ? this.unreadSlackCount()
-        : 0,
-    },
+    { id: 'inbox', label: 'Inbox', badgeCount: this.inboxBadgeCount() },
     { id: 'calendar', label: 'Calendar' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },

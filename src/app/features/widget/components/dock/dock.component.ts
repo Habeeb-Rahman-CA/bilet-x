@@ -21,6 +21,7 @@ export interface DockTab {
   id:
     | 'notes'
     | 'tasks'
+    | 'inbox'
     | 'messages'
     | 'jira'
     | 'github'
@@ -64,13 +65,43 @@ export type DockOrientation = 'vertical' | 'horizontal';
         animation-delay: -0.16s;
       }
 
+      /* The dock's outer element (and the popover itself) both carry
+         .glass-surface, which globally sets contain: paint for GPU
+         cost bounding. That containment clips descendant painting to
+         the element's own box — which swallows the +add-tab popover
+         whenever it tries to extend outside the dock's rectangle
+         (the whole point of the popover). Override containment and
+         overflow inside this component so the popover can render
+         beside the + button instead of being clipped away. The rest
+         of the glass composite (blur, refraction, shadow, gloss) is
+         untouched. */
+      .glass-surface {
+        contain: none;
+        overflow: visible;
+      }
+
       /* Add-tab popover positioning. Scoped CSS instead of Tailwind ngClass
          so v4's content scanner can't drop these transform utilities. Each
          class sits the popover flush against the + button with a 6px gap
          (the visual "seam" at the L-corner) and pins the perpendicular axis
          so icons land exactly on the same line as the + icon.
          flex-direction is also set here — depending on Tailwind's flex-col /
-         flex-row from ngClass string keys turned out to be unreliable. */
+         flex-row from ngClass string keys turned out to be unreliable.
+
+         position: absolute is re-declared here (even though Tailwind's
+         .absolute is on the same element) because the global .glass-surface
+         rule sets position: relative — a plain class selector with equal
+         specificity that wins whichever is cascaded last. Angular's view
+         encapsulation appends a scoping attribute to these selectors,
+         raising their specificity above the global rule so the popover
+         actually floats out of the dock instead of stacking inline in the
+         dock's flex column. */
+      .popover-left,
+      .popover-right,
+      .popover-up,
+      .popover-down {
+        position: absolute;
+      }
       .popover-left {
         right: 100%;
         top: 50%;
@@ -418,6 +449,14 @@ export class DockComponent implements AfterViewInit, OnChanges, OnDestroy {
       // mid-drag. If a drag is in progress we intentionally ignore updates
       // — the local visualTabs is authoritative until pointerup completes.
       this.visualTabs.set([...this.tabs]);
+    }
+
+    // Auto-open the add-tab popover the moment edit mode is entered, and
+    // auto-close it when edit mode exits. Saves the user an extra click to
+    // discover the popover — the whole point of edit mode is customization,
+    // and the popover is the primary customization surface.
+    if (changes['isEditMode']) {
+      this.isAddPopoverOpen.set(this.isEditMode);
     }
   }
 

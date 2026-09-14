@@ -27,7 +27,7 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect GitHub</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with GitHub — Bilet-X shows every open issue and PR assigned to you across all your repos.
+              Sign in once with GitHub
             </div>
           </div>
 
@@ -70,10 +70,6 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
               Cancel
             </button>
           </div>
-
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Your access token is stored securely and never leaves this device.
-          </p>
           <p *ngIf="isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
             Complete the sign-in in your browser. If you see an error page, tap Cancel here and try again.
           </p>
