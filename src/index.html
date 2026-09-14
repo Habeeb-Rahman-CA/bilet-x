@@ -1,28 +1,65 @@
 <!doctype html>
 <html lang="en" class="dark">
-  <head>
-    <meta charset="utf-8" />
-    <title>Bilet-X Application Window</title>
-    <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
-    <link
-      rel="icon"
-      type="image/png"
-      href="bilet-x-dark-icon-v1.png"
-      media="(prefers-color-scheme: dark)"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      href="bilet-x-light-icon-v1.png"
-      media="(prefers-color-scheme: light)"
-    />
-    <link rel="apple-touch-icon" href="bilet-x-dark-icon-v1.png" />
-  </head>
-  <body
-    class="overflow-hidden bg-transparent font-sans text-slate-100 antialiased select-none selection:bg-neutral-500 selection:text-white"
-  >
-    <app-root></app-root>
-  </body>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Bilet-X Application Window</title>
+  <base href="/" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <link rel="icon" type="image/png" href="bilet-x-dark-icon-v1.png" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" href="bilet-x-light-icon-v1.png" media="(prefers-color-scheme: light)" />
+  <link rel="touch-icon" href="bilet-x-dark-icon-v1.png" />
+</head>
+
+<body
+  class="overflow-hidden bg-transparent font-sans text-slate-100 antialiased select-none selection:bg-neutral-500 selection:text-white">
+  <!--
+      Liquid-Glass refraction filter — referenced from CSS via
+      backdrop-filter: url(#lg-refraction). A single fractal-noise field
+      drives a small feDisplacementMap so the desktop behind the glass
+      appears gently bent through the surface. Kept low-frequency + low-
+      scale so the effect reads as refraction, not distortion.
+
+      Only the outer main-shell (.glass-surface) references this filter;
+      internal cards/buttons intentionally skip it to keep GPU cost bounded.
+    -->
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"
+    style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none">
+    <defs>
+      <filter id="lg-refraction" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="4" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="1.5" result="softNoise" />
+        <feDisplacementMap in="SourceGraphic" in2="softNoise" scale="6" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+
+      <!--
+          Gooey / liquid-merge filter — opt-in. Applied only to a container
+          element via CSS `filter: url(#lg-merge)`. Two nearby child shapes
+          will visually connect through a stretched neck; three or more form
+          a single blobby shape. Intentionally NOT applied to the main glass
+          shell — this is meant for decorative shapes (accent blobs, status
+          indicators) where the merge conveys something.
+
+          How it works: a heavy blur softens the child shapes into an alpha
+          gradient, then feColorMatrix pushes the alpha channel through a
+          steep contrast curve so mid-alpha pixels either collapse to fully
+          opaque (where two shapes meet) or fade to fully transparent (thin
+          edges). Compose brings back the original colors so the merged
+          shape isn't monochrome.
+        -->
+      <filter id="lg-merge" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0
+                    0 1 0 0 0
+                    0 0 1 0 0
+                    0 0 0 18 -7" result="merged" />
+        <feComposite in="SourceGraphic" in2="merged" operator="atop" />
+      </filter>
+    </defs>
+  </svg>
+
+  <app-root></app-root>
+</body>
+
 </html>

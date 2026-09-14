@@ -5,11 +5,12 @@ import { IntegrationManagerService } from '../../../../integrations/core/integra
 import { MessageProvider } from '../../../../integrations/core/capabilities/message-provider.interface';
 import { UnifiedMessage } from '../../../../integrations/core/models/unified-message.model';
 import { WindowService } from '../../../../core/tauri/window.service';
+import { DisconnectButtonComponent } from '../../../../shared/components/disconnect-button/disconnect-button.component';
 
 @Component({
   selector: 'app-messages',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DisconnectButtonComponent],
   template: `
     <div class="flex h-full flex-col">
 
@@ -27,7 +28,7 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect Gmail</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with Google — Bilet-X keeps you signed in and refreshes your session automatically.
+              Sign in once with Google
             </div>
           </div>
 
@@ -73,9 +74,6 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </button>
           </div>
 
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Your refresh token is stored securely and never leaves this device.
-          </p>
           <p *ngIf="isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
             Complete the sign-in in your browser. If you see a Google error page, tap Cancel here and try again.
           </p>
@@ -130,6 +128,8 @@ import { WindowService } from '../../../../core/tauri/window.service';
                   <path d="M8 16H3v5" />
                 </svg>
               </button>
+
+              <app-disconnect-button providerId="gmail"></app-disconnect-button>
             </div>
           </div>
 

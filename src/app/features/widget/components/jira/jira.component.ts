@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { IntegrationManagerService } from '../../../../integrations/core/integration-manager.service';
 import { UnifiedTask } from '../../../../integrations/core/models/unified-task.model';
 import { WindowService } from '../../../../core/tauri/window.service';
+import { DisconnectButtonComponent } from '../../../../shared/components/disconnect-button/disconnect-button.component';
 
 @Component({
   selector: 'app-jira',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DisconnectButtonComponent],
   template: `
     <div class="flex h-full flex-col">
 
@@ -26,7 +27,7 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect Jira</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with Atlassian — Bilet-X keeps you signed in and lists everything assigned to you.
+              Sign in once with Atlassian
             </div>
           </div>
 
@@ -77,9 +78,6 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </button>
           </div>
 
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Your refresh token is stored securely and never leaves this device.
-          </p>
           <p *ngIf="isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
             Complete the sign-in in your browser. If you see an error page, tap Cancel here and try again.
           </p>
@@ -103,25 +101,29 @@ import { WindowService } from '../../../../core/tauri/window.service';
               </span>
             </div>
 
-            <button
-              (click)="refreshTasks()"
-              type="button"
-              [disabled]="isLoading()"
-              title="Sync Jira"
-              class="flex h-6 w-6 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
-            >
-              <svg
-                [class.animate-spin]="isLoading()"
-                xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            <div class="flex items-center space-x-1">
+              <button
+                (click)="refreshTasks()"
+                type="button"
+                [disabled]="isLoading()"
+                title="Sync Jira"
+                class="flex h-6 w-6 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
               >
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                <path d="M8 16H3v5" />
-              </svg>
-            </button>
+                <svg
+                  [class.animate-spin]="isLoading()"
+                  xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                >
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M8 16H3v5" />
+                </svg>
+              </button>
+
+              <app-disconnect-button providerId="jira"></app-disconnect-button>
+            </div>
           </div>
 
           <!-- ERROR BANNER -->

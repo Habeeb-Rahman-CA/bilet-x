@@ -5,11 +5,12 @@ import { IntegrationManagerService } from '../../../../integrations/core/integra
 import { MessageProvider } from '../../../../integrations/core/capabilities/message-provider.interface';
 import { UnifiedMessage } from '../../../../integrations/core/models/unified-message.model';
 import { WindowService } from '../../../../core/tauri/window.service';
+import { DisconnectButtonComponent } from '../../../../shared/components/disconnect-button/disconnect-button.component';
 
 @Component({
   selector: 'app-slack',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DisconnectButtonComponent],
   template: `
     <div class="flex h-full flex-col">
 
@@ -27,7 +28,7 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect Slack</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with Slack — Bilet-X shows your latest DMs and group DMs. Personal messages stay on your workspace.
+              Sign in once with Slack
             </div>
           </div>
 
@@ -74,9 +75,6 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </button>
           </div>
 
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Slack asks you to pick a workspace and confirm the requested scopes.
-          </p>
         </div>
       </ng-container>
 
@@ -124,6 +122,8 @@ import { WindowService } from '../../../../core/tauri/window.service';
                   <path d="M8 16H3v5" />
                 </svg>
               </button>
+
+              <app-disconnect-button providerId="slack"></app-disconnect-button>
             </div>
           </div>
 

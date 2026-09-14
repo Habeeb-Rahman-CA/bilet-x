@@ -5,11 +5,12 @@ import { IntegrationManagerService } from '../../../../integrations/core/integra
 import { MessageProvider } from '../../../../integrations/core/capabilities/message-provider.interface';
 import { UnifiedMessage } from '../../../../integrations/core/models/unified-message.model';
 import { WindowService } from '../../../../core/tauri/window.service';
+import { DisconnectButtonComponent } from '../../../../shared/components/disconnect-button/disconnect-button.component';
 
 @Component({
   selector: 'app-outlook',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DisconnectButtonComponent],
   template: `
     <div class="flex h-full flex-col">
 
@@ -27,7 +28,7 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </div>
             <div class="text-sm font-semibold text-white pt-1">Connect Outlook</div>
             <div class="text-[10px] leading-relaxed text-neutral-400 max-w-[220px]">
-              Sign in once with Microsoft — Bilet-X shows your Outlook inbox and refreshes the session automatically.
+              Sign in once with Microsoft
             </div>
           </div>
 
@@ -74,9 +75,6 @@ import { WindowService } from '../../../../core/tauri/window.service';
             </button>
           </div>
 
-          <p *ngIf="!isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
-            A browser tab will open for consent. Your refresh token is stored securely and never leaves this device.
-          </p>
           <p *ngIf="isConnecting()" class="text-center text-[9px] leading-relaxed text-neutral-500 max-w-[220px]">
             Complete the sign-in in your browser. If you see an error page, tap Cancel here and try again.
           </p>
@@ -131,6 +129,8 @@ import { WindowService } from '../../../../core/tauri/window.service';
                   <path d="M8 16H3v5" />
                 </svg>
               </button>
+
+              <app-disconnect-button providerId="outlook"></app-disconnect-button>
             </div>
           </div>
 

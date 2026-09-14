@@ -483,18 +483,17 @@ export class SettingsComponent implements OnDestroy {
   // Settings is intentionally excluded — it must always stay visible so the
   // user can never lock themselves out of this screen.
   //
+  // Gmail / Outlook / Slack / WhatsApp / Jira / GitHub live inside the
+  // unified Inbox tab now (with an in-panel service switcher), so they no
+  // longer appear here individually.
+  //
   // Tasks / Calculator / Pomodoro / Clipboard / Activity are hidden for this
   // release. Kept in the codebase — uncomment when their features ship.
   // Must stay in sync with `allAvailableTabs` in widget.component.ts.
   public allTabs = computed(() => [
     { id: 'notes', label: 'Notes' },
     // { id: 'tasks', label: 'Tasks' },
-    { id: 'messages', label: 'Gmail' },
-    { id: 'jira', label: 'Jira' },
-    { id: 'github', label: 'GitHub' },
-    { id: 'outlook', label: 'Outlook' },
-    { id: 'whatsapp', label: 'WhatsApp' },
-    { id: 'slack', label: 'Slack' },
+    { id: 'inbox', label: 'Inbox' },
     { id: 'calendar', label: 'Calendar' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },

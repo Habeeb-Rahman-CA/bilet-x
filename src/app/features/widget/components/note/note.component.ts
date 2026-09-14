@@ -1,28 +1,22 @@
-import { Component } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PersistenceService } from '../../../../core/tauri/persistence.service';
+
 
 @Component({
   selector: 'app-note',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="flex h-full flex-col space-y-2">
-      <div
-        class="flex shrink-0 items-center justify-between font-mono text-[10px] text-neutral-400"
-      >
-        <span class="flex items-center space-x-1.5">
-          <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
-          <span class="font-medium text-emerald-400">Saved</span>
-        </span>
-        <span>{{ persistence.scratchpadText().length }} chars</span>
-      </div>
+    <div class="flex h-full flex-col gap-4">
+      <!-- Body. Plain textarea — dashes typed by the user render as the
+           bulleted look in the reference; no markdown parsing. -->
       <textarea
-        [ngModel]="persistence.scratchpadText()"
-        (ngModelChange)="onScratchpadChange($event)"
-        placeholder="Type your notes here..."
-        class="min-h-0 w-full flex-1 resize-none rounded-xl border border-neutral-800 bg-neutral-900/90 p-3.5 font-sans text-xs leading-relaxed text-neutral-100 placeholder-neutral-500 selection:bg-neutral-700 selection:text-white focus:border-neutral-500 focus:outline-none"
+        [ngModel]="body()"
+        (ngModelChange)="onBodyChange($event)"
+        placeholder="- Start a bullet with a dash"
+        class="min-h-0 w-full flex-1 resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-neutral-200 placeholder-neutral-500 focus:outline-none focus:ring-0"
       ></textarea>
     </div>
   `,
@@ -30,7 +24,28 @@ import { PersistenceService } from '../../../../core/tauri/persistence.service';
 export class NoteComponent {
   constructor(public persistence: PersistenceService) {}
 
-  public onScratchpadChange(newText: string): void {
-    this.persistence.saveScratchpad(newText);
+  public title = computed(() => {
+    const text = this.persistence.scratchpadText();
+    const nl = text.indexOf('\n');
+    return nl === -1 ? text : text.slice(0, nl);
+  });
+
+  public body = computed(() => {
+    const text = this.persistence.scratchpadText();
+    const nl = text.indexOf('\n');
+    return nl === -1 ? '' : text.slice(nl + 1);
+  });
+
+  public onTitleChange(newTitle: string): void {
+    const body = this.body();
+    // Preserve the newline separator even when body is empty so the next
+    // keystroke in the body textarea doesn't accidentally merge back into
+    // the title line.
+    this.persistence.saveScratchpad(body ? `${newTitle}\n${body}` : newTitle);
+  }
+
+  public onBodyChange(newBody: string): void {
+    const title = this.title();
+    this.persistence.saveScratchpad(title ? `${title}\n${newBody}` : `\n${newBody}`);
   }
 }

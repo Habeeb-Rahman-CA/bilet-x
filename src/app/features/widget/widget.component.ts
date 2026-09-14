@@ -22,12 +22,8 @@ import {
 } from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
 import { TaskComponent } from './components/task/task.component';
-import { MessagesComponent } from './components/messages/messages.component';
-import { JiraComponent } from './components/jira/jira.component';
-import { GitHubComponent } from './components/github/github.component';
-import { OutlookComponent } from './components/outlook/outlook.component';
-import { WhatsAppComponent } from './components/whatsapp/whatsapp.component';
-import { SlackComponent } from './components/slack/slack.component';
+import { InboxComponent } from './components/inbox/inbox.component';
+import { InboxSwitcherComponent } from './components/inbox/inbox-switcher.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
@@ -44,12 +40,8 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     DockComponent,
     NoteComponent,
     TaskComponent,
-    MessagesComponent,
-    JiraComponent,
-    GitHubComponent,
-    OutlookComponent,
-    WhatsAppComponent,
-    SlackComponent,
+    InboxComponent,
+    InboxSwitcherComponent,
     CalendarComponent,
     CalculatorComponent,
     PomodoroComponent,
@@ -84,96 +76,81 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
         "
         (click)="$event.stopPropagation()"
       >
-        <!-- FLYOUT QUICK PANEL -->
+        <!-- FLYOUT QUICK PANEL.
+             Stays mounted while isPanelClosing() is true so the reverse
+             spring (animate-panel-collapse) has a live node to animate.
+             Class binding — not a static class — flips the animation
+             direction; the browser re-runs the animation on class change,
+             which is exactly what we want for a mount-time entrance and
+             a signal-driven exit. -->
         <div
           #panelEl
-          *ngIf="isPanelExpanded()"
-          class="animate-panel-expand flex w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 p-4 text-neutral-100 shadow-2xl backdrop-blur-xl transition-[height] duration-300 ease-out"
+          *ngIf="isPanelExpanded() || isPanelClosing()"
+          class="glass-surface flex w-[380px] flex-col overflow-hidden rounded-[22px] p-4 text-neutral-100 transition-[height] duration-300 ease-out"
+          [class.animate-panel-expand]="!isPanelClosing()"
+          [class.animate-panel-collapse]="isPanelClosing()"
           [style.height]="
             dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
           "
         >
-          <!-- PANEL TOP HEADER ACTION CONTROLS -->
-          <div
-            class="titlebar-drag-region flex items-center justify-between border-b border-neutral-800/80 pb-3"
-          >
-            <!-- Left Header Title -->
-            <div class="no-drag flex items-center space-x-1.5">
-              <span class="font-mono text-xs font-bold tracking-wider text-neutral-200 uppercase">
-                {{ activeTab().label }}
-              </span>
+          <!-- PANEL TOP HEADER.
+               Left slot is per-tab: the inbox contributes its service
+               switcher here so the icons sit parallel to the close
+               button on the same row, matching the reference design.
+               Other tabs leave the left slot empty so the close button
+               stays right-aligned as it was. -->
+          <div class="titlebar-drag-region flex shrink-0 items-center gap-2">
+            <div class="no-drag min-w-0 flex-1">
+              <app-inbox-switcher *ngIf="activeTab().id === 'inbox'"></app-inbox-switcher>
             </div>
-
-            <!-- Right Header Close Button -->
-            <div class="no-drag flex items-center space-x-1.5">
-              <button
-                (click)="collapseToWidget()"
-                type="button"
-                title="Close (ESC)"
-                class="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-400 transition hover:bg-white hover:text-black"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="lucide lucide-x"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
+            <button
+              (click)="collapseToWidget()"
+              type="button"
+              title="Close (ESC)"
+              class="no-drag glass-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
           </div>
 
-          <!-- PANEL MAIN CONTENT BODY -->
+          <!-- PANEL MAIN CONTENT BODY.
+               Each tab component wears animate-content-enter so its
+               entrance (opacity + subtle translate/scale) runs on mount.
+               The glass shell above is persistent across tab switches —
+               only the inner content transitions, matching the "one
+               physical material" behavior. -->
           <div class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <!-- VIEW 1: NOTE COMPONENT -->
-            <app-note *ngIf="activeTab().id === 'notes'"></app-note>
+            <app-note class="animate-content-enter block h-full" *ngIf="activeTab().id === 'notes'"></app-note>
 
             <!-- VIEW 2: TASK COMPONENT -->
-            <app-task *ngIf="activeTab().id === 'tasks'"></app-task>
+            <app-task class="animate-content-enter block h-full" *ngIf="activeTab().id === 'tasks'"></app-task>
 
-            <!-- VIEW 2b: MESSAGES / GMAIL COMPONENT -->
-            <app-messages *ngIf="activeTab().id === 'messages'"></app-messages>
-
-            <!-- VIEW 2c: JIRA COMPONENT -->
-            <app-jira *ngIf="activeTab().id === 'jira'"></app-jira>
-
-            <!-- VIEW 2c2: GITHUB COMPONENT -->
-            <app-github *ngIf="activeTab().id === 'github'"></app-github>
-
-            <!-- VIEW 2c3: OUTLOOK COMPONENT -->
-            <app-outlook *ngIf="activeTab().id === 'outlook'"></app-outlook>
-
-            <!-- VIEW 2c4: WHATSAPP DEEP-LINK -->
-            <app-whatsapp *ngIf="activeTab().id === 'whatsapp'"></app-whatsapp>
-
-            <!-- VIEW 2c5: SLACK COMPONENT -->
-            <app-slack *ngIf="activeTab().id === 'slack'"></app-slack>
+            <!-- VIEW 2b: UNIFIED INBOX (Gmail, Outlook, Slack, WhatsApp, Jira, GitHub).
+                 Inbox owns its own service-switcher strip at the top and
+                 delegates the body to the existing per-service components. -->
+            <app-inbox class="animate-content-enter block h-full" *ngIf="activeTab().id === 'inbox'"></app-inbox>
 
             <!-- VIEW 2d: CALENDAR COMPONENT -->
-            <app-calendar *ngIf="activeTab().id === 'calendar'"></app-calendar>
+            <app-calendar class="animate-content-enter block h-full" *ngIf="activeTab().id === 'calendar'"></app-calendar>
 
             <!-- VIEW 2e: CALCULATOR COMPONENT -->
-            <app-calculator *ngIf="activeTab().id === 'calculator'"></app-calculator>
+            <app-calculator class="animate-content-enter block h-full" *ngIf="activeTab().id === 'calculator'"></app-calculator>
 
             <!-- VIEW 2f: POMODORO COMPONENT -->
-            <app-pomodoro *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro>
+            <app-pomodoro class="animate-content-enter block h-full" *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro>
 
             <!-- VIEW 2g: CLIPBOARD COMPONENT -->
-            <app-clipboard *ngIf="activeTab().id === 'clipboard'"></app-clipboard>
+            <app-clipboard class="animate-content-enter block h-full" *ngIf="activeTab().id === 'clipboard'"></app-clipboard>
 
             <!-- VIEW 3: ACTIVITY COMPONENT -->
-            <app-activity *ngIf="activeTab().id === 'activity'"></app-activity>
+            <app-activity class="animate-content-enter block h-full" *ngIf="activeTab().id === 'activity'"></app-activity>
 
             <!-- VIEW 4: SETTINGS COMPONENT -->
-            <app-settings *ngIf="activeTab().id === 'settings'"></app-settings>
+            <app-settings class="animate-content-enter block h-full" *ngIf="activeTab().id === 'settings'"></app-settings>
           </div>
         </div>
 
@@ -205,6 +182,18 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
 })
 export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   public isPanelExpanded = signal<boolean>(false);
+
+  /**
+   * True during the ~140ms panel collapse animation. The template keeps
+   * the panel mounted while either isPanelExpanded or isPanelClosing is
+   * true, so the reverse spring can play instead of the DOM node vanishing
+   * the instant the user hits close. Kept as a separate signal (rather
+   * than a tri-state enum) so the reactive click-through re-measure effect
+   * doesn't have to distinguish "actively open" from "unwinding".
+   */
+  public isPanelClosing = signal<boolean>(false);
+  private closeAnimTimer: number | undefined;
+  private readonly CLOSE_ANIM_MS = 140;
 
   /**
    * Global "edit mode" — entered by a long-press on any dock tab. In this
@@ -246,96 +235,33 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   private lastMovedX = 0;
   private lastMovedY = 0;
 
-  // Per-provider unread counts — otherwise the Gmail badge would double-
-  // count Outlook mail (and vice versa) once both are connected.
-  public unreadGmailCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedMessages()
-        .filter((m) => m.providerId === 'gmail' && !m.isRead).length
-  );
+  // Combined badge count for the unified inbox tab. Sums every provider's
+  // unread messages and every task provider's open items, so the single
+  // dot on the inbox tab summarizes "there is stuff waiting" across
+  // Gmail / Outlook / Slack / Jira / GitHub. The service-switcher strip
+  // inside the inbox breaks it back down per-provider.
+  public inboxBadgeCount = computed(() => {
+    const unreadMessages = this.integrationManager
+      .unifiedMessages()
+      .filter((m) => !m.isRead).length;
+    const openTasks = this.integrationManager
+      .unifiedTasks()
+      .filter((t) => t.status !== 'done' && t.status !== 'cancelled').length;
+    return unreadMessages + openTasks;
+  });
 
-  public unreadOutlookCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedMessages()
-        .filter((m) => m.providerId === 'outlook' && !m.isRead).length
-  );
-
-  public unreadSlackCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedMessages()
-        .filter((m) => m.providerId === 'slack' && !m.isRead).length
-  );
-
-  public openJiraCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedTasks()
-        .filter(
-          (t) => t.providerId === 'jira' && t.status !== 'done' && t.status !== 'cancelled'
-        ).length
-  );
-
-  public openGitHubCount = computed(
-    () =>
-      this.integrationManager
-        .unifiedTasks()
-        .filter(
-          (t) => t.providerId === 'github' && t.status !== 'done' && t.status !== 'cancelled'
-        ).length
-  );
-
-  // Release-visible tabs. Tasks / Calculator / Pomodoro / Clipboard / Activity
-  // are intentionally hidden until their features are production-ready — the
-  // component code, service wiring, Rust commands, and template views all stay
-  // in place, so re-enabling is just uncommenting the matching line here (and
-  // in settings.component.ts allTabs).
+  // Release-visible tabs. Gmail / Outlook / Slack / WhatsApp / Jira / GitHub
+  // are folded into the single Inbox tab — the inbox owns a top service
+  // switcher and reuses each provider's existing component in its body.
+  // Tasks / Calculator / Pomodoro / Clipboard / Activity are intentionally
+  // hidden until their features are production-ready — the component code,
+  // service wiring, Rust commands, and template views all stay in place, so
+  // re-enabling is just uncommenting the matching line here (and in
+  // settings.component.ts allTabs).
   public allAvailableTabs = computed<DockTab[]>(() => [
     { id: 'notes', label: 'Notes' },
     // { id: 'tasks', label: 'Tasks' },
-    {
-      id: 'messages',
-      label: 'Gmail',
-      icon: 'gmail',
-      badgeCount: this.integrationManager.hasCapability('messages')
-        ? this.unreadGmailCount()
-        : 0,
-    },
-    {
-      id: 'jira',
-      label: 'Jira',
-      icon: 'jira',
-      badgeCount: this.integrationManager.hasCapability('tasks')
-        ? this.openJiraCount()
-        : 0,
-    },
-    {
-      id: 'github',
-      label: 'GitHub',
-      icon: 'github',
-      badgeCount: this.integrationManager.hasCapability('tasks')
-        ? this.openGitHubCount()
-        : 0,
-    },
-    {
-      id: 'outlook',
-      label: 'Outlook',
-      icon: 'outlook',
-      badgeCount: this.integrationManager.hasCapability('messages')
-        ? this.unreadOutlookCount()
-        : 0,
-    },
-    { id: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp' },
-    {
-      id: 'slack',
-      label: 'Slack',
-      icon: 'slack',
-      badgeCount: this.integrationManager.hasCapability('messages')
-        ? this.unreadSlackCount()
-        : 0,
-    },
+    { id: 'inbox', label: 'Inbox', badgeCount: this.inboxBadgeCount() },
     { id: 'calendar', label: 'Calendar' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },
@@ -368,13 +294,14 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
    * 640-wide transparent window and get clipped.
    */
   public popoverDirection = computed<'left' | 'right' | 'up' | 'down'>(() => {
-    const p = this.currentPosition();
-    if (p === 'top') return 'down';
-    if (p === 'bottom') return 'up';
-    if (p.includes('left')) return 'right';
-    // Everything else ('right', 'top-right', 'bottom-right', fallback) puts
-    // the dock on the right side of the window; popover has to open left.
-    return 'left';
+    // Popover extends perpendicular to the dock's flex direction so the two
+    // strips meet at the + button in a clean L. Direction points AWAY from
+    // the screen edge the widget hugs, so the popover stays inside the
+    // transparent widget window.
+    if (this.dockOrientation() === 'horizontal') {
+      return this.isTopSide() ? 'down' : 'up';
+    }
+    return this.isLeftSide() ? 'right' : 'left';
   });
 
   // Dock customization signals (Task 5)
@@ -493,10 +420,11 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       const nextState = !this.isPanelExpanded();
       if (nextState) {
         await this.layoutService.ensureVisible();
-      }
-      this.isPanelExpanded.set(nextState);
-      if (nextState) {
+        this.cancelPendingClose();
+        this.isPanelExpanded.set(true);
         this.windowService.focusWindow();
+      } else {
+        this.collapseToWidget();
       }
     });
 
@@ -526,6 +454,9 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.positionPollTimer !== undefined) {
       window.clearInterval(this.positionPollTimer);
+    }
+    if (this.closeAnimTimer !== undefined) {
+      window.clearTimeout(this.closeAnimTimer);
     }
   }
 
@@ -672,7 +603,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
    * On drag-end (400ms of quiet after the last poll saw movement), work
    * out which preset position the widget's center is closest to and slide
    * there. Rust reports positions in physical pixels; we convert to CSS
-   * pixels so the comparison against screen dimensions is apples-to-apples.
+   * pixels so the comparison against screen dimensions.
    */
   private async snapToNearestPreset(): Promise<void> {
     if (this.isProgrammaticMove) return;
@@ -813,17 +744,47 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isEditMode.set(false);
     }
     if (this.activeTab().id === tab.id && this.isPanelExpanded()) {
-      this.isPanelExpanded.set(false);
+      this.collapseToWidget();
     } else {
       await this.layoutService.ensureVisible();
+      // Reopening mid-close cancels the pending unmount so we don't wait
+      // for the collapse tail before showing the new content.
+      this.cancelPendingClose();
       this.activeTab.set(tab);
       this.isPanelExpanded.set(true);
       this.windowService.focusWindow();
     }
   }
 
+  /**
+   * Trigger the reverse spring, then unmount once it completes. The panel
+   * stays in the DOM for CLOSE_ANIM_MS so the css keyframes have something
+   * to animate — a plain `set(false)` would rip the element out mid-frame.
+   * Re-entry (selectTab / onToggleWidget) cancels the pending unmount and
+   * reopens instantly instead of waiting for the tail.
+   */
   public collapseToWidget(): void {
-    this.isPanelExpanded.set(false);
+    if (!this.isPanelExpanded() || this.isPanelClosing()) return;
+    this.isPanelClosing.set(true);
+    if (this.closeAnimTimer !== undefined) {
+      window.clearTimeout(this.closeAnimTimer);
+    }
+    this.closeAnimTimer = window.setTimeout(() => {
+      this.isPanelExpanded.set(false);
+      this.isPanelClosing.set(false);
+      this.closeAnimTimer = undefined;
+    }, this.CLOSE_ANIM_MS);
+  }
+
+  /** Cancel any in-flight collapse so a reopen feels instant. */
+  private cancelPendingClose(): void {
+    if (this.closeAnimTimer !== undefined) {
+      window.clearTimeout(this.closeAnimTimer);
+      this.closeAnimTimer = undefined;
+    }
+    if (this.isPanelClosing()) {
+      this.isPanelClosing.set(false);
+    }
   }
 
   public onDockMouseEnter(): void {
@@ -882,6 +843,19 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.isPanelExpanded()) {
       this.collapseToWidget();
     }
+  }
+
+  // Any pointerdown that lands outside the dock exits edit mode. Covers
+  // clicks on the panel body and clicks on the transparent widget area that
+  // still resolve to a DOM target inside our window. Clicks that truly fall
+  // outside the widget rect are handled by window:blur above.
+  @HostListener('window:pointerdown', ['$event'])
+  public onWindowPointerDown(event: PointerEvent): void {
+    if (!this.isEditMode()) return;
+    const target = event.target as HTMLElement | null;
+    const dockEl = this.dockRef?.nativeElement;
+    if (dockEl && target && dockEl.contains(target)) return;
+    this.isEditMode.set(false);
   }
 
   private scheduleInteractiveAreaUpdate(): void {
