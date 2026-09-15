@@ -14,8 +14,8 @@ use std::time::{Duration, Instant};
 // file at src-tauri/.cargo/config.toml:
 //
 //   [env]
-//   GITHUB_CLIENT_ID = "your-github-oauth-app-client-id"
-//   GITHUB_CLIENT_SECRET = "your-github-oauth-app-client-secret"
+//   GH_CLIENT_ID = "your-github-oauth-app-client-id"
+//   GH_CLIENT_SECRET = "your-github-oauth-app-client-secret"
 //
 // Register an OAuth App (not a GitHub App — different flow) at:
 //   https://github.com/settings/developers
@@ -31,16 +31,16 @@ use std::time::{Duration, Instant};
 // are long-lived (they don't expire unless revoked). If we ever migrate to
 // a GitHub App, we'd need to add a refresh flow here.
 // ============================================================================
-const GITHUB_CLIENT_ID: Option<&str> = option_env!("GITHUB_CLIENT_ID");
-const GITHUB_CLIENT_SECRET: Option<&str> = option_env!("GITHUB_CLIENT_SECRET");
+const GH_CLIENT_ID: Option<&str> = option_env!("GH_CLIENT_ID");
+const GH_CLIENT_SECRET: Option<&str> = option_env!("GH_CLIENT_SECRET");
 
 const LOOPBACK_PORT: u16 = 43729;
 
 fn require_credentials() -> Result<(&'static str, &'static str), String> {
-    match (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) {
+    match (GH_CLIENT_ID, GH_CLIENT_SECRET) {
         (Some(id), Some(secret)) if !id.is_empty() && !secret.is_empty() => Ok((id, secret)),
         _ => Err(
-            "GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET not set at build time. Add them to src-tauri/.cargo/config.toml and rebuild."
+            "GH_CLIENT_ID / GH_CLIENT_SECRET not set at build time. Add them to src-tauri/.cargo/config.toml and rebuild."
                 .to_string(),
         ),
     }
