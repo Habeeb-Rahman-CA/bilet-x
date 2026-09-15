@@ -85,7 +85,7 @@ Uninstalling the app does not delete these folders — remove them by hand if yo
 Requirements: Node 20+, Rust stable, and the platform prerequisites listed in the [Tauri v2 setup guide](https://v2.tauri.app/start/prerequisites/).
 
 ```bash
-git clone https://github.com/<your-account>/bilet-x.git
+git clone https://github.com/Habeeb-Rahman-CA/bilet-x.git
 cd bilet-x
 npm install
 npm run tauri:dev        # run in development
