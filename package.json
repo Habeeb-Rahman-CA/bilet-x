@@ -30,6 +30,8 @@
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/open-sans": "^5.3.0",
     "@tauri-apps/api": "^2.11.1",
+    "@types/dompurify": "^3.0.5",
+    "dompurify": "^3.4.15",
     "lucide-angular": "^1.0.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

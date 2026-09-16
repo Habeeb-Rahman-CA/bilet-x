@@ -25,6 +25,7 @@ tauri = { version = "2.11.3", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-notification = "2"
+tauri-plugin-autostart = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
 ureq = { version = "2", features = ["json"] }
 base64 = "0.22"
