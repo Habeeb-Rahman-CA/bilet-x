@@ -100,10 +100,10 @@ If this trade-off doesn't work for your threat model, build Bilet-X from source 
 The Tauri webview enforces a strict CSP (`src-tauri/tauri.conf.json`). Notably:
 
 - `script-src 'self'` — no inline scripts, no remote script sources.
-- `connect-src` is limited to `'self'`, Tauri IPC, and the local dev server URL.
+- `connect-src` is limited to `'self'`, Tauri IPC, the local dev server URL, and the specific provider API hosts the webview calls directly (Gmail, Microsoft Graph, GitHub, Atlassian, Facebook Graph).
 - `frame-ancestors 'none'`, `object-src 'none'`, `form-action 'none'`.
 
-Third-party API calls (Gmail, Slack, etc.) are proxied through Rust `#[tauri::command]` functions rather than made directly from the webview. This lets us keep the CSP tight while still reaching those APIs.
+OAuth flows themselves (authorization code exchange, token refresh) run in Rust `#[tauri::command]` functions so client secrets never touch the webview. Read-only API calls to fetch mail/issues/notifications are made directly from the webview under the CSP allowlist above.
 
 ### Signing status
 

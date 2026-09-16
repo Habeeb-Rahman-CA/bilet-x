@@ -37,7 +37,7 @@
 
 
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: https://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:4200; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: https://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws://localhost:4200 https://gmail.googleapis.com https://graph.microsoft.com https://api.github.com https://api.atlassian.com https://graph.facebook.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
     }
   },
   "bundle": {
