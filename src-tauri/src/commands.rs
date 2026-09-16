@@ -8,8 +8,10 @@ use crate::outlook_oauth::{self, OutlookTokens, RefreshedOutlookTokens};
 use crate::whatsapp_oauth::{self, WhatsAppTokens};
 use crate::slack_oauth::{self, SlackTokens};
 use crate::slack_api;
+use crate::db::Database;
 use crate::state::{AppState, InteractiveRect};
-use tauri::{State, Window};
+use tauri::{AppHandle, State, Window};
+use tauri_plugin_autostart::ManagerExt;
 
 const ACTIVITY_LOG_LIMIT_MAX: u32 = 500;
 // Settings keys we surface in the activity feed. Others (widget_x, widget_y)
@@ -40,6 +42,7 @@ const USER_FACING_SETTING_KEYS: &[&str] = &[
     "pomodoro_focus_minutes",
     "pomodoro_break_minutes",
     "clipboard_capture_enabled",
+    "autostart_enabled",
 ];
 
 const VALID_TASK_STATUSES: &[&str] = &["pending", "in_progress", "completed"];
@@ -696,6 +699,39 @@ pub async fn slack_api_post(
     tauri::async_runtime::spawn_blocking(move || slack_api::api_post(&token, &path, &body))
         .await
         .map_err(|e| format!("Slack API task join error: {}", e))?
+}
+
+#[tauri::command]
+pub fn autostart_enable(
+    app: AppHandle,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    app.autolaunch()
+        .enable()
+        .map_err(|e| format!("Failed to enable autostart: {}", e))?;
+    db.set_setting("autostart_enabled", "true")
+        .map_err(|e| format!("Failed to persist autostart setting: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn autostart_disable(
+    app: AppHandle,
+    db: State<'_, Database>,
+) -> Result<(), String> {
+    app.autolaunch()
+        .disable()
+        .map_err(|e| format!("Failed to disable autostart: {}", e))?;
+    db.set_setting("autostart_enabled", "false")
+        .map_err(|e| format!("Failed to persist autostart setting: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn autostart_is_enabled(app: AppHandle) -> Result<bool, String> {
+    app.autolaunch()
+        .is_enabled()
+        .map_err(|e| format!("Failed to read autostart state: {}", e))
 }
 
 #[tauri::command]

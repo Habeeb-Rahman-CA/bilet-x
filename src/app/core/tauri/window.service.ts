@@ -140,4 +140,21 @@ export class WindowService {
       return [0, 0];
     }
   }
+
+  public async setAutostart(enabled: boolean): Promise<void> {
+    if (!this.tauriService.isTauriAvailable()) return;
+    await this.tauriService.invokeCommand(
+      enabled ? 'autostart_enable' : 'autostart_disable'
+    );
+  }
+
+  public async isAutostartEnabled(): Promise<boolean> {
+    if (!this.tauriService.isTauriAvailable()) return false;
+    try {
+      return await this.tauriService.invokeCommand<boolean>('autostart_is_enabled');
+    } catch (e) {
+      console.warn('autostart_is_enabled failed', e);
+      return false;
+    }
+  }
 }

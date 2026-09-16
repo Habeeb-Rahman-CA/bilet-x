@@ -20,6 +20,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
+use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 /// Chooses where the widget window should appear on startup.
@@ -119,6 +120,9 @@ pub fn run() {
             commands::db_delete_clipboard_entry,
             commands::db_clear_clipboard_history,
             commands::open_external_url,
+            commands::autostart_enable,
+            commands::autostart_disable,
+            commands::autostart_is_enabled,
             commands::google_oauth_login,
             commands::google_oauth_refresh,
             commands::jira_oauth_login,
@@ -347,6 +351,40 @@ pub fn run() {
 
             // 4. Desktop Notifications Plugin Setup
             app.handle().plugin(tauri_plugin_notification::init())?;
+
+            // 5. Autostart Plugin — launches Bilet-X automatically at login.
+            // MacosLauncher::LaunchAgent uses ~/Library/LaunchAgents; on Windows
+            // this writes to HKCU\...\Run and on Linux drops a .desktop file into
+            // ~/.config/autostart. `--minimized` is a hint the frontend can key on
+            // if it wants to skip the greeting on autostart (currently unused).
+            app.handle().plugin(
+                tauri_plugin_autostart::init(
+                    MacosLauncher::LaunchAgent,
+                    Some(vec!["--autostart"]),
+                ),
+            )?;
+
+            // First-run default: opt users into autostart unless they explicitly
+            // turned it off. Persisted so we never re-enable behind their back.
+            let db_for_autostart = app.state::<db::Database>();
+            let stored = db_for_autostart
+                .get_setting("autostart_enabled")
+                .ok()
+                .flatten();
+            let manager = app.autolaunch();
+            match stored.as_deref() {
+                Some("true") => {
+                    let _ = manager.enable();
+                }
+                Some("false") => {
+                    let _ = manager.disable();
+                }
+                _ => {
+                    if manager.enable().is_ok() {
+                        let _ = db_for_autostart.set_setting("autostart_enabled", "true");
+                    }
+                }
+            }
 
             if cfg!(debug_assertions) {
                 app.handle().plugin(

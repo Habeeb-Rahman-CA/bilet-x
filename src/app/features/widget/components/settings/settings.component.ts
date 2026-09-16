@@ -271,6 +271,47 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
         </button>
       </div>
 
+      <!-- 5b. START ON LOGIN -->
+      <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-[11px] font-semibold text-neutral-300">Start on Login</div>
+            <div class="text-[9px] text-neutral-500">Launch Bilet-X automatically when you sign in.</div>
+          </div>
+          <span
+            [class.text-emerald-400]="isAutostartEnabled()"
+            [class.bg-emerald-500_10]="isAutostartEnabled()"
+            [class.border-emerald-500_20]="isAutostartEnabled()"
+            [class.text-neutral-500]="!isAutostartEnabled()"
+            [class.bg-neutral-800]="!isAutostartEnabled()"
+            [class.border-neutral-700]="!isAutostartEnabled()"
+            class="rounded border px-1.5 py-0.5 font-mono text-[9px]"
+          >
+            {{ isAutostartEnabled() ? 'Enabled' : 'Disabled' }}
+          </span>
+        </div>
+        <div class="flex items-center space-x-2 font-mono text-[10px]">
+          <button
+            (click)="toggleAutostart(true)"
+            type="button"
+            [disabled]="autostartBusy()"
+            [ngClass]="toggleClasses(isAutostartEnabled())"
+            class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out disabled:opacity-50"
+          >
+            On
+          </button>
+          <button
+            (click)="toggleAutostart(false)"
+            type="button"
+            [disabled]="autostartBusy()"
+            [ngClass]="toggleClasses(!isAutostartEnabled())"
+            class="flex-1 rounded-lg py-1.5 text-center transition-all duration-200 ease-out disabled:opacity-50"
+          >
+            Off
+          </button>
+        </div>
+      </div>
+
       <!-- 6. PLUGGABLE INTEGRATIONS MANAGEMENT -->
       <!-- <div class="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/90 p-3">
         <div class="flex items-center justify-between">
@@ -516,6 +557,9 @@ export class SettingsComponent implements OnDestroy {
   public testNotificationSent = signal<boolean>(false);
   private testNotificationTimer: number | undefined;
 
+  public isAutostartEnabled = signal<boolean>(false);
+  public autostartBusy = signal<boolean>(false);
+
   public noteCount: Signal<number>;
   public taskCount: Signal<number>;
 
@@ -594,6 +638,31 @@ export class SettingsComponent implements OnDestroy {
     this.isNotificationsEnabled = this.notificationService.isNotificationsEnabled;
     this.noteCount = computed(() => this.persistence.notes().length);
     this.taskCount = computed(() => this.persistence.tasks().length);
+
+    // Seed the autostart toggle from the OS state so a manual change made
+    // outside the app (e.g. Task Manager → Startup) is reflected here.
+    this.windowService
+      .isAutostartEnabled()
+      .then((enabled) => this.isAutostartEnabled.set(enabled))
+      .catch(() => this.isAutostartEnabled.set(false));
+  }
+
+  public async toggleAutostart(enabled: boolean): Promise<void> {
+    if (this.autostartBusy() || enabled === this.isAutostartEnabled()) return;
+    this.autostartBusy.set(true);
+    try {
+      await this.windowService.setAutostart(enabled);
+      this.isAutostartEnabled.set(enabled);
+    } catch (e) {
+      console.warn('[Settings] toggleAutostart failed', e);
+      // Fall back to whatever the OS actually reports.
+      const actual = await this.windowService
+        .isAutostartEnabled()
+        .catch(() => this.isAutostartEnabled());
+      this.isAutostartEnabled.set(actual);
+    } finally {
+      this.autostartBusy.set(false);
+    }
   }
 
   public ngOnDestroy(): void {

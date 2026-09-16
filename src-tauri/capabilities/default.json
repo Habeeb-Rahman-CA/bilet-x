@@ -5,5 +5,9 @@
   "windows": [
     "main"
   ],
-  "permissions": []
+  "permissions": [
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
+  ]
 }

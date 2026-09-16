@@ -1,11 +1,16 @@
 import { Injectable } from '@angular/core';
 import { BaseIntegration } from '../../core/base-integration';
-import { MessageProvider, MessageFilter } from '../../core/capabilities/message-provider.interface';
+import {
+  MessageProvider,
+  MessageFilter,
+  MessageDraft,
+  UnifiedMessageBody,
+} from '../../core/capabilities/message-provider.interface';
 import { CapabilityType, IntegrationCategory } from '../../core/capabilities/capability.types';
 import { ConnectionConfigField } from '../../core/models/connection.model';
 import { UnifiedMessage } from '../../core/models/unified-message.model';
 import { GmailAuthHandler } from './gmail-auth';
-import { GmailMessage } from './gmail.models';
+import { GmailMessage, GmailMessagePart } from './gmail.models';
 import { TauriTokenStorageService } from '../../core/auth/tauri-token-storage.service';
 import { GoogleOAuthService } from '../../core/auth/google-oauth.service';
 
@@ -53,6 +58,43 @@ export class GmailIntegration extends BaseIntegration implements MessageProvider
       this.fetchGmailApi(token, filter?.query)
     );
     return messages.map((m) => this.normalizeGmailMessage(m, connectionId));
+  }
+
+  public async fetchMessageBody(
+    connectionId: string,
+    messageId: string
+  ): Promise<UnifiedMessageBody> {
+    const full = await this.callGmailWithRetry(connectionId, async (token) => {
+      const res = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?format=full`,
+        { headers: this.authHandler.getAuthHeaders({}, token) }
+      );
+      if (res.status === 401) throw new GmailApiError('Unauthorized', 401);
+      if (!res.ok) {
+        throw new GmailApiError(
+          `Gmail message fetch failed: ${res.status} ${res.statusText}`,
+          res.status
+        );
+      }
+      return (await res.json()) as GmailMessage;
+    });
+
+    const textPart = findPart(full.payload, 'text/plain');
+    const htmlPart = findPart(full.payload, 'text/html');
+
+    const rawText = textPart?.body?.data ? decodeBase64Url(textPart.body.data) : '';
+    const rawHtml = htmlPart?.body?.data ? decodeBase64Url(htmlPart.body.data) : '';
+
+    // Prefer the true text/plain part. If the sender only shipped HTML, strip
+    // it down to readable text so the custom UI can render it directly without
+    // any DOM injection surface.
+    const text = rawText.trim() || (rawHtml ? htmlToText(rawHtml) : full.snippet || '');
+
+    return {
+      text: text.trim(),
+      html: rawHtml || undefined,
+      hasHtml: Boolean(rawHtml),
+    };
   }
 
   public async markAsRead(connectionId: string, messageId: string): Promise<void> {
@@ -121,6 +163,11 @@ export class GmailIntegration extends BaseIntegration implements MessageProvider
     const isRead = !(msg.labelIds || []).includes('UNREAD');
     const isStarred = (msg.labelIds || []).includes('STARRED');
 
+    // RFC-822 Message-ID header, needed to build a proper In-Reply-To /
+    // References chain when the user sends a reply. Falls back to empty
+    // string; sendReply then relies on Gmail's threadId alone.
+    const rfcMessageId = getHeader('Message-ID') || getHeader('Message-Id');
+
     return {
       id: `gmail:${msg.id}`,
       sourceId: msg.id,
@@ -140,8 +187,62 @@ export class GmailIntegration extends BaseIntegration implements MessageProvider
       webUrl: `https://mail.google.com/mail/u/0/#inbox/${msg.threadId || msg.id}`,
       metadata: {
         labelIds: msg.labelIds,
+        rfcMessageId,
       },
     };
+  }
+
+  public async sendMessage(
+    connectionId: string,
+    draft: MessageDraft
+  ): Promise<void> {
+    const body = draft.body.trim();
+    const to = draft.to.trim();
+    if (!body) throw new Error('Message body is empty.');
+    if (!to) throw new Error('Recipient (To) is required.');
+
+    const subject = draft.subject?.trim() || '';
+
+    const headers: string[] = [
+      `To: ${to}`,
+      `Subject: ${encodeHeader(subject)}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset=utf-8',
+      'Content-Transfer-Encoding: 7bit',
+    ];
+    if (draft.inReplyToHeader) {
+      headers.push(`In-Reply-To: ${draft.inReplyToHeader}`);
+      headers.push(`References: ${draft.inReplyToHeader}`);
+    }
+
+    const rfcMessage = `${headers.join('\r\n')}\r\n\r\n${body}`;
+    const raw = base64UrlEncode(rfcMessage);
+
+    await this.callGmailWithRetry(connectionId, async (token) => {
+      const res = await fetch(
+        'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+        {
+          method: 'POST',
+          headers: {
+            ...this.authHandler.getAuthHeaders({}, token),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(
+            draft.threadId ? { raw, threadId: draft.threadId } : { raw }
+          ),
+        }
+      );
+      if (res.status === 401) throw new GmailApiError('Unauthorized', 401);
+      if (!res.ok) {
+        let detail = `${res.status} ${res.statusText}`;
+        try {
+          const err = await res.json();
+          if (err?.error?.message) detail = err.error.message;
+        } catch { /* ignore JSON parse */ }
+        throw new GmailApiError(`Send failed: ${detail}`, res.status);
+      }
+      return true;
+    });
   }
 
   // ==========================================
@@ -240,4 +341,83 @@ function isUnauthorized(err: unknown): boolean {
   if (err instanceof GmailApiError) return err.status === 401;
   const message = (err as any)?.message || '';
   return typeof message === 'string' && message.includes('401');
+}
+
+/**
+ * Walk the MIME tree depth-first and return the first part matching `mimeType`.
+ * Gmail nests messages like multipart/mixed → multipart/alternative → text/plain,
+ * so we can't just check the root.
+ */
+function findPart(
+  root: GmailMessage['payload'] | GmailMessagePart | undefined,
+  mimeType: string
+): GmailMessagePart | undefined {
+  if (!root) return undefined;
+  if (root.mimeType === mimeType && root.body?.data) {
+    return root as GmailMessagePart;
+  }
+  for (const child of root.parts || []) {
+    const hit = findPart(child, mimeType);
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
+function base64UrlEncode(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+/**
+ * RFC 2047 encoded-word for Subject when it contains non-ASCII. Keeps ASCII
+ * subjects untouched so they stay human-readable in raw dumps.
+ */
+function encodeHeader(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  if (/^[\x00-\x7F]*$/.test(value)) return value;
+  const b64 = base64UrlEncode(value).replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64.padEnd(Math.ceil(b64.length / 4) * 4, '=');
+  return `=?utf-8?B?${padded}?=`;
+}
+
+function decodeBase64Url(data: string): string {
+  const b64 = data.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64.padEnd(Math.ceil(b64.length / 4) * 4, '=');
+  try {
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Collapse an HTML body to readable text. Deliberately not a sanitizer —
+ * we strip scripts/styles, unwrap tags, and decode common entities. The
+ * result is fed into a `<pre>` block in the UI, never into `innerHTML`.
+ */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '\n• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/\r/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
