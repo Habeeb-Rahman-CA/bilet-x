@@ -75,7 +75,11 @@ interface UnifiedFeedItem {
                 <!-- Provider icon on the row so users can tell at a
                      glance which service the item came from. -->
                 <span class="flex h-5 w-5 shrink-0 items-center justify-center text-neutral-300">
-                  <app-tab-icon [tab]="state.tabForProvider(item.providerId)" [size]="12"></app-tab-icon>
+                  <app-tab-icon
+                    [tab]="state.tabForProvider(item.providerId)"
+                    [size]="12"
+                    [style.color]="state.getServiceColor(item.providerId)"
+                  ></app-tab-icon>
                 </span>
                 <span class="truncate font-semibold text-neutral-200">{{ item.title }}</span>
               </div>
