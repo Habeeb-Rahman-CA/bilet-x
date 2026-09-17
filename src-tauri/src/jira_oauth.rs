@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 // Create an OAuth 2.0 (3LO) app at:
 //   https://developer.atlassian.com/console/myapps/
 // Add the "Jira API" permission with scopes: read:jira-user, read:jira-work,
-// offline_access. Under "Authorization" set the callback URL to EXACTLY:
+// write:jira-work, offline_access. Under "Authorization" set the callback URL to EXACTLY:
 //
 //   http://127.0.0.1:43728
 //
@@ -50,8 +50,9 @@ const USERINFO_ENDPOINT: &str = "https://api.atlassian.com/me";
 const RESOURCES_ENDPOINT: &str = "https://api.atlassian.com/oauth/token/accessible-resources";
 const AUDIENCE: &str = "api.atlassian.com";
 // offline_access → refresh token. read:jira-user for /myself + assignee resolution.
-// read:jira-work for search + issue read.
-const SCOPES: &str = "read:jira-user read:jira-work offline_access";
+// read:jira-work for search + issue read. write:jira-work for status transitions
+// and issue edits from the detail view.
+const SCOPES: &str = "read:jira-user read:jira-work write:jira-work offline_access";
 
 const CALLBACK_TIMEOUT_SECS: u64 = 120;
 

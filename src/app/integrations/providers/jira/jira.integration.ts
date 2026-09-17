@@ -1,6 +1,11 @@
 import { Injectable, Injector } from '@angular/core';
 import { BaseIntegration } from '../../core/base-integration';
-import { TaskProvider, TaskFilter } from '../../core/capabilities/task-provider.interface';
+import {
+  TaskProvider,
+  TaskFilter,
+  TaskTransition,
+  UnifiedTaskDetail,
+} from '../../core/capabilities/task-provider.interface';
 import { NotificationProvider, NotificationFilter } from '../../core/capabilities/notification-provider.interface';
 import { CapabilityType, IntegrationCategory } from '../../core/capabilities/capability.types';
 import { ConnectionConfigField } from '../../core/models/connection.model';
@@ -85,6 +90,131 @@ export class JiraIntegration extends BaseIntegration implements TaskProvider, No
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+  }
+
+  public async fetchTaskDetail(
+    connectionId: string,
+    taskId: string
+  ): Promise<UnifiedTaskDetail> {
+    const config = this.getConnectionConfig(connectionId);
+    const cloudId = config['cloudId'];
+    if (!cloudId) {
+      throw new Error(
+        '[Jira] Missing cloudId on connection. Sign out and sign in again to re-discover your Jira site.'
+      );
+    }
+    const siteUrl = config['siteUrl'] || '';
+
+    const issue = await this.callJiraWithRetry(connectionId, async (token) => {
+      const url = `https://api.atlassian.com/ex/jira/${encodeURIComponent(
+        cloudId
+      )}/rest/api/3/issue/${encodeURIComponent(taskId)}?fields=summary,description,status,priority,assignee,reporter,labels,project,created,updated,duedate`;
+      const res = await fetch(url, {
+        headers: this.authHandler.getAuthHeaders({}, token),
+      });
+      if (res.status === 401) throw new JiraApiError('Unauthorized', 401);
+      if (!res.ok) {
+        throw new JiraApiError(
+          `Jira issue fetch failed: ${res.status} ${res.statusText}`,
+          res.status
+        );
+      }
+      return (await res.json()) as JiraIssue & {
+        fields: JiraIssue['fields'] & { reporter?: JiraIssue['fields']['assignee'] };
+      };
+    });
+
+    const task = this.normalizeJiraIssue(issue, connectionId, siteUrl);
+    const descriptionText = adfToText(issue.fields.description);
+    const reporterRaw = (issue.fields as any).reporter;
+    const reporter = reporterRaw
+      ? {
+          name: reporterRaw.displayName,
+          email: reporterRaw.emailAddress,
+          avatarUrl: reporterRaw.avatarUrls?.['24x24'],
+        }
+      : undefined;
+
+    return { task, descriptionText, reporter };
+  }
+
+  public async fetchTransitions(
+    connectionId: string,
+    taskId: string
+  ): Promise<TaskTransition[]> {
+    const config = this.getConnectionConfig(connectionId);
+    const cloudId = config['cloudId'];
+    if (!cloudId) throw new Error('[Jira] Missing cloudId on connection.');
+
+    const raw = await this.callJiraWithRetry(connectionId, async (token) => {
+      const url = `https://api.atlassian.com/ex/jira/${encodeURIComponent(
+        cloudId
+      )}/rest/api/3/issue/${encodeURIComponent(taskId)}/transitions`;
+      const res = await fetch(url, {
+        headers: this.authHandler.getAuthHeaders({}, token),
+      });
+      if (res.status === 401) throw new JiraApiError('Unauthorized', 401);
+      if (!res.ok) {
+        throw new JiraApiError(
+          `Jira transitions fetch failed: ${res.status} ${res.statusText}`,
+          res.status
+        );
+      }
+      return (await res.json()) as {
+        transitions?: {
+          id: string;
+          name: string;
+          to?: { name?: string; statusCategory?: { key?: string } };
+        }[];
+      };
+    });
+
+    return (raw.transitions || []).map((t) => ({
+      id: t.id,
+      label: t.name,
+      toStatus: mapCategoryToStatus(t.to?.statusCategory?.key, t.to?.name),
+      toStatusRaw: t.to?.name,
+    }));
+  }
+
+  public async transitionTask(
+    connectionId: string,
+    taskId: string,
+    transitionId: string
+  ): Promise<void> {
+    const config = this.getConnectionConfig(connectionId);
+    const cloudId = config['cloudId'];
+    if (!cloudId) throw new Error('[Jira] Missing cloudId on connection.');
+
+    await this.callJiraWithRetry(connectionId, async (token) => {
+      const url = `https://api.atlassian.com/ex/jira/${encodeURIComponent(
+        cloudId
+      )}/rest/api/3/issue/${encodeURIComponent(taskId)}/transitions`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...this.authHandler.getAuthHeaders({}, token),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transition: { id: transitionId } }),
+      });
+      if (res.status === 401) throw new JiraApiError('Unauthorized', 401);
+      // Jira returns 204 No Content on success.
+      if (!res.ok) {
+        let detail = `${res.status} ${res.statusText}`;
+        try {
+          const err = await res.json();
+          if (err?.errorMessages?.length) detail = err.errorMessages.join('; ');
+          else if (err?.errors && Object.keys(err.errors).length) {
+            detail = Object.entries(err.errors)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join('; ');
+          }
+        } catch { /* ignore JSON parse */ }
+        throw new JiraApiError(`Transition failed: ${detail}`, res.status);
+      }
+      return true;
+    });
   }
 
   // ==================================================
@@ -260,4 +390,59 @@ function isUnauthorized(err: unknown): boolean {
   if (err instanceof JiraApiError) return err.status === 401;
   const message = (err as any)?.message || '';
   return typeof message === 'string' && message.includes('401');
+}
+
+/**
+ * Atlassian Document Format → plain text. Jira's `description` field is
+ * either a legacy wiki-markup string or an ADF JSON tree. We only need
+ * readable text for the detail overlay; no rich rendering.
+ */
+function adfToText(input: unknown): string {
+  if (input == null) return '';
+  if (typeof input === 'string') return input.trim();
+
+  const walk = (node: any): string => {
+    if (!node || typeof node !== 'object') return '';
+    if (node.type === 'text' && typeof node.text === 'string') return node.text;
+
+    const childText = Array.isArray(node.content)
+      ? node.content.map(walk).join('')
+      : '';
+
+    switch (node.type) {
+      case 'hardBreak':
+        return '\n';
+      case 'paragraph':
+      case 'heading':
+        return childText + '\n\n';
+      case 'listItem':
+        return `• ${childText.trim()}\n`;
+      case 'bulletList':
+      case 'orderedList':
+        return childText + '\n';
+      case 'codeBlock':
+        return `\n${childText}\n`;
+      case 'blockquote':
+        return childText
+          .split('\n')
+          .map((l: string) => (l ? `> ${l}` : l))
+          .join('\n');
+      default:
+        return childText;
+    }
+  };
+
+  return walk(input).replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function mapCategoryToStatus(
+  categoryKey: string | undefined,
+  statusName: string | undefined
+): TaskStatus | undefined {
+  const name = (statusName || '').toLowerCase();
+  if (categoryKey === 'done' || name.includes('done') || name.includes('closed')) return 'done';
+  if (categoryKey === 'indeterminate' || name.includes('progress')) return 'in_progress';
+  if (name.includes('review')) return 'in_review';
+  if (categoryKey === 'new' || name.includes('to do') || name.includes('open')) return 'todo';
+  return undefined;
 }
