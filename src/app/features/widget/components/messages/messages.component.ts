@@ -647,8 +647,9 @@ export class MessagesComponent implements OnInit {
     if (this.isLoading()) return;
     this.isLoading.set(true);
     this.localError.set(null);
+    const minWait = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      await this.integrationManager.fetchMessages();
+      await Promise.allSettled([this.integrationManager.fetchMessages(), minWait]);
     } catch (err: any) {
       this.localError.set(err?.message || 'Failed to fetch Gmail messages.');
     } finally {

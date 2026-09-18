@@ -158,13 +158,14 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             </svg>
             <input
               type="text"
-              [(ngModel)]="searchQuery"
+              [ngModel]="searchQuery()"
+              (ngModelChange)="searchQuery.set($event)"
               placeholder="Search subjects, senders, snippets..."
               class="w-full bg-transparent text-xs text-white placeholder-neutral-500 focus:outline-none"
             />
             <button
-              *ngIf="searchQuery"
-              (click)="searchQuery = ''"
+              *ngIf="searchQuery()"
+              (click)="searchQuery.set('')"
               type="button"
               class="text-[10px] text-neutral-500 hover:text-white"
             >
@@ -263,7 +264,7 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
   `,
 })
 export class OutlookComponent implements OnInit {
-  public searchQuery = '';
+  public searchQuery = signal<string>('');
   public isLoading = signal<boolean>(false);
   private localError = signal<string | null>(null);
 
@@ -285,7 +286,7 @@ export class OutlookComponent implements OnInit {
 
   public filteredMessages = computed(() => {
     const list = this.outlookMessages();
-    const q = this.searchQuery.trim().toLowerCase();
+    const q = this.searchQuery().trim().toLowerCase();
     if (!q) return list;
     return list.filter(
       (m) =>
@@ -351,8 +352,9 @@ export class OutlookComponent implements OnInit {
     if (this.isLoading()) return;
     this.isLoading.set(true);
     this.localError.set(null);
+    const minWait = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      await this.integrationManager.fetchMessages();
+      await Promise.allSettled([this.integrationManager.fetchMessages(), minWait]);
     } catch (err: any) {
       this.localError.set(err?.message || 'Failed to fetch Outlook messages.');
     } finally {

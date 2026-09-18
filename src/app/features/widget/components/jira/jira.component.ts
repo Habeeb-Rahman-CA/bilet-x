@@ -51,6 +51,31 @@ interface IssueDetailState {
 
             <div class="flex items-center space-x-1.5">
               <button
+                (click)="refreshIssueDetail(d.task)"
+                type="button"
+                [disabled]="d.isLoading"
+                title="Refresh issue details"
+                class="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
+              >
+                <svg
+                  [class.animate-spin]="d.isLoading"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M8 16H3v5" />
+                </svg>
+              </button>
+              <button
                 *ngIf="d.task.webUrl"
                 (click)="openIssueInBrowser(d.task)"
                 type="button"
@@ -555,13 +580,19 @@ export class JiraComponent implements OnInit {
     if (this.isLoading()) return;
     this.isLoading.set(true);
     this.localError.set(null);
+    const minWait = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      await this.integrationManager.fetchTasks();
+      await Promise.allSettled([this.integrationManager.fetchTasks(), minWait]);
     } catch (err: any) {
       this.localError.set(err?.message || 'Failed to fetch Jira issues.');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  public async refreshIssueDetail(task: UnifiedTask): Promise<void> {
+    this.detail.update((d) => (d && d.task.id === task.id ? { ...d, isLoading: true, error: null } : d));
+    await this.loadIssueDetail(task);
   }
 
   public openIssueInBrowser(task: UnifiedTask): void {
