@@ -335,7 +335,6 @@ interface IssueDetailState {
             <div class="flex items-center space-x-1.5 font-mono text-[10px] text-neutral-400">
               <span class="flex h-2 w-2 rounded-full bg-emerald-400"></span>
               <span class="font-medium text-neutral-200">Jira</span>
-              <span *ngIf="siteName()" class="truncate text-neutral-500">· {{ siteName() }}</span>
               <span *ngIf="openCount() > 0" class="rounded bg-blue-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-blue-300 border border-blue-500/30">
                 {{ openCount() }} Open
               </span>

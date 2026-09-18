@@ -38,7 +38,7 @@ import { TabIconComponent } from '../dock/tab-icon.component';
   ],
   template: `
     <div
-      class="switcher-row no-drag flex flex-nowrap items-center gap-1 overflow-x-auto"
+      class="switcher-row no-drag flex flex-nowrap items-center gap-1 overflow-x-auto pt-1"
     >
       <button
         *ngFor="let svc of state.services(); trackBy: trackByServiceId"

@@ -563,20 +563,21 @@ interface GitHubDetailState {
            CONNECTED — ISSUE & PR LIST VIEW
            ========================================== -->
       <ng-container *ngIf="isConnected()">
-        <div class="flex flex-1 flex-col overflow-hidden px-3 pt-3">
+        <div class="flex h-full flex-col space-y-2.5 text-xs">
           <!-- HEADER -->
-          <div class="mb-3 flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="text-sm font-semibold text-white">GitHub</span>
+          <div class="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/90 p-2 text-xs">
+            <div class="flex items-center space-x-1.5 font-mono text-[10px] text-neutral-400">
+              <span class="flex h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span class="font-medium text-neutral-200">GitHub</span>
               <span
                 *ngIf="openCount() > 0"
-                class="rounded bg-neutral-800 px-1.5 py-0.5 font-mono text-[9px] text-neutral-300"
+                class="rounded border border-purple-500/30 bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300"
               >
-                {{ openCount() }} open
+                {{ openCount() }} Open
               </span>
             </div>
 
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1">
               <button
                 (click)="refreshTasks()"
                 type="button"
@@ -610,21 +611,21 @@ interface GitHubDetailState {
           <!-- ERROR BANNER -->
           <div
             *ngIf="errorMessage()"
-            class="mb-3 space-y-1 rounded-lg border border-red-500/30 bg-red-500/10 p-2.5 text-[10px] text-red-300"
+            class="rounded-xl border border-red-500/30 bg-red-500/10 p-2.5 text-[10px] text-red-300 space-y-1"
           >
             <div class="flex items-center space-x-1.5 font-semibold text-red-400">
               <span>⚠️</span>
-              <span>GitHub Error</span>
+              <span>GitHub Sync Notice</span>
             </div>
-            <div>{{ errorMessage() }}</div>
+            <div class="leading-relaxed">{{ errorMessage() }}</div>
           </div>
 
           <!-- SEARCH BAR -->
           <div
-            class="mb-3 flex items-center space-x-2 rounded-xl border border-neutral-800 bg-neutral-900/80 px-3 py-1.5"
+            class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 px-2.5 py-1.5 text-xs"
           >
             <svg
-              class="text-neutral-500"
+              class="mr-2 shrink-0 text-neutral-500"
               xmlns="http://www.w3.org/2000/svg"
               width="12"
               height="12"
