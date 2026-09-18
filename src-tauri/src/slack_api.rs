@@ -36,9 +36,15 @@ pub fn api_post(token: &str, path: &str, body: &str) -> Result<String, String> {
     validate_path(path)?;
     let url = format!("{}/{}", API_BASE, path);
 
+    let content_type = if body.trim_start().starts_with('{') || body.trim_start().starts_with('[') {
+        "application/json; charset=utf-8"
+    } else {
+        "application/x-www-form-urlencoded"
+    };
+
     let response = ureq::post(&url)
         .set("Authorization", &format!("Bearer {}", token))
-        .set("Content-Type", "application/x-www-form-urlencoded")
+        .set("Content-Type", content_type)
         .set("Accept", "application/json")
         .send_string(body)
         .map_err(|e| format!("Slack POST {} failed: {}", path, e))?;

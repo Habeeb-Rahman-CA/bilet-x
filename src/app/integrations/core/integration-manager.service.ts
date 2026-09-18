@@ -176,6 +176,19 @@ export class IntegrationManagerService {
   }
 
   /**
+   * Mark a message as read in the unifiedMessages signal so all consumer views update reactively.
+   */
+  public markMessageAsRead(messageId: string): void {
+    this.unifiedMessages.update((msgs) =>
+      msgs.map((m) =>
+        m.id === messageId || m.sourceId === messageId || m.threadId === messageId
+          ? { ...m, isRead: true }
+          : m
+      )
+    );
+  }
+
+  /**
    * Fetch calendar events from all connected CalendarProviders.
    */
   public async fetchEvents(filter?: CalendarFilter): Promise<UnifiedCalendarEvent[]> {

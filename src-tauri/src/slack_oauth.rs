@@ -52,7 +52,7 @@ const TOKEN_ENDPOINT: &str = "https://slack.com/api/oauth.v2.access";
 const USER_INFO_ENDPOINT: &str = "https://slack.com/api/users.info";
 
 // User-token scopes only. `scope` is reserved for bot scopes; we omit it.
-const USER_SCOPES: &str = "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users.profile:read";
+const USER_SCOPES: &str = "channels:history,channels:read,groups:history,groups:read,im:history,im:read,mpim:history,mpim:read,users:read,users.profile:read,chat:write";
 
 const CALLBACK_TIMEOUT_SECS: u64 = 120;
 
