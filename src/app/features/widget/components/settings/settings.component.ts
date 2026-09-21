@@ -538,14 +538,13 @@ export class SettingsComponent implements OnDestroy {
   // Must stay in sync with `allAvailableTabs` in widget.component.ts.
   public allTabs = computed(() => [
     { id: 'notes', label: 'Notes' },
-    // { id: 'tasks', label: 'Tasks' },
+    { id: 'tasks', label: 'Tasks' },
     { id: 'inbox', label: 'Inbox' },
     { id: 'calendar', label: 'Calendar' },
     { id: 'ai', label: 'Bilet AI' },
-    // { id: 'calculator', label: 'Calculator' },
-    // { id: 'pomodoro', label: 'Pomodoro' },
-    // { id: 'clipboard', label: 'Clipboard' },
-    // { id: 'activity', label: 'Activity' },
+    { id: 'pomodoro', label: 'Pomodoro' },
+    { id: 'clipboard', label: 'Clipboard' },
+    { id: 'activity', label: 'Activity' },
   ]);
 
   public currentPosition: Signal<string>;

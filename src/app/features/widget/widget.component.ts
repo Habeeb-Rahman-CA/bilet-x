@@ -26,7 +26,6 @@ import { InboxComponent } from './components/inbox/inbox.component';
 import { InboxSwitcherComponent } from './components/inbox/inbox-switcher.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { BiletAiComponent } from './components/bilet-ai/bilet-ai.component';
-import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
 import { ClipboardComponent } from './components/clipboard/clipboard.component';
 import { ActivityComponent } from './components/activity/activity.component';
@@ -45,7 +44,6 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     InboxSwitcherComponent,
     CalendarComponent,
     BiletAiComponent,
-    CalculatorComponent,
     PomodoroComponent,
     ClipboardComponent,
     ActivityComponent,
@@ -163,12 +161,6 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
               class="animate-content-enter block h-full"
               *ngIf="activeTab().id === 'ai'"
             ></app-bilet-ai>
-
-            <!-- VIEW 2e: CALCULATOR COMPONENT -->
-            <app-calculator
-              class="animate-content-enter block h-full"
-              *ngIf="activeTab().id === 'calculator'"
-            ></app-calculator>
 
             <!-- VIEW 2f: POMODORO COMPONENT -->
             <app-pomodoro
@@ -302,14 +294,13 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   // settings.component.ts allTabs).
   public allAvailableTabs = computed<DockTab[]>(() => [
     { id: 'notes', label: 'Notes' },
-    // { id: 'tasks', label: 'Tasks' },
+    { id: 'tasks', label: 'Tasks' },
     { id: 'inbox', label: 'Inbox', badgeCount: this.inboxBadgeCount() },
     { id: 'calendar', label: 'Calendar' },
     { id: 'ai', label: 'Bilet AI' },
-    // { id: 'calculator', label: 'Calculator' },
-    // { id: 'pomodoro', label: 'Pomodoro' },
-    // { id: 'clipboard', label: 'Clipboard' },
-    // { id: 'activity', label: 'Activity' },
+    { id: 'pomodoro', label: 'Pomodoro' },
+    { id: 'clipboard', label: 'Clipboard' },
+    { id: 'activity', label: 'Activity' },
     { id: 'settings', label: 'Settings' },
   ]);
 
