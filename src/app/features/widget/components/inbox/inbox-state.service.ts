@@ -34,15 +34,40 @@ export interface InboxServiceOption {
  */
 @Injectable({ providedIn: 'root' })
 export class InboxStateService {
-  public readonly services: InboxServiceOption[] = [
-    { id: 'all',      label: 'All Inboxes', tab: { id: 'inbox',    label: 'All' } },
+  public readonly allService: InboxServiceOption = {
+    id: 'all',
+    label: 'All Inboxes',
+    tab: { id: 'inbox', label: 'All' },
+  };
+
+  public readonly providerServices: InboxServiceOption[] = [
+    { id: 'github',   label: 'GitHub',      tab: { id: 'github',   label: 'GitHub',   icon: 'github' } },
     { id: 'gmail',    label: 'Gmail',       tab: { id: 'messages', label: 'Gmail',    icon: 'gmail' } },
+    { id: 'jira',     label: 'Jira',        tab: { id: 'jira',     label: 'Jira',     icon: 'jira' } },
     { id: 'outlook',  label: 'Outlook',     tab: { id: 'outlook',  label: 'Outlook',  icon: 'outlook' } },
     { id: 'slack',    label: 'Slack',       tab: { id: 'slack',    label: 'Slack',    icon: 'slack' } },
     { id: 'whatsapp', label: 'WhatsApp',    tab: { id: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp' } },
-    { id: 'jira',     label: 'Jira',        tab: { id: 'jira',     label: 'Jira',     icon: 'jira' } },
-    { id: 'github',   label: 'GitHub',      tab: { id: 'github',   label: 'GitHub',   icon: 'github' } },
   ];
+
+  /**
+   * Reactive list of switcher options:
+   * 1. "All Inboxes" is pinned first as the unified feed view.
+   * 2. Connected services come first, sorted alphabetically by label.
+   * 3. Disconnected services follow, sorted alphabetically by label.
+   */
+  public services = computed<InboxServiceOption[]>(() => {
+    // Reading connections() registers reactive signal dependency
+    const _conns = this.integrationManager.connections();
+    const connected = this.providerServices
+      .filter((svc) => this.isConnected(svc.id))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    const disconnected = this.providerServices
+      .filter((svc) => !this.isConnected(svc.id))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    return [this.allService, ...connected, ...disconnected];
+  });
 
   public activeService = signal<InboxServiceId>('all');
 
@@ -59,6 +84,22 @@ export class InboxStateService {
 
   public hasAnyConnection(): boolean {
     return this.integrationManager.activeConnections().length > 0;
+  }
+
+  /**
+   * Service brand color when connected.
+   * Returns the canonical brand hex color for the icon.
+   */
+  public getServiceColor(id: string): string | null {
+    const brandColors: Record<string, string> = {
+      gmail: '#EA4335',    // Red (Google / Gmail)
+      jira: '#2684FF',     // Blue (Atlassian / Jira)
+      outlook: '#0078D4',  // Blue (Microsoft Outlook)
+      whatsapp: '#25D366', // Green (WhatsApp)
+      slack: '#ECB22E',    // Yellow/Amber (Slack)
+      github: '#8957E5',   // Purple (GitHub)
+    };
+    return brandColors[id] || null;
   }
 
   /** Unread count for messaging services / open count for task services. */

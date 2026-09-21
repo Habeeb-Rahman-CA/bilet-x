@@ -313,15 +313,19 @@ export class WhatsAppComponent implements OnInit {
   public async refresh(): Promise<void> {
     if (this.isLoading()) return;
     const conn = this.currentConnection();
-    if (!conn || !this.wabaId()) {
+    if (!conn) {
       this.templates.set([]);
       return;
     }
     this.isLoading.set(true);
     this.localError.set(null);
+    const minWait = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      const templates = await this.whatsappIntegration.fetchTemplates(conn.connectionId);
-      this.templates.set(templates);
+      if (this.wabaId()) {
+        const templates = await this.whatsappIntegration.fetchTemplates(conn.connectionId);
+        this.templates.set(templates);
+      }
+      await minWait;
     } catch (err: any) {
       this.localError.set(err?.message || 'Failed to fetch WhatsApp templates.');
     } finally {

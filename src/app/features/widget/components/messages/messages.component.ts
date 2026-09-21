@@ -429,31 +429,60 @@ interface ComposeState {
             <div class="leading-relaxed">{{ errorMessage() }}</div>
           </div>
 
-          <!-- SEARCH / FILTER BAR -->
-          <div class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 px-2.5 py-1.5 text-xs">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              class="mr-2 shrink-0 text-neutral-500"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              type="text"
-              [ngModel]="searchQuery()"
-              (ngModelChange)="searchQuery.set($event)"
-              placeholder="Search subjects, senders, snippets..."
-              class="w-full bg-transparent text-xs text-white placeholder-neutral-500 focus:outline-none"
-            />
-            <button
-              *ngIf="searchQuery()"
-              (click)="searchQuery.set('')"
-              type="button"
-              class="text-[10px] text-neutral-500 hover:text-white"
-            >
-              ✕
-            </button>
+          <!-- SEARCH & UNREAD TOGGLE -->
+          <div class="flex items-center space-x-1.5">
+            <div class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 px-2.5 py-1.5 text-xs flex-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="mr-2 shrink-0 text-neutral-500"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                type="text"
+                [ngModel]="searchQuery()"
+                (ngModelChange)="searchQuery.set($event)"
+                placeholder="Search emails..."
+                class="w-full bg-transparent text-xs text-white placeholder-neutral-500 focus:outline-none"
+              />
+              <button
+                *ngIf="searchQuery()"
+                (click)="searchQuery.set('')"
+                type="button"
+                class="text-[10px] text-neutral-500 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 p-0.5 font-mono text-[9px]">
+              <button
+                type="button"
+                (click)="showUnreadOnly.set(true)"
+                class="rounded-lg px-2 py-1 transition"
+                [class.bg-red-500/20]="showUnreadOnly()"
+                [class.text-red-400]="showUnreadOnly()"
+                [class.font-semibold]="showUnreadOnly()"
+                [class.text-neutral-400]="!showUnreadOnly()"
+                [class.hover:text-white]="!showUnreadOnly()"
+              >
+                Unread ({{ unreadCount() }})
+              </button>
+              <button
+                type="button"
+                (click)="showUnreadOnly.set(false)"
+                class="rounded-lg px-2 py-1 transition"
+                [class.bg-neutral-800]="!showUnreadOnly()"
+                [class.text-neutral-200]="!showUnreadOnly()"
+                [class.font-semibold]="!showUnreadOnly()"
+                [class.text-neutral-500]="showUnreadOnly()"
+                [class.hover:text-white]="showUnreadOnly()"
+              >
+                All
+              </button>
+            </div>
           </div>
 
           <!-- MESSAGES LIST -->
@@ -534,10 +563,13 @@ interface ComposeState {
             <!-- EMPTY STATE -->
             <div
               *ngIf="filteredMessages().length === 0 && !isLoading()"
-              class="py-8 text-center font-mono text-xs text-neutral-500"
+              class="py-12 text-center font-mono text-xs text-neutral-500"
             >
-              <div class="mb-1 text-sm">📭</div>
-              No messages found.
+              <div class="mb-1 text-base">✓</div>
+              <div class="font-medium text-neutral-400">All caught up!</div>
+              <div class="mt-0.5 text-[10px] text-neutral-600">
+                {{ showUnreadOnly() ? 'No unread emails.' : 'No messages found.' }}
+              </div>
             </div>
           </div>
         </div>
@@ -559,12 +591,21 @@ export class MessagesComponent implements OnInit {
     () => this.integrationManager.getConnectionsForProvider('gmail').length > 0
   );
 
+  public gmailMessages = computed(() =>
+    this.integrationManager.unifiedMessages().filter((m) => m.providerId === 'gmail')
+  );
+
+  public showUnreadOnly = signal<boolean>(true);
+
   public unreadCount = computed(
-    () => this.integrationManager.unifiedMessages().filter((m) => !m.isRead).length
+    () => this.gmailMessages().filter((m) => !m.isRead).length
   );
 
   public filteredMessages = computed(() => {
-    const list = this.integrationManager.unifiedMessages();
+    let list = this.gmailMessages();
+    if (this.showUnreadOnly()) {
+      list = list.filter((m) => !m.isRead);
+    }
     const q = this.searchQuery().trim().toLowerCase();
     if (!q) return list;
     return list.filter(
@@ -647,8 +688,9 @@ export class MessagesComponent implements OnInit {
     if (this.isLoading()) return;
     this.isLoading.set(true);
     this.localError.set(null);
+    const minWait = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      await this.integrationManager.fetchMessages();
+      await Promise.allSettled([this.integrationManager.fetchMessages(), minWait]);
     } catch (err: any) {
       this.localError.set(err?.message || 'Failed to fetch Gmail messages.');
     } finally {
@@ -672,6 +714,7 @@ export class MessagesComponent implements OnInit {
 
     if (!mail.isRead) {
       mail.isRead = true;
+      this.integrationManager.markMessageAsRead(mail.id);
       this.markAsRead(mail).catch((err) =>
         console.warn('[Messages] Mark-as-read remote sync:', err)
       );
@@ -710,6 +753,13 @@ export class MessagesComponent implements OnInit {
   public openMailInGmail(mail: UnifiedMessage): void {
     if (mail.webUrl) {
       this.windowService.openExternalUrl(mail.webUrl);
+    }
+    if (!mail.isRead) {
+      mail.isRead = true;
+      this.integrationManager.markMessageAsRead(mail.id);
+      this.markAsRead(mail).catch((err) =>
+        console.warn('[Messages] Mark-as-read remote sync:', err)
+      );
     }
   }
 

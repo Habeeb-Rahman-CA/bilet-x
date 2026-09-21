@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IntegrationManagerService } from '../../../../integrations/core/integration-manager.service';
@@ -6,13 +6,199 @@ import { MessageProvider } from '../../../../integrations/core/capabilities/mess
 import { UnifiedMessage } from '../../../../integrations/core/models/unified-message.model';
 import { WindowService } from '../../../../core/tauri/window.service';
 import { DisconnectButtonComponent } from '../../../../shared/components/disconnect-button/disconnect-button.component';
+import { SlackIntegration } from '../../../../integrations/providers/slack/slack.integration';
+import { SlackChatMessage } from '../../../../integrations/providers/slack/slack.models';
+
+export interface SlackDetailState {
+  message: UnifiedMessage;
+  connectionId: string;
+  channelId: string;
+  partnerName: string;
+  isMpim: boolean;
+  chatMessages: SlackChatMessage[];
+  isLoading: boolean;
+  error: string | null;
+  isSending: boolean;
+  sendError: string | null;
+  sendSuccess: boolean;
+}
 
 @Component({
   selector: 'app-slack',
   standalone: true,
   imports: [CommonModule, FormsModule, DisconnectButtonComponent],
   template: `
-    <div class="flex h-full flex-col">
+    <div class="relative flex h-full flex-col">
+
+      <!-- ==========================================
+           CHAT DETAIL OVERLAY
+           ========================================== -->
+      <ng-container *ngIf="detail() as d">
+        <div class="absolute inset-0 z-20 flex flex-col rounded-xl border border-neutral-800 bg-neutral-950/95 backdrop-blur-md">
+
+          <!-- Top Toolbar / Header -->
+          <div class="flex items-center justify-between border-b border-neutral-800/80 px-2.5 py-2">
+            <div class="flex items-center space-x-2 overflow-hidden">
+              <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-800 font-mono text-[9px] font-bold text-neutral-300">
+                {{ getInitials(d.partnerName) }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center space-x-1.5">
+                  <span class="truncate text-xs font-semibold text-white">{{ d.partnerName }}</span>
+                  <span
+                    class="rounded px-1.5 py-0.5 font-mono text-[8px]"
+                    [ngClass]="{
+                      'bg-purple-500/15 text-purple-300 border border-purple-500/30': d.isMpim,
+                      'bg-neutral-800 text-neutral-300 border border-neutral-700/50': !d.isMpim
+                    }"
+                  >
+                    {{ d.isMpim ? 'group' : 'DM' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-1 shrink-0">
+              <!-- Refresh chat messages -->
+              <button
+                (click)="refreshChat()"
+                type="button"
+                [disabled]="d.isLoading"
+                title="Refresh conversation"
+                class="flex h-6 w-6 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-50"
+              >
+                <svg
+                  [class.animate-spin]="d.isLoading"
+                  xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                >
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M8 16H3v5" />
+                </svg>
+              </button>
+
+              <!-- Open in Slack app button -->
+              <button
+                (click)="openInSlack(d.message)"
+                type="button"
+                title="Open in Slack app"
+                class="flex h-6 items-center space-x-1 rounded-lg border border-neutral-800 bg-neutral-800 px-2 font-mono text-[9px] text-neutral-300 transition hover:bg-neutral-700 hover:text-white"
+              >
+                <span>↗</span>
+                <span>Slack</span>
+              </button>
+
+              <!-- Close button -->
+              <button
+                (click)="closeChatDetail()"
+                type="button"
+                title="Close"
+                class="flex h-6 w-6 items-center justify-center rounded-lg border border-neutral-800 bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Chat Conversation Area -->
+          <div #chatContainer class="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3 py-2.5 text-xs">
+            <!-- Loading indicator -->
+            <div *ngIf="d.isLoading && d.chatMessages.length === 0" class="flex items-center justify-center space-x-2 py-8 font-mono text-[10px] text-neutral-500">
+              <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+              <span>Loading messages...</span>
+            </div>
+
+            <!-- Error banner in detail -->
+            <div *ngIf="d.error" class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] text-red-300">
+              ⚠️ {{ d.error }}
+            </div>
+
+            <!-- Messages list -->
+            <ng-container *ngFor="let m of d.chatMessages">
+              <!-- Outgoing (You) -->
+              <div *ngIf="m.isFromMe" class="flex flex-col items-end">
+                <div class="max-w-[85%] rounded-2xl rounded-tr-sm bg-[#4A154B] px-3.5 py-2 text-[12px] text-white shadow-sm border border-purple-500/30 whitespace-pre-wrap break-words leading-relaxed">
+                  {{ m.text }}
+                </div>
+                <span class="mt-0.5 mr-1 font-mono text-[9px] text-neutral-500">
+                  {{ formatRelativeTime(m.timestamp) }}
+                </span>
+              </div>
+
+              <!-- Incoming (Contact / Other) -->
+              <div *ngIf="!m.isFromMe" class="flex items-start space-x-2 max-w-[88%]">
+                <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-800 font-mono text-[9px] font-bold text-neutral-300">
+                  {{ getInitials(m.senderName) }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="mb-0.5 flex items-center space-x-1.5 font-mono text-[9px] text-neutral-500">
+                    <span class="font-sans font-semibold text-neutral-300">{{ m.senderName }}</span>
+                    <span>·</span>
+                    <span>{{ formatRelativeTime(m.timestamp) }}</span>
+                  </div>
+                  <div class="rounded-2xl rounded-tl-sm border border-neutral-800 bg-neutral-900/90 px-3.5 py-2 text-[12px] text-neutral-200 shadow-sm whitespace-pre-wrap break-words leading-relaxed">
+                    {{ m.text }}
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Empty chat state -->
+            <div *ngIf="!d.isLoading && d.chatMessages.length === 0 && !d.error" class="py-12 text-center font-mono text-xs text-neutral-500">
+              <div class="mb-1 text-base">💬</div>
+              No messages found.
+            </div>
+          </div>
+
+          <!-- Bottom Reply Composer -->
+          <div class="mx-2 mb-2 rounded-xl border border-neutral-800 bg-neutral-900/90">
+            <div *ngIf="d.sendError" class="border-b border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[10px] text-red-300">
+              ⚠️ {{ d.sendError }}
+            </div>
+            <div *ngIf="d.sendSuccess" class="border-b border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[10px] text-emerald-300">
+              ✓ Message sent
+            </div>
+
+            <div class="flex items-center space-x-2 p-1.5">
+              <input
+                type="text"
+                [ngModel]="replyDraft()"
+                (ngModelChange)="replyDraft.set($event)"
+                [placeholder]="'Message ' + d.partnerName + '...'"
+                [disabled]="d.isSending"
+                (keydown.enter)="sendReply()"
+                class="flex-1 bg-transparent px-2.5 py-1 text-[12px] text-white placeholder-neutral-500 focus:outline-none disabled:opacity-50"
+              />
+              <button
+                type="button"
+                (click)="sendReply()"
+                [disabled]="d.isSending || !replyDraft().trim()"
+                [title]="d.isSending ? 'Sending...' : 'Send message'"
+                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#4A154B] text-white transition hover:bg-[#611f62] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-[#4A154B]"
+              >
+                <svg *ngIf="!d.isSending" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                <svg *ngIf="d.isSending" class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </ng-container>
 
       <!-- ==========================================
            NOT CONNECTED — SIGN IN WITH SLACK CARD
@@ -90,6 +276,9 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
               <span class="flex h-2 w-2 shrink-0 rounded-full bg-emerald-400"></span>
               <span class="font-medium text-neutral-200">Slack</span>
               <span *ngIf="teamName()" class="truncate text-neutral-500">· {{ teamName() }}</span>
+              <span *ngIf="unreadCount() > 0" class="rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300 border border-purple-500/30">
+                {{ unreadCount() }} Unread
+              </span>
             </div>
 
             <div class="flex items-center space-x-1">
@@ -139,41 +328,71 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             <div class="leading-relaxed">{{ errorMessage() }}</div>
           </div>
 
-          <!-- SEARCH -->
-          <div class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 px-2.5 py-1.5 text-xs">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              class="mr-2 shrink-0 text-neutral-500"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              type="text"
-              [(ngModel)]="searchQuery"
-              placeholder="Search by sender, channel, text..."
-              class="w-full bg-transparent text-xs text-white placeholder-neutral-500 focus:outline-none"
-            />
-            <button
-              *ngIf="searchQuery"
-              (click)="searchQuery = ''"
-              type="button"
-              class="text-[10px] text-neutral-500 hover:text-white"
-            >
-              ✕
-            </button>
+          <!-- SEARCH & UNREAD TOGGLE -->
+          <div class="flex items-center space-x-1.5">
+            <div class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 px-2.5 py-1.5 text-xs flex-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="mr-2 shrink-0 text-neutral-500"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                type="text"
+                [ngModel]="searchQuery()"
+                (ngModelChange)="searchQuery.set($event)"
+                placeholder="Search DMs..."
+                class="w-full bg-transparent text-xs text-white placeholder-neutral-500 focus:outline-none"
+              />
+              <button
+                *ngIf="searchQuery()"
+                (click)="searchQuery.set('')"
+                type="button"
+                class="text-[10px] text-neutral-500 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div class="flex items-center rounded-xl border border-neutral-800 bg-neutral-900/60 p-0.5 font-mono text-[9px]">
+              <button
+                type="button"
+                (click)="showUnreadOnly.set(true)"
+                class="rounded-lg px-2 py-1 transition"
+                [class.bg-purple-500/20]="showUnreadOnly()"
+                [class.text-purple-300]="showUnreadOnly()"
+                [class.font-semibold]="showUnreadOnly()"
+                [class.text-neutral-400]="!showUnreadOnly()"
+                [class.hover:text-white]="!showUnreadOnly()"
+              >
+                Unread ({{ unreadCount() }})
+              </button>
+              <button
+                type="button"
+                (click)="showUnreadOnly.set(false)"
+                class="rounded-lg px-2 py-1 transition"
+                [class.bg-neutral-800]="!showUnreadOnly()"
+                [class.text-neutral-200]="!showUnreadOnly()"
+                [class.font-semibold]="!showUnreadOnly()"
+                [class.text-neutral-500]="showUnreadOnly()"
+                [class.hover:text-white]="showUnreadOnly()"
+              >
+                All
+              </button>
+            </div>
           </div>
 
           <!-- MESSAGES LIST -->
           <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
             <div
               *ngFor="let msg of filteredMessages()"
-              (click)="openInSlack(msg)"
+              (click)="openChatDetail(msg)"
               role="button"
               tabindex="0"
-              (keydown.enter)="openInSlack(msg)"
-              title="Click to open in Slack"
+              (keydown.enter)="openChatDetail(msg)"
+              title="Click to open conversation"
               class="group cursor-pointer rounded-xl border border-neutral-800/90 bg-neutral-900/80 p-3 text-xs transition-all duration-150 hover:border-neutral-600 hover:bg-neutral-800/90 active:scale-[0.99]"
               [class.border-l-2]="!msg.isRead"
               [class.border-l-purple-500]="!msg.isRead"
@@ -190,9 +409,25 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
                   >{{ msg.sender.name }}</span>
                 </div>
 
-                <span class="font-mono text-[9px] text-neutral-500">
-                  {{ formatRelativeTime(msg.timestamp) }}
-                </span>
+                <div class="flex items-center space-x-1.5 shrink-0">
+                  <span class="font-mono text-[9px] text-neutral-500">
+                    {{ formatRelativeTime(msg.timestamp) }}
+                  </span>
+
+                  <!-- Open externally in Slack client -->
+                  <button
+                    (click)="$event.stopPropagation(); openInSlack(msg)"
+                    type="button"
+                    class="rounded p-1 text-neutral-500 transition hover:bg-neutral-700 hover:text-white"
+                    title="Open in Slack app"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <!-- Channel / subject label -->
@@ -218,10 +453,13 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
             <!-- EMPTY STATE -->
             <div
               *ngIf="filteredMessages().length === 0 && !isLoading()"
-              class="py-8 text-center font-mono text-xs text-neutral-500"
+              class="py-12 text-center font-mono text-xs text-neutral-500"
             >
-              <div class="mb-1 text-sm">💬</div>
-              No recent DMs.
+              <div class="mb-1 text-base">✓</div>
+              <div class="font-medium text-neutral-400">All caught up!</div>
+              <div class="mt-0.5 text-[10px] text-neutral-600">
+                {{ showUnreadOnly() ? 'No unread messages.' : 'No messages found.' }}
+              </div>
             </div>
           </div>
         </div>
@@ -231,8 +469,12 @@ import { DisconnectButtonComponent } from '../../../../shared/components/disconn
   `,
 })
 export class SlackComponent implements OnInit {
-  public searchQuery = '';
+  @ViewChild('chatContainer') private chatContainer?: ElementRef<HTMLDivElement>;
+
+  public searchQuery = signal<string>('');
   public isLoading = signal<boolean>(false);
+  public detail = signal<SlackDetailState | null>(null);
+  public replyDraft = signal<string>('');
   private localError = signal<string | null>(null);
 
   public errorMessage = computed(
@@ -255,9 +497,18 @@ export class SlackComponent implements OnInit {
     this.integrationManager.unifiedMessages().filter((m) => m.providerId === 'slack')
   );
 
+  public showUnreadOnly = signal<boolean>(true);
+
+  public unreadCount = computed(
+    () => this.slackMessages().filter((m) => !m.isRead).length
+  );
+
   public filteredMessages = computed(() => {
-    const list = this.slackMessages();
-    const q = this.searchQuery.trim().toLowerCase();
+    let list = this.slackMessages();
+    if (this.showUnreadOnly()) {
+      list = list.filter((m) => !m.isRead);
+    }
+    const q = this.searchQuery().trim().toLowerCase();
     if (!q) return list;
     return list.filter(
       (m) =>
@@ -274,7 +525,8 @@ export class SlackComponent implements OnInit {
 
   constructor(
     public integrationManager: IntegrationManagerService,
-    private windowService: WindowService
+    private windowService: WindowService,
+    private slackIntegration: SlackIntegration
   ) {}
 
   public ngOnInit(): void {
@@ -323,8 +575,9 @@ export class SlackComponent implements OnInit {
     if (this.isLoading()) return;
     this.isLoading.set(true);
     this.localError.set(null);
+    const minWait = new Promise((resolve) => setTimeout(resolve, 500));
     try {
-      await this.integrationManager.fetchMessages();
+      await Promise.allSettled([this.integrationManager.fetchMessages(), minWait]);
     } catch (err: any) {
       this.localError.set(err?.message || 'Failed to fetch Slack messages.');
     } finally {
@@ -332,9 +585,181 @@ export class SlackComponent implements OnInit {
     }
   }
 
+  public openChatDetail(msg: UnifiedMessage): void {
+    const channelId = ((msg.metadata?.['channelId'] as string) || msg.threadId || '').trim();
+    const connectionId = msg.connectionId || this.currentConnection()?.connectionId || '';
+    const partnerName = (msg.metadata?.['partnerName'] as string) || msg.sender.name || 'Chat';
+    const isMpim = this.isMpim(msg);
+
+    if (!channelId || !connectionId) {
+      return;
+    }
+
+    this.replyDraft.set('');
+    this.detail.set({
+      message: msg,
+      connectionId,
+      channelId,
+      partnerName,
+      isMpim,
+      chatMessages: [],
+      isLoading: true,
+      error: null,
+      isSending: false,
+      sendError: null,
+      sendSuccess: false,
+    });
+
+    if (!msg.isRead) {
+      msg.isRead = true;
+      this.integrationManager.markMessageAsRead(msg.id);
+      this.markAsRead(msg).catch((err) =>
+        console.warn('[Slack] Mark-as-read remote sync:', err)
+      );
+    }
+
+    this.loadChatHistory(connectionId, channelId);
+  }
+
+  public closeChatDetail(): void {
+    this.detail.set(null);
+    this.replyDraft.set('');
+  }
+
+  public async refreshChat(): Promise<void> {
+    const d = this.detail();
+    if (!d) return;
+
+    this.detail.set({
+      ...d,
+      isLoading: true,
+      error: null,
+      sendError: null,
+      sendSuccess: false,
+    });
+
+    const minWait = new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const [messages] = await Promise.all([
+        this.slackIntegration.fetchConversationHistory(d.connectionId, d.channelId, 30),
+        minWait,
+      ]);
+      this.detail.update((curr) =>
+        curr && curr.channelId === d.channelId
+          ? { ...curr, chatMessages: messages, isLoading: false, error: null }
+          : curr
+      );
+      this.scrollToBottom();
+    } catch (err: any) {
+      this.detail.update((curr) =>
+        curr && curr.channelId === d.channelId
+          ? {
+              ...curr,
+              isLoading: false,
+              error: err?.message || 'Failed to refresh conversation.',
+            }
+          : curr
+      );
+    }
+  }
+
+  private async loadChatHistory(connectionId: string, channelId: string): Promise<void> {
+    try {
+      const messages = await this.slackIntegration.fetchConversationHistory(
+        connectionId,
+        channelId,
+        30
+      );
+      this.detail.update((curr) =>
+        curr && curr.channelId === channelId
+          ? { ...curr, chatMessages: messages, isLoading: false, error: null }
+          : curr
+      );
+      this.scrollToBottom();
+    } catch (err: any) {
+      this.detail.update((curr) =>
+        curr && curr.channelId === channelId
+          ? {
+              ...curr,
+              isLoading: false,
+              error: err?.message || 'Failed to load conversation history.',
+            }
+          : curr
+      );
+    }
+  }
+
+  public async sendReply(): Promise<void> {
+    const d = this.detail();
+    if (!d || d.isSending) return;
+
+    const text = this.replyDraft().trim();
+    if (!text) {
+      this.detail.update((curr) =>
+        curr ? { ...curr, sendError: 'Type a message first.' } : curr
+      );
+      return;
+    }
+
+    this.detail.update((curr) =>
+      curr ? { ...curr, isSending: true, sendError: null, sendSuccess: false } : curr
+    );
+
+    try {
+      const sentMsg = await this.slackIntegration.postChatMessage(
+        d.connectionId,
+        d.channelId,
+        text
+      );
+
+      this.replyDraft.set('');
+      this.detail.update((curr) => {
+        if (!curr || curr.channelId !== d.channelId) return curr;
+        return {
+          ...curr,
+          chatMessages: [...curr.chatMessages, sentMsg],
+          isSending: false,
+          sendError: null,
+          sendSuccess: true,
+        };
+      });
+
+      // Update snippet in the feed
+      d.message.snippet = `You: ${text}`;
+      d.message.timestamp = sentMsg.timestamp;
+
+      this.scrollToBottom();
+
+      // Clear success notification after 3s
+      setTimeout(() => {
+        this.detail.update((curr) =>
+          curr && curr.channelId === d.channelId ? { ...curr, sendSuccess: false } : curr
+        );
+      }, 3000);
+    } catch (err: any) {
+      this.detail.update((curr) =>
+        curr && curr.channelId === d.channelId
+          ? {
+              ...curr,
+              isSending: false,
+              sendError: err?.message || 'Failed to send message.',
+              sendSuccess: false,
+            }
+          : curr
+      );
+    }
+  }
+
+  private scrollToBottom(): void {
+    setTimeout(() => {
+      if (this.chatContainer?.nativeElement) {
+        this.chatContainer.nativeElement.scrollTop =
+          this.chatContainer.nativeElement.scrollHeight;
+      }
+    }, 60);
+  }
+
   public openInSlack(msg: UnifiedMessage): void {
-    // Prefer the slack:// deep link so the desktop client focuses if the
-    // user has it installed; fall back to app.slack.com.
     const teamId = this.teamId();
     const channelId = (msg.metadata?.['channelId'] as string) || msg.threadId;
     if (teamId && channelId) {
@@ -346,6 +771,7 @@ export class SlackComponent implements OnInit {
 
     if (!msg.isRead) {
       msg.isRead = true;
+      this.integrationManager.markMessageAsRead(msg.id);
       this.markAsRead(msg).catch((err) =>
         console.warn('[Slack] Mark-as-read remote sync:', err)
       );

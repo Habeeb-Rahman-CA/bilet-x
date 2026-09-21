@@ -31,12 +31,23 @@ import { ClipboardItem, ClipboardService } from './clipboard.service';
           <span>{{ clipboard.isCapturing() ? 'Live' : 'Paused' }}</span>
         </button>
 
-        <input
-          type="text"
-          [(ngModel)]="searchQuery"
-          placeholder="Search"
-          class="h-7 min-w-0 flex-1 rounded-lg border border-neutral-800 bg-neutral-900/90 px-2.5 font-sans text-[11px] text-neutral-100 placeholder-neutral-500 selection:bg-neutral-700 selection:text-white focus:border-neutral-600 focus:outline-none"
-        />
+        <div class="relative flex h-7 min-w-0 flex-1 items-center">
+          <input
+            type="text"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Search"
+            class="h-7 w-full rounded-lg border border-neutral-800 bg-neutral-900/90 px-2.5 pr-6 font-sans text-[11px] text-neutral-100 placeholder-neutral-500 selection:bg-neutral-700 selection:text-white focus:border-neutral-600 focus:outline-none"
+          />
+          <button
+            *ngIf="searchQuery()"
+            (click)="searchQuery.set('')"
+            type="button"
+            class="absolute right-2 text-[10px] text-neutral-500 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
 
         <button
           *ngIf="clipboard.history().length > 0"
@@ -142,23 +153,23 @@ import { ClipboardItem, ClipboardService } from './clipboard.service';
   `,
 })
 export class ClipboardComponent {
-  public searchQuery = '';
+  public searchQuery = signal<string>('');
   public readonly clearArmed = signal<boolean>(false);
   private clearTimer: number | undefined;
 
   public readonly filteredHistory = computed<ClipboardItem[]>(() => {
-    const q = this.searchQuery.trim().toLowerCase();
+    const q = this.searchQuery().trim().toLowerCase();
     const items = this.clipboard.history();
     if (!q) return items;
     return items.filter((i) => i.content.toLowerCase().includes(q));
   });
 
   public readonly emptyHeadline = computed(() =>
-    this.searchQuery.trim() ? 'No matches' : 'Clipboard is empty'
+    this.searchQuery().trim() ? 'No matches' : 'Clipboard is empty'
   );
 
   public readonly emptyBody = computed(() => {
-    if (this.searchQuery.trim()) return 'Try a different search term';
+    if (this.searchQuery().trim()) return 'Try a different search term';
     return this.clipboard.isCapturing()
       ? 'Copy something to see it here'
       : 'Capture is paused';

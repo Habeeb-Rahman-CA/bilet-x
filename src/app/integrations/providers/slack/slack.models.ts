@@ -23,6 +23,8 @@ export interface SlackMessage {
   user?: string; // Sender's user ID
   bot_id?: string;
   team?: string;
+  thread_ts?: string;
+  reply_count?: number;
 }
 
 export interface SlackUserProfile {
@@ -59,4 +61,27 @@ export interface SlackUsersInfoResponse {
   ok: boolean;
   error?: string;
   user?: SlackUser;
+}
+
+export interface SlackPostMessageResponse {
+  ok: boolean;
+  error?: string;
+  channel?: string;
+  ts?: string;
+  message?: SlackMessage;
+}
+
+export interface SlackChatMessage {
+  id: string;
+  ts: string;
+  channelId: string;
+  senderId: string;
+  senderName: string;
+  avatarUrl?: string;
+  text: string;
+  rawText: string;
+  timestamp: string;
+  isFromMe: boolean;
+  threadTs?: string;
+  replyCount?: number;
 }

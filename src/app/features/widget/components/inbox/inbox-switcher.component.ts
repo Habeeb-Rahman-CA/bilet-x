@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { InboxStateService } from './inbox-state.service';
+import { InboxServiceOption, InboxStateService } from './inbox-state.service';
 import { TabIconComponent } from '../dock/tab-icon.component';
 
 /**
@@ -10,8 +10,10 @@ import { TabIconComponent } from '../dock/tab-icon.component';
  * writes shared state via InboxStateService so the body component
  * (rendered separately in the panel content area) stays in sync.
  *
- * Unconnected service icons stay visible at 40% opacity so users can
- * discover and click into them — the child component's built-in
+ * Connected services are listed first (sorted alphabetically) and their
+ * icons are tinted in their canonical brand color (e.g. Gmail red, Jira blue).
+ * Unconnected service icons stay visible at 40% opacity in neutral tone so
+ * users can discover and click into them — the child component's built-in
  * connect card takes over once selected.
  */
 @Component({
@@ -36,14 +38,14 @@ import { TabIconComponent } from '../dock/tab-icon.component';
   ],
   template: `
     <div
-      class="switcher-row no-drag flex flex-nowrap items-center gap-1 overflow-x-auto"
+      class="switcher-row no-drag flex flex-nowrap items-center gap-1 overflow-x-auto pt-1"
     >
       <button
-        *ngFor="let svc of state.services"
+        *ngFor="let svc of state.services(); trackBy: trackByServiceId"
         (click)="state.selectService(svc.id)"
         type="button"
         [title]="svc.label + (state.isConnected(svc.id) ? '' : ' — not connected')"
-        class="glass-btn relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+        class="glass-btn relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-150"
         [class.is-selected]="state.activeService() === svc.id"
         [class.opacity-40]="!state.isConnected(svc.id) && svc.id !== 'all'"
       >
@@ -66,7 +68,13 @@ import { TabIconComponent } from '../dock/tab-icon.component';
           <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
           <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
         </svg>
-        <app-tab-icon *ngIf="svc.id !== 'all'" [tab]="svc.tab" [size]="11"></app-tab-icon>
+        <app-tab-icon
+          *ngIf="svc.id !== 'all'"
+          [tab]="svc.tab"
+          [size]="11"
+          class="flex items-center justify-center transition-colors duration-150"
+          [style.color]="state.isConnected(svc.id) ? state.getServiceColor(svc.id) : null"
+        ></app-tab-icon>
 
         <!-- Per-service badge. Suppressed for 'all' — its count would
              double the summary badge already shown on the dock's
@@ -83,4 +91,8 @@ import { TabIconComponent } from '../dock/tab-icon.component';
 })
 export class InboxSwitcherComponent {
   constructor(public state: InboxStateService) {}
+
+  public trackByServiceId(_index: number, svc: InboxServiceOption): string {
+    return svc.id;
+  }
 }
