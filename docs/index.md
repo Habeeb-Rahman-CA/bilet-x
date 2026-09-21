@@ -8,7 +8,7 @@ description: Always-on-top desktop widget for notes, tasks, and quick actions.
 **Bilet-X** is a minimalist, always-on-top desktop widget for notes, tasks, and quick actions. It runs locally, follows you across workspaces via a global hotkey, and keeps your data on your machine.
 
 - **Platform:** Windows, macOS, Linux (desktop)
-- **Version:** 1.0.3
+- **Version:** 1.1.0
 - **Publisher:** Habeeb Rahman C A
 - **Source code:** [github.com/Habeeb-Rahman-CA/bilet-x](https://github.com/Habeeb-Rahman-CA/bilet-x)
 

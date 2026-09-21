@@ -7,8 +7,7 @@
   :root {
     --font-sans:
       'Fira Code Variable', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    --font-mono:
-      'Fira Code Variable', 'Fira Code', monospace;
+    --font-mono: 'Fira Code Variable', 'Fira Code', monospace;
 
     /* =====================================================================
        LIQUID GLASS DESIGN TOKENS
@@ -16,16 +15,14 @@
        html.light further down for the light palette. Tune here to retone
        the whole material system in one place.
        ===================================================================== */
-    --glass-bg: 22, 22, 26;                 /* rgb triplet — outer shell fill */
-    --glass-opacity: 0.55;                  /* alpha applied to --glass-bg */
-    --glass-blur: 22px;                     /* backdrop blur radius */
-    --glass-saturation: 180%;                /* backdrop color-punch */
+    --glass-bg: 22, 22, 26; /* rgb triplet — outer shell fill */
+    --glass-opacity: 0.55; /* alpha applied to --glass-bg */
+    --glass-blur: 22px; /* backdrop blur radius */
+    --glass-saturation: 180%; /* backdrop color-punch */
     --glass-border: rgba(255, 255, 255, 0.09);
-    --glass-highlight: rgba(255, 255, 255, 0.11);   /* top edge light-catch */
-    --glass-inner-shadow: rgba(0, 0, 0, 0.15);       /* bottom depth line */
-    --glass-shadow:
-      0 20px 50px -12px rgba(0, 0, 0, 0.55),
-      0 4px 14px -4px rgba(0, 0, 0, 0.35);
+    --glass-highlight: rgba(255, 255, 255, 0.11); /* top edge light-catch */
+    --glass-inner-shadow: rgba(0, 0, 0, 0.15); /* bottom depth line */
+    --glass-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.55), 0 4px 14px -4px rgba(0, 0, 0, 0.35);
     --glass-gloss: radial-gradient(
       140% 60% at 50% -20%,
       rgba(255, 255, 255, 0.09),
@@ -35,8 +32,8 @@
     --glass-refraction: url(#lg-refraction);
     /* Spring-in with a small overshoot; ease-out flavor for the exit. */
     --glass-ease-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
-    --glass-ease-out:    cubic-bezier(0.4, 0, 1, 1);
-    --glass-in-duration:  260ms;
+    --glass-ease-out: cubic-bezier(0.4, 0, 1, 1);
+    --glass-in-duration: 260ms;
     --glass-out-duration: 140ms;
   }
 
@@ -47,8 +44,7 @@
     --glass-highlight: rgba(255, 255, 255, 0.85);
     --glass-inner-shadow: rgba(20, 20, 30, 0.06);
     --glass-shadow:
-      0 18px 40px -12px rgba(20, 20, 30, 0.22),
-      0 3px 10px -4px rgba(20, 20, 30, 0.12);
+      0 18px 40px -12px rgba(20, 20, 30, 0.22), 0 3px 10px -4px rgba(20, 20, 30, 0.12);
     --glass-gloss: radial-gradient(
       140% 60% at 50% -20%,
       rgba(255, 255, 255, 0.65),
@@ -120,6 +116,18 @@
   outline: none;
 }
 
+/* Hide number input spinners (up/down arrows) */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .titlebar-drag-region {
   -webkit-app-region: drag;
   user-select: none;
@@ -140,24 +148,51 @@
    mounted (see WidgetComponent), so only the inner content wrapper animates.
    ========================================================================= */
 @keyframes panelExpand {
-  0%   { opacity: 0; transform: scale(0.94); }
-  60%  { opacity: 1; transform: scale(1.02); }
-  100% { opacity: 1; transform: scale(1);    }
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes panelCollapse {
-  0%   { opacity: 1; transform: scale(1);    }
-  100% { opacity: 0; transform: scale(0.96); }
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 @keyframes widgetPop {
-  0%   { opacity: 0.6; transform: scale(0.92); }
-  100% { opacity: 1;   transform: scale(1);    }
+  0% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes contentEnter {
-  0%   { opacity: 0; transform: translateY(6px) scale(0.98); }
-  100% { opacity: 1; transform: translateY(0)   scale(1);    }
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .animate-panel-expand {
@@ -208,11 +243,27 @@
     animation-name: rmFadeOut;
   }
 
-  @keyframes rmFadeIn  { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes rmFadeOut { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes rmFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes rmFadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
 
   /* Kill dock jiggle so edit mode is still functional but not distracting. */
-  .jiggle { animation: none !important; }
+  .jiggle {
+    animation: none !important;
+  }
 }
 
 /* Snappier default for View Transitions API. Default is 250ms which reads
@@ -394,7 +445,7 @@ html.light .glass-btn {
 
 html.light .glass-btn:hover {
   background-color: rgba(20, 20, 30, 0.09);
-  border-color: rgba(20, 20, 30, 0.10);
+  border-color: rgba(20, 20, 30, 0.1);
 }
 
 html.light .glass-btn:active {
@@ -430,7 +481,9 @@ html.light .glass-sep {
 @media (prefers-reduced-motion: reduce) {
   /* Drop the expensive filter when reduced motion is on. The shapes will
      render individually, which is a fine visual degradation. */
-  .liquid-merge { filter: none; }
+  .liquid-merge {
+    filter: none;
+  }
 }
 
 /* Borders */

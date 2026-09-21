@@ -1,7 +1,7 @@
 {
   "name": "bilet-x",
-  "version": "1.0.3",
-  "description": "Always-on-top desktop widget for notes, tasks, and quick actions. Runs locally, follows you across workspaces via a global hotkey.",
+  "version": "1.1.0",
+  "description": "bilet-x - Smart Dynamic Island Desktop Widget, for notes, tasks, and quick actions. Runs locally, follows you across workspaces via a global hotkey.",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

@@ -7,6 +7,7 @@ pub mod models;
 pub mod outlook_oauth;
 pub mod slack_api;
 pub mod slack_oauth;
+pub mod spotify_oauth;
 pub mod state;
 pub mod whatsapp_oauth;
 
@@ -134,6 +135,8 @@ pub fn run() {
             commands::slack_oauth_login,
             commands::slack_api_get,
             commands::slack_api_post,
+            commands::spotify_oauth_login,
+            commands::spotify_oauth_refresh,
         ])
         .setup(|app| {
             let app_dir = app
