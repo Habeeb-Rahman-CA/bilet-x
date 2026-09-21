@@ -101,11 +101,8 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
           </div>
         </div>
 
-        <!-- Tab visibility toggles.
-             TEMP (release scope): hidden for this release — all tabs are
-             always shown, so there's no hide/show setting to surface.
-             Kept intact behind *ngIf="false" for easy re-enable later. -->
-        <div *ngIf="false" class="space-y-1">
+        <!-- Tab visibility toggles -->
+        <div class="space-y-1">
           <div class="text-[10px] text-neutral-400">Visible tabs</div>
           <div class="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
             <button
@@ -113,7 +110,7 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
               (click)="toggleTabVisibility(tab.id)"
               type="button"
               [ngClass]="toggleClasses(isTabVisible(tab.id), true)"
-              class="rounded-lg px-2 py-1.5 text-center transition-all duration-200 ease-out"
+              class="cursor-pointer rounded-lg px-2 py-1.5 text-center transition-all duration-200 ease-out active:scale-95"
             >
               {{ tab.label }}
             </button>
@@ -538,10 +535,11 @@ export class SettingsComponent implements OnDestroy {
   // Must stay in sync with `allAvailableTabs` in widget.component.ts.
   public allTabs = computed(() => [
     { id: 'notes', label: 'Notes' },
-    { id: 'tasks', label: 'Tasks' },
     { id: 'inbox', label: 'Inbox' },
     { id: 'calendar', label: 'Calendar' },
     { id: 'ai', label: 'Bilet AI' },
+    { id: 'water', label: 'Water' },
+    { id: 'tasks', label: 'Tasks' },
     { id: 'pomodoro', label: 'Pomodoro' },
     { id: 'clipboard', label: 'Clipboard' },
     { id: 'activity', label: 'Activity' },
@@ -832,8 +830,17 @@ export class SettingsComponent implements OnDestroy {
     await this.persistence.setSetting('dock_auto_hide', enabled ? 'true' : 'false');
   }
 
+  private readonly DEFAULT_VISIBLE_TAB_IDS = new Set<string>([
+    'notes',
+    'inbox',
+    'calendar',
+    'ai',
+    'settings',
+  ]);
+
   public isTabVisible(tabId: string): boolean {
-    return this.persistence.getSettingValue(`tab_${tabId}_visible`, 'true') === 'true';
+    const defaultVisible = this.DEFAULT_VISIBLE_TAB_IDS.has(tabId) ? 'true' : 'false';
+    return this.persistence.getSettingValue(`tab_${tabId}_visible`, defaultVisible) === 'true';
   }
 
   public async toggleTabVisibility(tabId: string): Promise<void> {

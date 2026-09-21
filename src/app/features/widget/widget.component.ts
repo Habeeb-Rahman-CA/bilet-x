@@ -26,6 +26,7 @@ import { InboxComponent } from './components/inbox/inbox.component';
 import { InboxSwitcherComponent } from './components/inbox/inbox-switcher.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { BiletAiComponent } from './components/bilet-ai/bilet-ai.component';
+import { WaterComponent } from './components/water/water.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
 import { ClipboardComponent } from './components/clipboard/clipboard.component';
 import { ActivityComponent } from './components/activity/activity.component';
@@ -44,6 +45,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     InboxSwitcherComponent,
     CalendarComponent,
     BiletAiComponent,
+    WaterComponent,
     PomodoroComponent,
     ClipboardComponent,
     ActivityComponent,
@@ -161,6 +163,12 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
               class="animate-content-enter block h-full"
               *ngIf="activeTab().id === 'ai'"
             ></app-bilet-ai>
+
+            <!-- VIEW 2h: WATER REMINDER COMPONENT -->
+            <app-water
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'water'"
+            ></app-water>
 
             <!-- VIEW 2f: POMODORO COMPONENT -->
             <app-pomodoro
@@ -294,14 +302,15 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
   // settings.component.ts allTabs).
   public allAvailableTabs = computed<DockTab[]>(() => [
     { id: 'notes', label: 'Notes' },
-    { id: 'tasks', label: 'Tasks' },
     { id: 'inbox', label: 'Inbox', badgeCount: this.inboxBadgeCount() },
     { id: 'calendar', label: 'Calendar' },
     { id: 'ai', label: 'Bilet AI' },
+    { id: 'settings', label: 'Settings' },
+    { id: 'water', label: 'Water' },
+    { id: 'tasks', label: 'Tasks' },
     { id: 'pomodoro', label: 'Pomodoro' },
     { id: 'clipboard', label: 'Clipboard' },
     { id: 'activity', label: 'Activity' },
-    { id: 'settings', label: 'Settings' },
   ]);
 
   public activeTab = signal<DockTab>({ id: 'notes', label: 'Notes' });
@@ -394,8 +403,16 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     return sorted.filter((t) => !this.isTabVisible(t));
   });
 
+  private readonly DEFAULT_VISIBLE_TAB_IDS = new Set<string>([
+    'notes',
+    'inbox',
+    'calendar',
+    'ai',
+    'settings',
+  ]);
+
   private isTabVisible(t: DockTab): boolean {
-    const defaultVisible = t.id === 'settings' ? 'false' : 'true';
+    const defaultVisible = this.DEFAULT_VISIBLE_TAB_IDS.has(t.id) ? 'true' : 'false';
     return this.persistence.getSettingValue(`tab_${t.id}_visible`, defaultVisible) === 'true';
   }
 

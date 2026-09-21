@@ -33,6 +33,7 @@ export interface DockTab {
     | 'clipboard'
     | 'activity'
     | 'ai'
+    | 'water'
     | 'settings'
     | string;
   label: string;
