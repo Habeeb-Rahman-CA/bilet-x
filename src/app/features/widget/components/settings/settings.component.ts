@@ -538,6 +538,7 @@ export class SettingsComponent implements OnDestroy {
     { id: 'inbox', label: 'Inbox' },
     { id: 'calendar', label: 'Calendar' },
     { id: 'ai', label: 'Bilet AI' },
+    { id: 'spotify', label: 'Spotify' },
     { id: 'water', label: 'Water' },
     { id: 'tasks', label: 'Tasks' },
     { id: 'pomodoro', label: 'Pomodoro' },

@@ -31,6 +31,7 @@ import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
 import { ClipboardComponent } from './components/clipboard/clipboard.component';
 import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
+import { SpotifyComponent } from './components/spotify/spotify.component';
 import { IntegrationManagerService } from '../../integrations/core/integration-manager.service';
 
 @Component({
@@ -50,6 +51,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     ClipboardComponent,
     ActivityComponent,
     SettingsComponent,
+    SpotifyComponent,
   ],
   template: `
     <div
@@ -169,6 +171,12 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
               class="animate-content-enter block h-full"
               *ngIf="activeTab().id === 'water'"
             ></app-water>
+
+            <!-- VIEW 2i: SPOTIFY MINI-PLAYER COMPONENT -->
+            <app-spotify
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'spotify'"
+            ></app-spotify>
 
             <!-- VIEW 2f: POMODORO COMPONENT -->
             <app-pomodoro
@@ -306,6 +314,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     { id: 'calendar', label: 'Calendar' },
     { id: 'ai', label: 'Bilet AI' },
     { id: 'settings', label: 'Settings' },
+    { id: 'spotify', label: 'Spotify' },
     { id: 'water', label: 'Water' },
     { id: 'tasks', label: 'Tasks' },
     { id: 'pomodoro', label: 'Pomodoro' },

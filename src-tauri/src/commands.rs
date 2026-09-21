@@ -7,6 +7,7 @@ use crate::github_oauth::{self, GitHubTokens};
 use crate::outlook_oauth::{self, OutlookTokens, RefreshedOutlookTokens};
 use crate::whatsapp_oauth::{self, WhatsAppTokens};
 use crate::slack_oauth::{self, SlackTokens};
+use crate::spotify_oauth::{self, SpotifyTokens, RefreshedSpotifyTokens};
 use crate::slack_api;
 use crate::db::Database;
 use crate::state::{AppState, InteractiveRect};
@@ -671,6 +672,27 @@ pub async fn slack_oauth_login() -> Result<SlackTokens, String> {
     tauri::async_runtime::spawn_blocking(slack_oauth::run_login_flow)
         .await
         .map_err(|e| format!("OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn spotify_oauth_login() -> Result<SpotifyTokens, String> {
+    tauri::async_runtime::spawn_blocking(spotify_oauth::run_login_flow)
+        .await
+        .map_err(|e| format!("Spotify OAuth task join error: {}", e))?
+}
+
+#[tauri::command]
+pub async fn spotify_oauth_refresh(
+    refresh_token: String,
+) -> Result<RefreshedSpotifyTokens, String> {
+    if refresh_token.trim().is_empty() {
+        return Err("refresh_token is required".to_string());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        spotify_oauth::refresh_access_token(&refresh_token)
+    })
+    .await
+    .map_err(|e| format!("Spotify refresh task join error: {}", e))?
 }
 
 #[tauri::command]
