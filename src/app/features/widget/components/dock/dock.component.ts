@@ -33,6 +33,7 @@ export interface DockTab {
     | 'pomodoro'
     | 'clipboard'
     | 'activity'
+    | 'ai'
     | 'settings'
     | string;
   label: string;
@@ -52,9 +53,15 @@ export type DockOrientation = 'vertical' | 'horizontal';
       /* iOS-style edit-mode jiggle. Kept subtle so it feels alive but
          doesn't distract during a real reorder gesture. */
       @keyframes dock-jiggle {
-        0%   { transform: rotate(-1.2deg); }
-        50%  { transform: rotate(1.2deg); }
-        100% { transform: rotate(-1.2deg); }
+        0% {
+          transform: rotate(-1.2deg);
+        }
+        50% {
+          transform: rotate(1.2deg);
+        }
+        100% {
+          transform: rotate(-1.2deg);
+        }
       }
       .jiggle {
         animation: dock-jiggle 0.32s ease-in-out infinite;
@@ -149,7 +156,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
         'p-2.5': size === 'large',
         'opacity-20': faded && !isEditMode,
         'opacity-100': !faded || isEditMode,
-        'ring-1 ring-white/25': isEditMode
+        'ring-1 ring-white/25': isEditMode,
       }"
       (pointerdown)="onContainerPointerDown($event)"
       (pointerup)="onContainerPointerUp()"
@@ -167,7 +174,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
           [ngClass]="{
             'h-7 w-7': size === 'compact',
             'h-9 w-9': size === 'normal',
-            'h-11 w-11': size === 'large'
+            'h-11 w-11': size === 'large',
           }"
           class="no-drag glass-btn relative flex items-center justify-center rounded-full"
         >
@@ -196,7 +203,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
           [ngClass]="{
             'h-7 w-7': size === 'compact',
             'h-9 w-9': size === 'normal',
-            'h-11 w-11': size === 'large'
+            'h-11 w-11': size === 'large',
           }"
           class="no-drag glass-btn relative flex items-center justify-center rounded-full"
         >
@@ -219,7 +226,6 @@ export type DockOrientation = 'vertical' | 'horizontal';
             <line x1="12" y1="7" x2="12" y2="7.01" />
           </svg>
         </button>
-
       </ng-container>
 
       <button
@@ -238,9 +244,9 @@ export type DockOrientation = 'vertical' | 'horizontal';
           'h-7 w-7': size === 'compact',
           'h-9 w-9': size === 'normal',
           'h-11 w-11': size === 'large',
-          'z-10 ring-1 ring-white/40 bg-white/[0.14]': isDragging() && dragIndex() === i,
-          'jiggle': isEditMode && !(isDragging() && dragIndex() === i),
-          'cursor-grabbing': isDragging()
+          'z-10 bg-white/[0.14] ring-1 ring-white/40': isDragging() && dragIndex() === i,
+          jiggle: isEditMode && !(isDragging() && dragIndex() === i),
+          'cursor-grabbing': isDragging(),
         }"
         class="no-drag glass-btn group relative flex cursor-pointer items-center justify-center rounded-full"
       >
@@ -274,10 +280,11 @@ export type DockOrientation = 'vertical' | 'horizontal';
             'h-7 w-7': size === 'compact',
             'h-9 w-9': size === 'normal',
             'h-11 w-11': size === 'large',
-            'bg-red-500/20 text-red-50 ring-1 ring-red-400/60 scale-110': isDragging() && isOverAddBtn(),
+            'scale-110 bg-red-500/20 text-red-50 ring-1 ring-red-400/60':
+              isDragging() && isOverAddBtn(),
             'bg-red-500/10 text-red-200 ring-1 ring-red-400/30': isDragging() && !isOverAddBtn(),
             'is-selected': !isDragging() && isAddPopoverOpen(),
-            'glass-btn': !isDragging() && !isAddPopoverOpen()
+            'glass-btn': !isDragging() && !isAddPopoverOpen(),
           }"
           class="flex items-center justify-center rounded-full transition-all duration-150 ease-out"
         >
@@ -327,18 +334,18 @@ export type DockOrientation = 'vertical' | 'horizontal';
           (pointerdown)="$event.stopPropagation()"
           class="no-drag glass-surface absolute z-30 flex items-center rounded-2xl"
           [ngClass]="{
-            'p-1.5 gap-2': size === 'compact',
-            'p-2 gap-2.5': size === 'normal',
-            'p-2.5 gap-3': size === 'large',
+            'gap-2 p-1.5': size === 'compact',
+            'gap-2.5 p-2': size === 'normal',
+            'gap-3 p-2.5': size === 'large',
             'popover-left': popoverDirection === 'left',
             'popover-right': popoverDirection === 'right',
             'popover-up': popoverDirection === 'up',
-            'popover-down': popoverDirection === 'down'
+            'popover-down': popoverDirection === 'down',
           }"
         >
           <div
             *ngIf="hiddenTabs.length === 0"
-            class="whitespace-nowrap px-2 py-1 font-mono text-[9px] uppercase tracking-wider text-neutral-500"
+            class="px-2 py-1 font-mono text-[9px] tracking-wider whitespace-nowrap text-neutral-500 uppercase"
           >
             All tabs visible
           </div>
@@ -352,7 +359,7 @@ export type DockOrientation = 'vertical' | 'horizontal';
             [ngClass]="{
               'h-7 w-7': size === 'compact',
               'h-9 w-9': size === 'normal',
-              'h-11 w-11': size === 'large'
+              'h-11 w-11': size === 'large',
             }"
             class="no-drag glass-btn flex shrink-0 items-center justify-center rounded-full"
           >
@@ -521,10 +528,7 @@ export class DockComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.pressStartX = event.clientX;
     this.pressStartY = event.clientY;
     this.pressIndex = null;
-    this.pressTimerId = window.setTimeout(
-      () => this.onLongPressFired(),
-      this.LONG_PRESS_MS
-    );
+    this.pressTimerId = window.setTimeout(() => this.onLongPressFired(), this.LONG_PRESS_MS);
   }
 
   public onContainerPointerUp(): void {
@@ -553,10 +557,7 @@ export class DockComponent implements AfterViewInit, OnChanges, OnDestroy {
     this.pressStartX = event.clientX;
     this.pressStartY = event.clientY;
     this.pressIndex = index;
-    this.pressTimerId = window.setTimeout(
-      () => this.onLongPressFired(),
-      this.LONG_PRESS_MS
-    );
+    this.pressTimerId = window.setTimeout(() => this.onLongPressFired(), this.LONG_PRESS_MS);
   }
 
   private armDragFor(index: number): void {
@@ -590,10 +591,7 @@ export class DockComponent implements AfterViewInit, OnChanges, OnDestroy {
     if (this.pressTimerId !== null) {
       const dx = event.clientX - this.pressStartX;
       const dy = event.clientY - this.pressStartY;
-      if (
-        Math.abs(dx) > this.MOVE_TOLERANCE_PX ||
-        Math.abs(dy) > this.MOVE_TOLERANCE_PX
-      ) {
+      if (Math.abs(dx) > this.MOVE_TOLERANCE_PX || Math.abs(dy) > this.MOVE_TOLERANCE_PX) {
         this.cancelLongPress();
       }
       return;
@@ -607,9 +605,7 @@ export class DockComponent implements AfterViewInit, OnChanges, OnDestroy {
       this.isDragging.set(true);
       this.visualTabs.set([...this.tabs]);
       this.tabRectSnapshot =
-        this.tabButtons
-          ?.toArray()
-          .map((b) => b.nativeElement.getBoundingClientRect()) ?? [];
+        this.tabButtons?.toArray().map((b) => b.nativeElement.getBoundingClientRect()) ?? [];
     }
 
     // Update the "over remove target" highlight regardless of whether we

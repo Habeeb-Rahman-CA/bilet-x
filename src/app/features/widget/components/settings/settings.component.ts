@@ -276,7 +276,9 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
         <div class="flex items-center justify-between">
           <div>
             <div class="text-[11px] font-semibold text-neutral-300">Start on Login</div>
-            <div class="text-[9px] text-neutral-500">Launch Bilet-X automatically when you sign in.</div>
+            <div class="text-[9px] text-neutral-500">
+              Launch Bilet-X automatically when you sign in.
+            </div>
           </div>
           <span
             [class.text-emerald-400]="isAutostartEnabled()"
@@ -331,14 +333,14 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
           </button>
         </div> -->
 
-        <!-- CATEGORIES LIST -->
-        <!-- <div *ngFor="let cat of integrationCategories()" class="space-y-1.5">
+      <!-- CATEGORIES LIST -->
+      <!-- <div *ngFor="let cat of integrationCategories()" class="space-y-1.5">
           <div class="font-mono text-[9px] font-bold uppercase tracking-wider text-neutral-400">
             {{ cat.label }}
           </div> -->
 
-          <!-- PROVIDERS IN CATEGORY -->
-          <!-- <div class="space-y-1.5">
+      <!-- PROVIDERS IN CATEGORY -->
+      <!-- <div class="space-y-1.5">
             <div
               *ngFor="let provider of cat.providers"
               class="rounded-lg border border-neutral-800/80 bg-neutral-950/60 p-2.5 transition hover:border-neutral-700"
@@ -346,9 +348,9 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
               <div class="flex items-start justify-between">
                 <div class="space-y-1">
                   <div class="flex items-center space-x-1.5"> -->
-                    <!-- <span class="font-semibold text-neutral-200">{{ provider.displayName }}</span> -->
-                    <!-- Capability badges -->
-                    <!-- <span
+      <!-- <span class="font-semibold text-neutral-200">{{ provider.displayName }}</span> -->
+      <!-- Capability badges -->
+      <!-- <span
                       *ngFor="let cap of provider.supportedCapabilities"
                       class="rounded bg-neutral-800 px-1.5 py-0.2 font-mono text-[8px] text-neutral-400"
                     >
@@ -358,10 +360,10 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                   <div class="text-[10px] text-neutral-400">{{ provider.description }}</div>
                 </div> -->
 
-                <!-- Action button: providers with inline tab UI show a hint; others show Connect -->
-                <!-- <div> -->
-                  <!-- All other providers: show Connect button -->
-                  <!-- <button
+      <!-- Action button: providers with inline tab UI show a hint; others show Connect -->
+      <!-- <div> -->
+      <!-- All other providers: show Connect button -->
+      <!-- <button
                     *ngIf="!provider.hasInlineConnectUI && getConnectionsForProvider(provider.id).length === 0"
                     (click)="openConnectForm(provider)"
                     type="button"
@@ -372,8 +374,8 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                 </div>
               </div> -->
 
-              <!-- ACTIVE CONNECTIONS FOR THIS PROVIDER -->
-              <!-- <div *ngIf="getConnectionsForProvider(provider.id).length > 0" class="mt-2 space-y-1.5 border-t border-neutral-800/60 pt-2">
+      <!-- ACTIVE CONNECTIONS FOR THIS PROVIDER -->
+      <!-- <div *ngIf="getConnectionsForProvider(provider.id).length > 0" class="mt-2 space-y-1.5 border-t border-neutral-800/60 pt-2">
                 <div
                   *ngFor="let conn of getConnectionsForProvider(provider.id)"
                   class="flex items-center justify-between rounded-md bg-neutral-900 p-1.5 text-[10px]"
@@ -409,8 +411,8 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                 </div>
               </div> -->
 
-              <!-- EXPANDABLE CONNECTION CONFIG FORM (not shown for providers with inline tab setup) -->
-              <!-- <div
+      <!-- EXPANDABLE CONNECTION CONFIG FORM (not shown for providers with inline tab setup) -->
+      <!-- <div
                 *ngIf="!provider.hasInlineConnectUI && activeForm() && activeForm()?.providerId === provider.id"
                 class="mt-2.5 rounded-lg border border-neutral-700 bg-neutral-900 p-2.5 space-y-2 text-xs"
               >
@@ -429,8 +431,8 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                   {{ activeForm()?.error }}
                 </div> -->
 
-                <!-- DYNAMIC CONFIG FIELDS -->
-                <!-- <div *ngFor="let field of provider.configFields" class="space-y-0.5">
+      <!-- DYNAMIC CONFIG FIELDS -->
+      <!-- <div *ngFor="let field of provider.configFields" class="space-y-0.5">
                   <label class="flex items-center justify-between text-[9px] text-neutral-300">
                     <span>{{ field.label }} <span *ngIf="field.required" class="text-red-400">*</span></span>
                     <span *ngIf="field.isSecret" class="font-mono text-[8px] text-emerald-400">Encrypted</span>
@@ -446,8 +448,8 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                   </div>
                 </div> -->
 
-                <!-- FORM ACTIONS -->
-                <!-- <div class="flex items-center justify-end space-x-1.5 pt-1">
+      <!-- FORM ACTIONS -->
+      <!-- <div class="flex items-center justify-end space-x-1.5 pt-1">
                   <button
                     (click)="closeConnectForm()"
                     type="button"
@@ -465,9 +467,9 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
                   </button>
                 </div>
               </div> -->
-            <!-- </div> -->
-          <!-- </div> -->
-        <!-- </div> -->
+      <!-- </div> -->
+      <!-- </div> -->
+      <!-- </div> -->
       <!-- </div> -->
 
       <!-- 7. ABOUT & VERSION SCREEN -->
@@ -539,6 +541,7 @@ export class SettingsComponent implements OnDestroy {
     // { id: 'tasks', label: 'Tasks' },
     { id: 'inbox', label: 'Inbox' },
     { id: 'calendar', label: 'Calendar' },
+    { id: 'ai', label: 'Bilet AI' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },
     // { id: 'clipboard', label: 'Clipboard' },
@@ -618,9 +621,7 @@ export class SettingsComponent implements OnDestroy {
     this.currentShortcut = computed(() =>
       this.persistence.getSettingValue('global_shortcut', 'CommandOrControl+Shift+K')
     );
-    this.currentDockSize = computed(() =>
-      this.persistence.getSettingValue('dock_size', 'normal')
-    );
+    this.currentDockSize = computed(() => this.persistence.getSettingValue('dock_size', 'normal'));
     this.currentDockOrientation = computed(() =>
       this.persistence.getSettingValue('dock_orientation', 'vertical')
     );
@@ -701,12 +702,12 @@ export class SettingsComponent implements OnDestroy {
     // Validate required fields
     for (const field of provider.configFields) {
       if (field.required && !form.formData[field.key]?.trim()) {
-        this.activeForm.update((f) => f ? { ...f, error: `${field.label} is required.` } : null);
+        this.activeForm.update((f) => (f ? { ...f, error: `${field.label} is required.` } : null));
         return;
       }
     }
 
-    this.activeForm.update((f) => f ? { ...f, isSaving: true, error: null } : null);
+    this.activeForm.update((f) => (f ? { ...f, isSaving: true, error: null } : null));
 
     try {
       const conn = await this.integrationManager.connectProvider(
@@ -716,12 +717,16 @@ export class SettingsComponent implements OnDestroy {
       );
 
       if (conn.status === 'error') {
-        this.activeForm.update((f) => f ? { ...f, isSaving: false, error: conn.errorMessage || 'Connection failed' } : null);
+        this.activeForm.update((f) =>
+          f ? { ...f, isSaving: false, error: conn.errorMessage || 'Connection failed' } : null
+        );
       } else {
         this.closeConnectForm();
       }
     } catch (err: any) {
-      this.activeForm.update((f) => f ? { ...f, isSaving: false, error: err?.message || 'Failed to connect' } : null);
+      this.activeForm.update((f) =>
+        f ? { ...f, isSaving: false, error: err?.message || 'Failed to connect' } : null
+      );
     }
   }
 
@@ -836,10 +841,7 @@ export class SettingsComponent implements OnDestroy {
     const currentlyVisible = this.isTabVisible(tabId);
     // Guard: never let the user hide the last visible tab.
     if (currentlyVisible && this.visibleTabCount() <= 1) return;
-    await this.persistence.setSetting(
-      `tab_${tabId}_visible`,
-      currentlyVisible ? 'false' : 'true'
-    );
+    await this.persistence.setSetting(`tab_${tabId}_visible`, currentlyVisible ? 'false' : 'true');
   }
 
   public async toggleNotifications(enabled: boolean): Promise<void> {

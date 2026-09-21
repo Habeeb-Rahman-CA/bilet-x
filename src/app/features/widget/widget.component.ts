@@ -25,6 +25,7 @@ import { TaskComponent } from './components/task/task.component';
 import { InboxComponent } from './components/inbox/inbox.component';
 import { InboxSwitcherComponent } from './components/inbox/inbox-switcher.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
+import { BiletAiComponent } from './components/bilet-ai/bilet-ai.component';
 import { CalculatorComponent } from './components/calculator/calculator.component';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
 import { ClipboardComponent } from './components/clipboard/clipboard.component';
@@ -43,6 +44,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     InboxComponent,
     InboxSwitcherComponent,
     CalendarComponent,
+    BiletAiComponent,
     CalculatorComponent,
     PomodoroComponent,
     ClipboardComponent,
@@ -51,7 +53,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
   ],
   template: `
     <div
-      class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 select-none transition-opacity duration-100 ease-out"
+      class="relative flex h-screen w-screen overflow-hidden bg-transparent text-neutral-100 transition-opacity duration-100 ease-out select-none"
       [class.justify-start]="isLeftSide()"
       [class.justify-center]="isHorizontallyCentered()"
       [class.justify-end]="!isLeftSide() && !isHorizontallyCentered()"
@@ -60,7 +62,6 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
       [class.items-center]="!isTopSide() && !isBottomSide()"
       [class.opacity-20]="isOrientationChanging()"
     >
-
       <!-- Inner container: flex-row for vertical dock (panel + dock side by side),
            flex-col for horizontal dock (panel + dock stacked). -->
       <div
@@ -89,9 +90,7 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
           class="glass-surface flex w-[380px] flex-col overflow-hidden rounded-[22px] p-4 text-neutral-100 transition-[height] duration-300 ease-out"
           [class.animate-panel-expand]="!isPanelClosing()"
           [class.animate-panel-collapse]="isPanelClosing()"
-          [style.height]="
-            dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'
-          "
+          [style.height]="dockOrientation() === 'horizontal' ? '340px' : 'calc(100vh - 1rem)'"
         >
           <!-- PANEL TOP HEADER.
                Left slot is per-tab: the inbox contributes its service
@@ -109,7 +108,17 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
               title="Close (ESC)"
               class="no-drag glass-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M18 6 6 18" />
                 <path d="m6 6 12 12" />
               </svg>
@@ -124,33 +133,66 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
                physical material" behavior. -->
           <div class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <!-- VIEW 1: NOTE COMPONENT -->
-            <app-note class="animate-content-enter block h-full" *ngIf="activeTab().id === 'notes'"></app-note>
+            <app-note
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'notes'"
+            ></app-note>
 
             <!-- VIEW 2: TASK COMPONENT -->
-            <app-task class="animate-content-enter block h-full" *ngIf="activeTab().id === 'tasks'"></app-task>
+            <app-task
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'tasks'"
+            ></app-task>
 
             <!-- VIEW 2b: UNIFIED INBOX (Gmail, Outlook, Slack, WhatsApp, Jira, GitHub).
                  Inbox owns its own service-switcher strip at the top and
                  delegates the body to the existing per-service components. -->
-            <app-inbox class="animate-content-enter block h-full" *ngIf="activeTab().id === 'inbox'"></app-inbox>
+            <app-inbox
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'inbox'"
+            ></app-inbox>
 
             <!-- VIEW 2d: CALENDAR COMPONENT -->
-            <app-calendar class="animate-content-enter block h-full" *ngIf="activeTab().id === 'calendar'"></app-calendar>
+            <app-calendar
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'calendar'"
+            ></app-calendar>
+
+            <!-- VIEW 2c: BILET AI COMPONENT -->
+            <app-bilet-ai
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'ai'"
+            ></app-bilet-ai>
 
             <!-- VIEW 2e: CALCULATOR COMPONENT -->
-            <app-calculator class="animate-content-enter block h-full" *ngIf="activeTab().id === 'calculator'"></app-calculator>
+            <app-calculator
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'calculator'"
+            ></app-calculator>
 
             <!-- VIEW 2f: POMODORO COMPONENT -->
-            <app-pomodoro class="animate-content-enter block h-full" *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro>
+            <app-pomodoro
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'pomodoro'"
+            ></app-pomodoro>
 
             <!-- VIEW 2g: CLIPBOARD COMPONENT -->
-            <app-clipboard class="animate-content-enter block h-full" *ngIf="activeTab().id === 'clipboard'"></app-clipboard>
+            <app-clipboard
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'clipboard'"
+            ></app-clipboard>
 
             <!-- VIEW 3: ACTIVITY COMPONENT -->
-            <app-activity class="animate-content-enter block h-full" *ngIf="activeTab().id === 'activity'"></app-activity>
+            <app-activity
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'activity'"
+            ></app-activity>
 
             <!-- VIEW 4: SETTINGS COMPONENT -->
-            <app-settings class="animate-content-enter block h-full" *ngIf="activeTab().id === 'settings'"></app-settings>
+            <app-settings
+              class="animate-content-enter block h-full"
+              *ngIf="activeTab().id === 'settings'"
+            ></app-settings>
           </div>
         </div>
 
@@ -263,6 +305,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     // { id: 'tasks', label: 'Tasks' },
     { id: 'inbox', label: 'Inbox', badgeCount: this.inboxBadgeCount() },
     { id: 'calendar', label: 'Calendar' },
+    { id: 'ai', label: 'Bilet AI' },
     // { id: 'calculator', label: 'Calculator' },
     // { id: 'pomodoro', label: 'Pomodoro' },
     // { id: 'clipboard', label: 'Clipboard' },
@@ -306,19 +349,17 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // Dock customization signals (Task 5)
   public dockSize = computed<DockSize>(
-    () => (this.persistence.getSettingValue('dock_size', 'normal') as DockSize)
+    () => this.persistence.getSettingValue('dock_size', 'normal') as DockSize
   );
   public dockOrientation = computed<DockOrientation>(
-    () =>
-      (this.persistence.getSettingValue('dock_orientation', 'vertical') as DockOrientation)
+    () => this.persistence.getSettingValue('dock_orientation', 'vertical') as DockOrientation
   );
   private dockAutoHideEnabled = computed(
     () => this.persistence.getSettingValue('dock_auto_hide', 'false') === 'true'
   );
   private isHoveringDock = signal<boolean>(false);
   public dockFaded = computed(
-    () =>
-      this.dockAutoHideEnabled() && !this.isPanelExpanded() && !this.isHoveringDock()
+    () => this.dockAutoHideEnabled() && !this.isPanelExpanded() && !this.isHoveringDock()
   );
 
   // Apply the user's persisted drag-reorder before filtering by visibility.
@@ -330,7 +371,10 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     const orderStr = this.persistence.getSettingValue('dock_tab_order', '');
     if (!orderStr) return all;
 
-    const savedIds = orderStr.split(',').map((s) => s.trim()).filter(Boolean);
+    const savedIds = orderStr
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
     const remaining = new Map(all.map((t) => [t.id, t]));
     const ordered: DockTab[] = [];
     for (const id of savedIds) {
@@ -412,7 +456,6 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
         this.activeTab.set(tabs[0]);
       }
     });
-
   }
 
   public async ngOnInit(): Promise<void> {
@@ -436,7 +479,6 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     // snap to the nearest configured preset.
     this.positionPollTimer = window.setInterval(() => this.pollWidgetPosition(), 100);
   }
-
 
   public ngAfterViewInit(): void {
     this.scheduleInteractiveAreaUpdate();
@@ -498,10 +540,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    await this.persistence.setSetting(
-      'dock_tab_order',
-      newFullOrder.map((t) => t.id).join(',')
-    );
+    await this.persistence.setSetting('dock_tab_order', newFullOrder.map((t) => t.id).join(','));
   }
 
   /**
@@ -641,9 +680,7 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       nearest,
       distances: valid.map((p) => {
         const c = this.presetCenter(p);
-        return c
-          ? { p, d: Math.round(Math.hypot(c.x - centerX, c.y - centerY)) }
-          : null;
+        return c ? { p, d: Math.round(Math.hypot(c.x - centerX, c.y - centerY)) } : null;
       }),
     });
 
@@ -665,14 +702,22 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     const hx = ww / 2;
     const hy = wh / 2;
     switch (pos) {
-      case 'left':         return { x: 10 + hx,      y: sh / 2 };
-      case 'right':        return { x: sw - 10 - hx, y: sh / 2 };
-      case 'top':          return { x: sw / 2,       y: 10 + hy };
-      case 'bottom':       return { x: sw / 2,       y: sh - 10 - hy };
-      case 'top-left':     return { x: 10 + hx,      y: 10 + hy };
-      case 'top-right':    return { x: sw - 10 - hx, y: 10 + hy };
-      case 'bottom-left':  return { x: 10 + hx,      y: sh - 10 - hy };
-      case 'bottom-right': return { x: sw - 10 - hx, y: sh - 10 - hy };
+      case 'left':
+        return { x: 10 + hx, y: sh / 2 };
+      case 'right':
+        return { x: sw - 10 - hx, y: sh / 2 };
+      case 'top':
+        return { x: sw / 2, y: 10 + hy };
+      case 'bottom':
+        return { x: sw / 2, y: sh - 10 - hy };
+      case 'top-left':
+        return { x: 10 + hx, y: 10 + hy };
+      case 'top-right':
+        return { x: sw - 10 - hx, y: 10 + hy };
+      case 'bottom-left':
+        return { x: 10 + hx, y: sh - 10 - hy };
+      case 'bottom-right':
+        return { x: sw - 10 - hx, y: sh - 10 - hy };
     }
     return null;
   }
@@ -735,7 +780,6 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
       this.isProgrammaticMove = false;
     }
   }
-
 
   public async selectTab(tab: DockTab): Promise<void> {
     // Selecting a tab always exits edit mode — the user's clearly moved
