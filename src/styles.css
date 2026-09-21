@@ -15,14 +15,14 @@
        html.light further down for the light palette. Tune here to retone
        the whole material system in one place.
        ===================================================================== */
-    --glass-bg: 22, 22, 26; /* rgb triplet — outer shell fill */
-    --glass-opacity: 0.55; /* alpha applied to --glass-bg */
-    --glass-blur: 22px; /* backdrop blur radius */
+    --glass-bg: 18, 18, 22; /* rgb triplet — outer shell fill */
+    --glass-opacity: 0.92; /* alpha applied to --glass-bg — reduced transparency for high readability */
+    --glass-blur: 28px; /* backdrop blur radius */
     --glass-saturation: 180%; /* backdrop color-punch */
-    --glass-border: rgba(255, 255, 255, 0.09);
-    --glass-highlight: rgba(255, 255, 255, 0.11); /* top edge light-catch */
-    --glass-inner-shadow: rgba(0, 0, 0, 0.15); /* bottom depth line */
-    --glass-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.55), 0 4px 14px -4px rgba(0, 0, 0, 0.35);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-highlight: rgba(255, 255, 255, 0.15); /* top edge light-catch */
+    --glass-inner-shadow: rgba(0, 0, 0, 0.25); /* bottom depth line */
+    --glass-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7), 0 4px 14px -4px rgba(0, 0, 0, 0.45);
     --glass-gloss: radial-gradient(
       140% 60% at 50% -20%,
       rgba(255, 255, 255, 0.09),
@@ -38,10 +38,10 @@
   }
 
   html.light {
-    --glass-bg: 255, 255, 255;
-    --glass-opacity: 0.55;
-    --glass-border: rgba(255, 255, 255, 0.65);
-    --glass-highlight: rgba(255, 255, 255, 0.85);
+    --glass-bg: 250, 250, 252;
+    --glass-opacity: 0.94;
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-highlight: rgba(255, 255, 255, 0.95);
     --glass-inner-shadow: rgba(20, 20, 30, 0.06);
     --glass-shadow:
       0 18px 40px -12px rgba(20, 20, 30, 0.22), 0 3px 10px -4px rgba(20, 20, 30, 0.12);
