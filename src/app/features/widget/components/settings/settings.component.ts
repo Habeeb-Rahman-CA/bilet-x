@@ -474,7 +474,7 @@ import { IntegrationCategory } from '../../../../integrations/core/capabilities/
         <div class="flex items-center justify-between">
           <span class="font-mono font-bold text-white uppercase">Bilet-X</span>
           <span class="rounded bg-neutral-800 px-1.5 py-0.5 font-mono text-neutral-300"
-            >v1.0.3</span
+            >v1.1.0</span
           >
         </div>
         <!-- <p class="pt-1 leading-relaxed text-neutral-400">
