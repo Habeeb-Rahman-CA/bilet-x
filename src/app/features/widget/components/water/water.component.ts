@@ -20,26 +20,21 @@ import { WaterService } from './water.service';
     `,
   ],
   template: `
-    <div class="flex h-full flex-col space-y-2.5 font-sans select-none">
+    <div class="flex h-full flex-col space-y-2.5 font-sans select-none text-neutral-100">
       <!-- 1. MAIN HYDRATION CARD -->
       <div
-        class="relative shrink-0 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/90 p-3"
+        class="relative shrink-0 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 p-3"
       >
-        <!-- Ambient Subtle Droplet Glow -->
-        <div
-          class="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-cyan-500/10 blur-xl"
-        ></div>
-
-        <!-- Header: Droplet icon + Title + Countdown Status -->
+        <!-- Header: Droplet icon + Title + Sound toggle + Reminder On/Off Toggle -->
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
             <div
-              class="flex h-5 w-5 items-center justify-center rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
+              class="flex h-6 w-6 items-center justify-center rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="12"
-                height="12"
+                width="13"
+                height="13"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -57,20 +52,74 @@ import { WaterService } from './water.service';
             </span>
           </div>
 
-          <!-- Next Reminder Badge -->
-          <div
-            class="flex items-center space-x-1.5 rounded-full border border-neutral-800 bg-black/60 px-2 py-0.5 font-mono text-[9px] text-neutral-400"
-            [title]="water.reminderStatus()"
-          >
-            <span
-              class="h-1.5 w-1.5 rounded-full"
+          <!-- Top Right Controls: Sound & Quick Toggle Pill -->
+          <div class="flex items-center space-x-1.5 font-mono text-[9px]">
+            <!-- Sound Toggle Button -->
+            <button
+              type="button"
+              (click)="water.toggleSound()"
+              [title]="water.soundEnabled() ? 'Reminder sound enabled' : 'Reminder sound muted'"
+              class="flex h-6 w-6 items-center justify-center rounded-md bg-neutral-800 text-neutral-400 transition hover:bg-neutral-700 hover:text-white"
+              [ngClass]="{ 'text-cyan-400': water.soundEnabled() }"
+            >
+              <svg
+                *ngIf="water.soundEnabled()"
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
+                />
+                <path d="M16 9a5 5 0 0 1 0 6" />
+              </svg>
+              <svg
+                *ngIf="!water.soundEnabled()"
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M16 9a5 5 0 0 1 .95 2.293M19.364 5.636a9 9 0 0 1 1.889 9.96M2 2l20 20M7 7l-.587.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298V11"
+                />
+              </svg>
+            </button>
+
+            <!-- Reminder Status & Toggle Pill -->
+            <button
+              type="button"
+              (click)="water.toggleReminders()"
+              [title]="water.reminderEnabled() ? 'Click to disable reminders' : 'Click to enable 30m reminders'"
+              class="flex items-center space-x-1.5 rounded-md border px-2 py-0.5 transition active:scale-95"
               [ngClass]="{
-                'animate-pulse bg-cyan-400': water.reminderEnabled() && !water.snoozeUntil(),
-                'bg-amber-400': !!water.snoozeUntil(),
-                'bg-neutral-600': !water.reminderEnabled(),
+                'border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20':
+                  water.reminderEnabled(),
+                'border-neutral-800 bg-neutral-800 text-neutral-500 hover:text-neutral-300':
+                  !water.reminderEnabled()
               }"
-            ></span>
-            <span class="max-w-[130px] truncate">{{ water.reminderStatus() }}</span>
+            >
+              <span
+                class="h-1.5 w-1.5 rounded-full"
+                [ngClass]="{
+                  'animate-pulse bg-cyan-400': water.reminderEnabled() && !water.snoozeUntil(),
+                  'bg-amber-400': !!water.snoozeUntil(),
+                  'bg-neutral-600': !water.reminderEnabled()
+                }"
+              ></span>
+              <span>{{ water.reminderEnabled() ? water.reminderStatus() : 'Reminder Off' }}</span>
+            </button>
           </div>
         </div>
 
@@ -92,7 +141,7 @@ import { WaterService } from './water.service';
             <span
               [ngClass]="{
                 'text-emerald-400': water.isGoalReached(),
-                'text-cyan-400': !water.isGoalReached(),
+                'text-cyan-400': !water.isGoalReached()
               }"
             >
               {{ water.progressPercent() }}%
@@ -112,8 +161,8 @@ import { WaterService } from './water.service';
           <div
             class="h-full transition-all duration-300 ease-out"
             [ngClass]="{
-              'bg-gradient-to-r from-cyan-500 to-emerald-400': water.isGoalReached(),
-              'bg-gradient-to-r from-cyan-600 to-cyan-400': !water.isGoalReached(),
+              'bg-emerald-400': water.isGoalReached(),
+              'bg-cyan-400': !water.isGoalReached()
             }"
             [style.width.%]="water.progressPercent()"
           ></div>
@@ -153,12 +202,12 @@ import { WaterService } from './water.service';
             </svg>
           </button>
 
-          <!-- Snooze Button -->
+          <!-- Snooze 30m Button (if reminder is enabled) -->
           <button
             *ngIf="water.reminderEnabled()"
             type="button"
             (click)="water.snooze(30)"
-            title="Snooze reminder for 30m"
+            title="Delay next reminder by 30m"
             class="flex h-8 cursor-pointer items-center justify-center rounded-lg border border-neutral-700 bg-neutral-800 px-2 font-mono text-[10px] text-neutral-300 transition hover:border-neutral-500 hover:bg-neutral-700 hover:text-white active:scale-95"
           >
             Snooze 30m
@@ -175,7 +224,7 @@ import { WaterService } from './water.service';
               *ngFor="let amount of drinkAmounts"
               type="button"
               (click)="water.addWater(amount)"
-              class="cursor-pointer rounded border border-neutral-800 bg-black/60 px-2 py-0.5 text-neutral-400 transition hover:border-neutral-600 hover:bg-neutral-800 hover:text-white active:scale-95"
+              class="cursor-pointer rounded border border-neutral-800 bg-neutral-950 px-2 py-0.5 text-neutral-400 transition hover:border-neutral-600 hover:bg-neutral-800 hover:text-white active:scale-95"
             >
               +{{ amount }}
             </button>
@@ -184,20 +233,31 @@ import { WaterService } from './water.service';
       </div>
 
       <!-- 2. STREAK & RECENT HISTORY CARD -->
-      <div class="shrink-0 rounded-xl border border-neutral-800 bg-neutral-900/60 p-2.5">
-        <div class="flex items-center justify-between border-b border-neutral-800/60 pb-1.5">
+      <div class="shrink-0 rounded-xl border border-neutral-800 bg-neutral-900 p-2.5">
+        <div class="flex items-center justify-between border-b border-neutral-800 pb-1.5">
           <span
             class="font-mono text-[10px] font-semibold tracking-wider text-neutral-400 uppercase"
           >
             Hydration History
           </span>
 
-          <!-- Streak Badge -->
+          <!-- Streak Badge with Flame SVG (No Emoji) -->
           <div
             *ngIf="water.streak() > 0"
             class="flex items-center space-x-1 font-mono text-[10px] font-semibold text-amber-400"
           >
-            <span>🔥</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="text-amber-400"
+            >
+              <path
+                d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+              />
+            </svg>
             <span>{{ water.streak() }} day streak</span>
           </div>
           <div *ngIf="water.streak() === 0" class="font-mono text-[9px] text-neutral-500">
@@ -219,14 +279,14 @@ import { WaterService } from './water.service';
 
             <!-- Mini Progress Bar Track -->
             <div
-              class="h-2 flex-1 overflow-hidden rounded border border-neutral-800/80 bg-neutral-950"
+              class="h-2 flex-1 overflow-hidden rounded border border-neutral-800 bg-neutral-950"
             >
               <div
                 class="h-full transition-all duration-300"
                 [ngClass]="{
                   'bg-emerald-400': day.isGoalMet,
-                  'bg-cyan-500/80': !day.isGoalMet && day.percent > 0,
-                  'bg-transparent': day.percent === 0,
+                  'bg-cyan-400': !day.isGoalMet && day.percent > 0,
+                  'bg-transparent': day.percent === 0
                 }"
                 [style.width.%]="day.percent"
               ></div>
@@ -244,32 +304,125 @@ import { WaterService } from './water.service';
         </div>
       </div>
 
-      <!-- 3. CONFIGURATION & CUSTOM LIMITS CARD -->
-      <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900/40 p-2.5">
+      <!-- 3. CONFIGURATION & REMINDER SETTINGS CARD -->
+      <div class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900 p-2.5">
         <div class="flex items-center justify-between">
           <span
             class="font-mono text-[10px] font-semibold tracking-wider text-neutral-400 uppercase"
           >
-            Daily Goal & Time Gap
+            Reminder & Schedule
           </span>
-          <button
-            type="button"
-            (click)="water.toggleReminders()"
-            class="cursor-pointer rounded border px-2 py-0.5 font-mono text-[9px] transition active:scale-95"
-            [ngClass]="{
-              'border-emerald-500/30 bg-emerald-500/10 text-emerald-400': water.reminderEnabled(),
-              'border-neutral-800 bg-neutral-900 text-neutral-500 hover:text-neutral-300':
-                !water.reminderEnabled(),
-            }"
-          >
-            Reminders: {{ water.reminderEnabled() ? 'On' : 'Off' }}
-          </button>
+          <div class="flex items-center space-x-1.5 font-mono text-[9px]">
+            <!-- Test Sound Button -->
+            <button
+              type="button"
+              (click)="water.playWaterReminderChime()"
+              title="Play sample water chime"
+              class="flex items-center space-x-1 rounded border border-neutral-800 bg-neutral-950 px-1.5 py-0.5 text-neutral-400 hover:border-neutral-700 hover:text-white active:scale-95"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="9"
+                height="9"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              </svg>
+              <span>Test Chime</span>
+            </button>
+
+            <!-- Reminders Toggle Button -->
+            <button
+              type="button"
+              (click)="water.toggleReminders()"
+              class="cursor-pointer rounded border px-2 py-0.5 transition active:scale-95"
+              [ngClass]="{
+                'border-emerald-500/30 bg-emerald-500/20 font-semibold text-emerald-300':
+                  water.reminderEnabled(),
+                'border-neutral-800 bg-neutral-950 text-neutral-500 hover:text-neutral-300':
+                  !water.reminderEnabled()
+              }"
+            >
+              {{ water.reminderEnabled() ? 'Reminders: ON' : 'Reminders: OFF' }}
+            </button>
+          </div>
         </div>
 
-        <!-- 3A. DAILY GOAL / TARGET (PRESETS + CUSTOM STEPPER & INPUT) -->
-        <div class="space-y-1.5">
+        <!-- 3A. REMINDER TIME GAP / INTERVAL (PRESETS + STEPPER) -->
+        <div class="space-y-1.5 border-t border-neutral-800 pt-2">
           <div class="flex items-center justify-between font-mono text-[9px] text-neutral-400">
-            <span>Daily Limit / Target</span>
+            <span>Reminder Interval</span>
+            <span class="text-[11px] font-bold text-neutral-200"
+              >Every {{ water.reminderIntervalMinutes() }} mins</span
+            >
+          </div>
+
+          <!-- Interval Preset Chips (30m is default & highlighted) -->
+          <div class="grid grid-cols-5 gap-1 font-mono text-[10px]">
+            <button
+              *ngFor="let inv of intervalOptions"
+              type="button"
+              (click)="water.setReminderInterval(inv.minutes)"
+              class="cursor-pointer rounded border py-1 text-center transition active:scale-95"
+              [ngClass]="{
+                'border-transparent bg-white font-semibold text-black':
+                  water.reminderIntervalMinutes() === inv.minutes,
+                'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white':
+                  water.reminderIntervalMinutes() !== inv.minutes
+              }"
+            >
+              {{ inv.label }}
+            </button>
+          </div>
+
+          <!-- Custom Interval Stepper & Any Value Input -->
+          <div class="flex items-center space-x-1.5 pt-0.5">
+            <button
+              type="button"
+              (click)="adjustInterval(-15)"
+              title="Decrease interval 15m"
+              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-neutral-950 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
+            >
+              -
+            </button>
+            <div class="relative flex-1">
+              <input
+                type="number"
+                [value]="water.reminderIntervalMinutes()"
+                (change)="onIntervalInputChange($event)"
+                (keyup.enter)="onIntervalInputChange($event)"
+                min="5"
+                max="720"
+                step="5"
+                placeholder="Custom mins"
+                class="w-full rounded border border-neutral-800 bg-neutral-950 px-2 py-0.5 text-center font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500 focus:text-white"
+              />
+              <span
+                class="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 font-mono text-[8px] text-neutral-500"
+                >mins</span
+              >
+            </div>
+            <button
+              type="button"
+              (click)="adjustInterval(15)"
+              title="Increase interval 15m"
+              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-neutral-950 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <!-- 3B. DAILY GOAL / TARGET -->
+        <div class="space-y-1.5 border-t border-neutral-800 pt-2">
+          <div class="flex items-center justify-between font-mono text-[9px] text-neutral-400">
+            <span>Daily Goal</span>
             <div class="flex items-center space-x-1">
               <span class="text-[11px] font-bold text-neutral-200">{{
                 water.goalLitersFormatted()
@@ -289,7 +442,7 @@ import { WaterService } from './water.service';
                 'border-transparent bg-white font-semibold text-black':
                   water.dailyGoalMl() === g.ml,
                 'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white':
-                  water.dailyGoalMl() !== g.ml,
+                  water.dailyGoalMl() !== g.ml
               }"
             >
               {{ g.label }}
@@ -302,7 +455,7 @@ import { WaterService } from './water.service';
               type="button"
               (click)="adjustGoal(-250)"
               title="Decrease goal 250ml"
-              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-black/60 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
+              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-neutral-950 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
             >
               -
             </button>
@@ -316,7 +469,7 @@ import { WaterService } from './water.service';
                 max="20000"
                 step="250"
                 placeholder="Custom ml"
-                class="w-full rounded border border-neutral-800 bg-black/70 px-2 py-0.5 text-center font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500 focus:text-white"
+                class="w-full rounded border border-neutral-800 bg-neutral-950 px-2 py-0.5 text-center font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500 focus:text-white"
               />
               <span
                 class="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 font-mono text-[8px] text-neutral-500"
@@ -327,72 +480,7 @@ import { WaterService } from './water.service';
               type="button"
               (click)="adjustGoal(250)"
               title="Increase goal 250ml"
-              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-black/60 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <!-- 3B. REMINDER INTERVAL / TIME GAP (PRESETS + CUSTOM STEPPER & INPUT) -->
-        <div class="space-y-1.5 border-t border-neutral-800/60 pt-2">
-          <div class="flex items-center justify-between font-mono text-[9px] text-neutral-400">
-            <span>Reminder Time Gap</span>
-            <span class="text-[11px] font-bold text-neutral-200"
-              >Every {{ water.reminderIntervalMinutes() }} mins</span
-            >
-          </div>
-
-          <!-- Interval Preset Chips -->
-          <div class="grid grid-cols-5 gap-1 font-mono text-[10px]">
-            <button
-              *ngFor="let inv of intervalOptions"
-              type="button"
-              (click)="water.setReminderInterval(inv.minutes)"
-              class="cursor-pointer rounded border py-1 text-center transition active:scale-95"
-              [ngClass]="{
-                'border-transparent bg-white font-semibold text-black':
-                  water.reminderIntervalMinutes() === inv.minutes,
-                'border-neutral-800 bg-neutral-950 text-neutral-400 hover:border-neutral-600 hover:text-white':
-                  water.reminderIntervalMinutes() !== inv.minutes,
-              }"
-            >
-              {{ inv.label }}
-            </button>
-          </div>
-
-          <!-- Custom Interval Stepper & Any Value Input -->
-          <div class="flex items-center space-x-1.5 pt-0.5">
-            <button
-              type="button"
-              (click)="adjustInterval(-15)"
-              title="Decrease interval 15m"
-              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-black/60 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
-            >
-              -
-            </button>
-            <div class="relative flex-1">
-              <input
-                type="number"
-                [value]="water.reminderIntervalMinutes()"
-                (change)="onIntervalInputChange($event)"
-                (keyup.enter)="onIntervalInputChange($event)"
-                min="5"
-                max="720"
-                step="5"
-                placeholder="Custom mins"
-                class="w-full rounded border border-neutral-800 bg-black/70 px-2 py-0.5 text-center font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500 focus:text-white"
-              />
-              <span
-                class="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 font-mono text-[8px] text-neutral-500"
-                >mins</span
-              >
-            </div>
-            <button
-              type="button"
-              (click)="adjustInterval(15)"
-              title="Increase interval 15m"
-              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-black/60 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
+              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-neutral-950 font-mono text-[12px] font-bold text-neutral-300 hover:border-neutral-600 hover:text-white active:scale-95"
             >
               +
             </button>
@@ -401,7 +489,7 @@ import { WaterService } from './water.service';
 
         <!-- 3C. ACTIVE HOURS WINDOW -->
         <div
-          class="flex items-center justify-between border-t border-neutral-800/60 pt-2 font-mono text-[9px] text-neutral-400"
+          class="flex items-center justify-between border-t border-neutral-800 pt-2 font-mono text-[9px] text-neutral-400"
         >
           <span>Active Window</span>
           <div class="flex items-center space-x-1">
@@ -409,14 +497,14 @@ import { WaterService } from './water.service';
               type="time"
               [value]="water.reminderStartTime()"
               (change)="onStartTimeChange($event)"
-              class="rounded border border-neutral-800 bg-black/70 px-1.5 py-0.5 font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500"
+              class="rounded border border-neutral-800 bg-neutral-950 px-1.5 py-0.5 font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500"
             />
             <span class="text-neutral-500">–</span>
             <input
               type="time"
               [value]="water.reminderEndTime()"
               (change)="onEndTimeChange($event)"
-              class="rounded border border-neutral-800 bg-black/70 px-1.5 py-0.5 font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500"
+              class="rounded border border-neutral-800 bg-neutral-950 px-1.5 py-0.5 font-mono text-[10px] text-neutral-200 transition outline-none focus:border-cyan-500"
             />
           </div>
         </div>
@@ -491,3 +579,4 @@ export class WaterComponent {
     }
   }
 }
+
