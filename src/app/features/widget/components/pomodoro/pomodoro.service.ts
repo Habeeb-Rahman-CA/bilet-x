@@ -39,6 +39,7 @@ export class PomodoroService {
   // Active Timer state
   public readonly mode = signal<PomodoroMode>('focus');
   public readonly isRunning = signal<boolean>(false);
+  public readonly activeView = signal<'timer' | 'history' | 'settings'>('timer');
 
   // Current active task details (Counting UP)
   public readonly taskTitle = signal<string>('');

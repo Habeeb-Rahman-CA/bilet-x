@@ -26,149 +26,83 @@ interface DurationRow {
   imports: [CommonModule, FormsModule],
   template: `
     <div class="flex h-full flex-col space-y-2 text-neutral-100 select-none">
-      <!-- 1. TOP NAV / VIEW SWITCHER -->
-      <div class="flex shrink-0 items-center justify-between border-b border-neutral-800/80 pb-2">
-        <div class="flex items-center space-x-1 font-mono text-[10px] font-medium">
-          <button
-            type="button"
-            (click)="activeView.set('timer')"
-            class="rounded-lg px-2.5 py-1 transition-all duration-150"
-            [ngClass]="{
-              'bg-white font-semibold text-black shadow-sm': activeView() === 'timer',
-              'bg-neutral-800/80 text-neutral-400 hover:text-white': activeView() !== 'timer'
-            }"
-          >
-            Timer
-          </button>
-          <button
-            type="button"
-            (click)="activeView.set('history')"
-            class="flex items-center space-x-1.5 rounded-lg px-2.5 py-1 transition-all duration-150"
-            [ngClass]="{
-              'bg-white font-semibold text-black shadow-sm': activeView() === 'history',
-              'bg-neutral-800/80 text-neutral-400 hover:text-white': activeView() !== 'history'
-            }"
-          >
-            <span>History</span>
-            <span
-              *ngIf="pomodoro.workLogs().length > 0"
-              class="rounded px-1 text-[8px] font-bold tabular-nums"
-              [ngClass]="{
-                'bg-black/20 text-black': activeView() === 'history',
-                'bg-neutral-700 text-neutral-300': activeView() !== 'history'
-              }"
-            >
-              {{ pomodoro.workLogs().length }}
-            </span>
-          </button>
-        </div>
-
-        <div class="flex items-center space-x-1 font-mono text-[10px]">
-          <!-- Sound Toggle -->
-          <button
-            type="button"
-            (click)="pomodoro.toggleSound()"
-            [title]="pomodoro.soundEnabled() ? 'Mute sound chime' : 'Unmute sound chime'"
-            class="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-800/80 text-neutral-400 transition hover:bg-neutral-700 hover:text-white"
-            [ngClass]="{ 'text-emerald-400': pomodoro.soundEnabled() }"
-          >
-            <svg
-              *ngIf="pomodoro.soundEnabled()"
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
-              />
-              <path d="M16 9a5 5 0 0 1 0 6" />
-            </svg>
-            <svg
-              *ngIf="!pomodoro.soundEnabled()"
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M16 9a5 5 0 0 1 .95 2.293M19.364 5.636a9 9 0 0 1 1.889 9.96M2 2l20 20M7 7l-.587.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298V11"
-              />
-            </svg>
-          </button>
-
-          <!-- Settings Drawer Toggle -->
-          <button
-            type="button"
-            (click)="showConfig.set(!showConfig())"
-            [title]="showConfig() ? 'Close settings' : 'Timer settings'"
-            class="flex h-7 w-7 items-center justify-center rounded-lg transition"
-            [ngClass]="{
-              'bg-white text-black': showConfig(),
-              'bg-neutral-800/80 text-neutral-400 hover:bg-neutral-700 hover:text-white': !showConfig()
-            }"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-              />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- 2. CONFIGURATION DRAWER (Inline Modal) -->
+      <!-- 1. VIEW: SETTINGS / TIMER PREFERENCES -->
       <div
-        *ngIf="showConfig()"
-        class="my-auto space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900 p-3 shadow-xl"
+        *ngIf="pomodoro.activeView() === 'settings'"
+        class="space-y-2.5 rounded-xl border border-neutral-800 bg-neutral-900 p-3 shadow-xl"
       >
-        <div class="flex items-center justify-between">
-          <span class="font-mono text-[10px] font-semibold text-neutral-300">
+        <div class="flex items-center justify-between border-b border-neutral-800 pb-2">
+          <span class="font-mono text-[11px] font-bold tracking-wider text-neutral-200 uppercase">
             Timer Preferences
           </span>
-          <button
-            type="button"
-            (click)="pomodoro.resetFocusBlock()"
-            title="Reset current focus block counter"
-            class="flex items-center space-x-1 rounded px-1.5 py-0.5 font-mono text-[9px] text-neutral-400 hover:bg-neutral-800 hover:text-white"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+          <div class="flex items-center space-x-1.5">
+            <!-- Sound Toggle Button -->
+            <button
+              type="button"
+              (click)="pomodoro.toggleSound()"
+              [title]="pomodoro.soundEnabled() ? 'Reminder sound enabled' : 'Reminder sound muted'"
+              class="flex h-6 w-6 items-center justify-center rounded-md bg-neutral-800 text-neutral-400 transition hover:bg-neutral-700 hover:text-white"
+              [ngClass]="{ 'text-emerald-400': pomodoro.soundEnabled() }"
             >
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-            <span>Reset Cycle</span>
-          </button>
+              <svg
+                *ngIf="pomodoro.soundEnabled()"
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"
+                />
+                <path d="M16 9a5 5 0 0 1 0 6" />
+              </svg>
+              <svg
+                *ngIf="!pomodoro.soundEnabled()"
+                xmlns="http://www.w3.org/2000/svg"
+                width="11"
+                height="11"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M16 9a5 5 0 0 1 .95 2.293M19.364 5.636a9 9 0 0 1 1.889 9.96M2 2l20 20M7 7l-.587.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298V11"
+                />
+              </svg>
+            </button>
+
+            <!-- Reset Cycle Button -->
+            <button
+              type="button"
+              (click)="pomodoro.resetFocusBlock()"
+              title="Reset current focus block counter"
+              class="flex items-center space-x-1 rounded border border-neutral-800 bg-neutral-950 px-1.5 py-0.5 font-mono text-[9px] text-neutral-400 hover:border-neutral-700 hover:text-white active:scale-95"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="9"
+                height="9"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              <span>Reset Cycle</span>
+            </button>
+          </div>
         </div>
 
         <div
@@ -181,41 +115,31 @@ interface DurationRow {
               type="button"
               (click)="step(row, -row.step)"
               [disabled]="row.value() <= row.min"
-              class="flex h-5.5 w-5.5 items-center justify-center rounded bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-30"
+              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-neutral-950 text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:opacity-30 active:scale-95"
               aria-label="Decrease"
             >
               −
             </button>
-            <span class="w-7 text-center font-semibold text-neutral-100 tabular-nums">
+            <span class="w-8 text-center font-semibold text-neutral-100 tabular-nums">
               {{ row.value() }}
             </span>
             <button
               type="button"
               (click)="step(row, row.step)"
               [disabled]="row.value() >= row.max"
-              class="flex h-5.5 w-5.5 items-center justify-center rounded bg-neutral-800 text-neutral-300 transition hover:bg-neutral-700 hover:text-white disabled:opacity-30"
+              class="flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-neutral-800 bg-neutral-950 text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:opacity-30 active:scale-95"
               aria-label="Increase"
             >
               +
             </button>
-            <span class="ml-0.5 text-[8px] text-neutral-500">m</span>
+            <span class="ml-0.5 text-[9px] text-neutral-500">m</span>
           </div>
-        </div>
-
-        <div class="pt-1 text-right">
-          <button
-            type="button"
-            (click)="showConfig.set(false)"
-            class="rounded-lg bg-neutral-800 px-3 py-1 font-mono text-[10px] text-neutral-200 transition hover:bg-neutral-700"
-          >
-            Done
-          </button>
         </div>
       </div>
 
-      <!-- 3. VIEW: TIMER (Active Work Session) -->
+      <!-- 2. VIEW: TIMER (Active Work Session) -->
       <div
-        *ngIf="!showConfig() && activeView() === 'timer'"
+        *ngIf="pomodoro.activeView() === 'timer'"
         class="flex flex-1 flex-col justify-between space-y-2"
       >
         <!-- A. FOCUS / BREAK CONTINUOUS CYCLE PROGRESS -->
@@ -557,9 +481,9 @@ interface DurationRow {
         </div>
       </div>
 
-      <!-- 4. VIEW: COMPLETED WORK LOGS (History) -->
+      <!-- 3. VIEW: COMPLETED WORK LOGS (History) -->
       <div
-        *ngIf="!showConfig() && activeView() === 'history'"
+        *ngIf="pomodoro.activeView() === 'history'"
         class="flex min-h-0 flex-1 flex-col justify-between overflow-hidden"
       >
         <!-- TODAY SUMMARY STATS -->
@@ -689,8 +613,6 @@ interface DurationRow {
   `,
 })
 export class PomodoroComponent {
-  public readonly activeView = signal<'timer' | 'history'>('timer');
-  public readonly showConfig = signal<boolean>(false);
   public readonly showDescription = signal<boolean>(false);
   public readonly clearArmed = signal<boolean>(false);
   private clearTimer: number | undefined;
@@ -749,7 +671,7 @@ export class PomodoroComponent {
   public handleFinishWork(): void {
     const entry = this.pomodoro.finishCurrentWork();
     if (entry) {
-      this.activeView.set('history');
+      this.pomodoro.activeView.set('history');
     }
   }
 
@@ -798,11 +720,19 @@ export class PomodoroComponent {
 
   public formatTimeAgo(isoString: string): string {
     try {
-      const date = new Date(isoString);
+      if (!isoString) return '';
+      let normalized = isoString.trim();
+      if (normalized.includes(' ') && !normalized.includes('T')) {
+        normalized = normalized.replace(' ', 'T');
+      }
+      if (!normalized.endsWith('Z') && !/[+-]\d{2}(:?\d{2})?$/.test(normalized)) {
+        normalized += 'Z';
+      }
+      const date = new Date(normalized);
       const now = new Date();
       const diffSecs = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-      if (diffSecs < 60) return 'Just now';
+      if (isNaN(diffSecs) || diffSecs < 60) return 'Just now';
       if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
       if (diffSecs < 86400) {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

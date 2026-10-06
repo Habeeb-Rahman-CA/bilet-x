@@ -31,6 +31,8 @@ export class WaterService {
   public readonly lastReminderTimestamp = signal<number | null>(null);
   public readonly snoozeUntil = signal<number | null>(null);
 
+  public readonly viewMode = signal<'main' | 'settings'>('main');
+
   public readonly history = signal<Record<string, number>>({});
   public readonly todayDate = signal<string>(this.getTodayDateString());
 
