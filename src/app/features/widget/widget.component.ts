@@ -21,13 +21,18 @@ import {
   DockOrientation,
 } from './components/dock/dock.component';
 import { NoteComponent } from './components/note/note.component';
+import { NoteHeaderActionComponent } from './components/note/note-header-action.component';
 import { TaskComponent } from './components/task/task.component';
 import { InboxComponent } from './components/inbox/inbox.component';
 import { InboxSwitcherComponent } from './components/inbox/inbox-switcher.component';
 import { CalendarComponent } from './components/calendar/calendar.component';
 import { BiletAiComponent } from './components/bilet-ai/bilet-ai.component';
 import { WaterComponent } from './components/water/water.component';
+import { WaterHeaderActionComponent } from './components/water/water-header-action.component';
+import { WaterService } from './components/water/water.service';
 import { PomodoroComponent } from './components/pomodoro/pomodoro.component';
+import { PomodoroHeaderActionComponent } from './components/pomodoro/pomodoro-header-action.component';
+import { PomodoroService } from './components/pomodoro/pomodoro.service';
 import { ClipboardComponent } from './components/clipboard/clipboard.component';
 import { ActivityComponent } from './components/activity/activity.component';
 import { SettingsComponent } from './components/settings/settings.component';
@@ -41,13 +46,16 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
     CommonModule,
     DockComponent,
     NoteComponent,
+    NoteHeaderActionComponent,
     TaskComponent,
     InboxComponent,
     InboxSwitcherComponent,
     CalendarComponent,
     BiletAiComponent,
     WaterComponent,
+    WaterHeaderActionComponent,
     PomodoroComponent,
+    PomodoroHeaderActionComponent,
     ClipboardComponent,
     ActivityComponent,
     SettingsComponent,
@@ -103,7 +111,60 @@ import { IntegrationManagerService } from '../../integrations/core/integration-m
           <div class="titlebar-drag-region flex shrink-0 items-center gap-2">
             <div class="no-drag min-w-0 flex-1">
               <app-inbox-switcher *ngIf="activeTab().id === 'inbox'"></app-inbox-switcher>
+              <app-note-header-action *ngIf="activeTab().id === 'notes'"></app-note-header-action>
+              <app-water-header-action *ngIf="activeTab().id === 'water'"></app-water-header-action>
+              <app-pomodoro-header-action *ngIf="activeTab().id === 'pomodoro'"></app-pomodoro-header-action>
             </div>
+            <!-- Water settings icon placed on the right side to the left of the close icon with gap -->
+            <button
+              *ngIf="activeTab().id === 'water' && waterService.viewMode() === 'main'"
+              (click)="waterService.viewMode.set('settings')"
+              type="button"
+              title="Water Settings"
+              class="no-drag glass-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-300 hover:text-white transition active:scale-95"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                />
+              </svg>
+            </button>
+            <!-- Pomodoro settings icon placed on the right side to the left of the close icon with gap -->
+            <button
+              *ngIf="activeTab().id === 'pomodoro' && pomodoroService.activeView() !== 'settings'"
+              (click)="pomodoroService.activeView.set('settings')"
+              type="button"
+              title="Timer Settings"
+              class="no-drag glass-btn flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-300 hover:text-white transition active:scale-95"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                />
+              </svg>
+            </button>
             <button
               (click)="collapseToWidget()"
               type="button"
@@ -442,7 +503,9 @@ export class WidgetComponent implements OnInit, AfterViewInit, OnDestroy {
     private windowService: WindowService,
     private persistence: PersistenceService,
     private layoutService: LayoutService,
-    public integrationManager: IntegrationManagerService
+    public integrationManager: IntegrationManagerService,
+    public waterService: WaterService,
+    public pomodoroService: PomodoroService
   ) {
     // Re-measure whenever the panel expands/collapses. Effects run outside the
     // render lifecycle, so we defer to rAF and also re-measure after the 180ms

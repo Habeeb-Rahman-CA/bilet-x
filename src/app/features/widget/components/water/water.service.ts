@@ -13,7 +13,7 @@ export interface HistoryDay {
 
 const DEFAULT_GOAL_ML = 2500;
 const DEFAULT_QUICK_ADD_ML = 250;
-const DEFAULT_INTERVAL_MINS = 60;
+const DEFAULT_INTERVAL_MINS = 30; // Remind every 30 minutes
 const DEFAULT_START_TIME = '09:00';
 const DEFAULT_END_TIME = '21:00';
 
@@ -24,16 +24,19 @@ export class WaterService {
   public readonly quickAddMl = signal<number>(DEFAULT_QUICK_ADD_ML);
 
   public readonly reminderEnabled = signal<boolean>(true);
+  public readonly soundEnabled = signal<boolean>(true);
   public readonly reminderIntervalMinutes = signal<number>(DEFAULT_INTERVAL_MINS);
   public readonly reminderStartTime = signal<string>(DEFAULT_START_TIME);
   public readonly reminderEndTime = signal<string>(DEFAULT_END_TIME);
   public readonly lastReminderTimestamp = signal<number | null>(null);
   public readonly snoozeUntil = signal<number | null>(null);
 
+  public readonly viewMode = signal<'main' | 'settings'>('main');
+
   public readonly history = signal<Record<string, number>>({});
   public readonly todayDate = signal<string>(this.getTodayDateString());
 
-  // Ticks every 30s to update countdowns and trigger reminders
+  // Ticks every 15s to update countdowns and trigger reminders
   public readonly currentTick = signal<number>(Date.now());
 
   // Consumed percentage clamped to 100 for standard bar
@@ -138,7 +141,7 @@ export class WaterService {
     const last = this.lastReminderTimestamp();
     const intervalMs = this.reminderIntervalMinutes() * 60 * 1000;
     if (!last) {
-      return `In ${this.reminderIntervalMinutes()}m`;
+      return `Every ${this.reminderIntervalMinutes()}m`;
     }
 
     const nextTime = last + intervalMs;
@@ -160,6 +163,7 @@ export class WaterService {
   private intervalTimerId: number | null = null;
   private hasCongratulatedGoalToday = false;
   private isHydrated = false;
+  private audioContext: AudioContext | null = null;
 
   constructor(
     private persistence: PersistenceService,
@@ -167,8 +171,8 @@ export class WaterService {
   ) {
     this.hydrateFromPersistence();
 
-    // Start 30s reminder & date-check engine
-    this.intervalTimerId = window.setInterval(() => this.onTimerTick(), 30000);
+    // Start 15s reminder & date-check engine
+    this.intervalTimerId = window.setInterval(() => this.onTimerTick(), 15000);
   }
 
   public async addWater(amount?: number): Promise<void> {
@@ -192,8 +196,9 @@ export class WaterService {
     // Check goal achievement celebration
     if (newConsumed >= this.dailyGoalMl() && !this.hasCongratulatedGoalToday) {
       this.hasCongratulatedGoalToday = true;
+      this.playGoalCelebrationChime();
       await this.notification.sendNotification(
-        '🎉 Daily Hydration Goal Met!',
+        'Daily Hydration Goal Met!',
         `Great job! You reached your ${this.goalLitersFormatted()} water goal today.`
       );
     }
@@ -240,7 +245,25 @@ export class WaterService {
   public async toggleReminders(enabled?: boolean): Promise<void> {
     const next = enabled !== undefined ? enabled : !this.reminderEnabled();
     this.reminderEnabled.set(next);
+    if (next) {
+      // Set timestamp so next reminder countdown starts now
+      if (!this.lastReminderTimestamp()) {
+        this.lastReminderTimestamp.set(Date.now());
+      }
+    } else {
+      this.snoozeUntil.set(null);
+    }
+    this.currentTick.set(Date.now());
     await this.persistence.setSetting('water_reminder_enabled', next ? 'true' : 'false');
+  }
+
+  public async toggleSound(enabled?: boolean): Promise<void> {
+    const next = enabled !== undefined ? enabled : !this.soundEnabled();
+    this.soundEnabled.set(next);
+    if (next) {
+      this.playWaterReminderChime();
+    }
+    await this.persistence.setSetting('water_sound_enabled', next ? 'true' : 'false');
   }
 
   public snooze(minutes = 30): void {
@@ -293,8 +316,11 @@ export class WaterService {
       this.snoozeUntil.set(null);
       await this.persistence.setSetting('water_last_reminder', now.getTime().toString());
 
+      // Play water reminder audio notification chime
+      this.playWaterReminderChime();
+
       await this.notification.sendNotification(
-        '💧 Time for some water',
+        'Time to Drink Water',
         `Stay hydrated! You have logged ${this.consumedLitersFormatted()} of your ${this.goalLitersFormatted()} goal.`
       );
     }
@@ -312,6 +338,84 @@ export class WaterService {
       return currentMins >= startMins && currentMins <= endMins;
     }
     return currentMins >= startMins || currentMins <= endMins;
+  }
+
+  // --- AUDIO SYNTHESIS WATER NOTIFICATION CHIMES ---
+
+  public playWaterReminderChime(): void {
+    if (!this.soundEnabled()) return;
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!this.audioContext) {
+        this.audioContext = new AudioCtx();
+      }
+      const ctx = this.audioContext;
+      if (ctx.state === 'suspended') {
+        void ctx.resume();
+      }
+      const now = ctx.currentTime;
+
+      // Tone 1: Water drop frequency sweep (400Hz -> 850Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(400, now);
+      osc1.frequency.exponentialRampToValueAtTime(850, now + 0.1);
+      gain1.gain.setValueAtTime(0.0001, now);
+      gain1.gain.exponentialRampToValueAtTime(0.28, now + 0.02);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+      osc1.connect(gain1).connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.16);
+
+      // Tone 2: Crisp glass chime droplet (1175Hz -> 1320Hz)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1175, now + 0.08);
+      osc2.frequency.exponentialRampToValueAtTime(1320, now + 0.18);
+      gain2.gain.setValueAtTime(0.0001, now + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.22, now + 0.1);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+      osc2.connect(gain2).connect(ctx.destination);
+      osc2.start(now + 0.08);
+      osc2.stop(now + 0.4);
+    } catch (e) {
+      console.warn('Failed to play water audio chime', e);
+    }
+  }
+
+  public playGoalCelebrationChime(): void {
+    if (!this.soundEnabled()) return;
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!this.audioContext) {
+        this.audioContext = new AudioCtx();
+      }
+      const ctx = this.audioContext;
+      if (ctx.state === 'suspended') {
+        void ctx.resume();
+      }
+      const now = ctx.currentTime;
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      notes.forEach((freq, index) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const start = now + index * 0.1;
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.2, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.35);
+      });
+    } catch {}
   }
 
   public hydrateFromPersistence(): void {
@@ -341,6 +445,9 @@ export class WaterService {
     );
     this.reminderEnabled.set(
       this.persistence.getSettingValue('water_reminder_enabled', 'true') === 'true'
+    );
+    this.soundEnabled.set(
+      this.persistence.getSettingValue('water_sound_enabled', 'true') === 'true'
     );
 
     const lastReminder = parseInt(this.persistence.getSettingValue('water_last_reminder', '0'), 10);
@@ -404,3 +511,4 @@ export class WaterService {
     return `${year}-${month}-${day}`;
   }
 }
+

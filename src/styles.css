@@ -10,26 +10,20 @@
     --font-mono: 'Fira Code Variable', 'Fira Code', monospace;
 
     /* =====================================================================
-       LIQUID GLASS DESIGN TOKENS
-       Single source of truth for every glass surface. Overridden inside
-       html.light further down for the light palette. Tune here to retone
-       the whole material system in one place.
+       SOLID SURFACE DESIGN TOKENS
+       Clean, solid, high-contrast surfaces without desktop translucency bleed.
        ===================================================================== */
-    --glass-bg: 18, 18, 22; /* rgb triplet — outer shell fill */
-    --glass-opacity: 0.92; /* alpha applied to --glass-bg — reduced transparency for high readability */
-    --glass-blur: 28px; /* backdrop blur radius */
-    --glass-saturation: 180%; /* backdrop color-punch */
+    --glass-bg: 18, 18, 22; /* rgb triplet — outer shell fill (solid #121216) */
+    --glass-opacity: 1; /* 100% fully solid and opaque */
+    --glass-blur: 0px;
+    --glass-saturation: 100%;
     --glass-border: rgba(255, 255, 255, 0.12);
-    --glass-highlight: rgba(255, 255, 255, 0.15); /* top edge light-catch */
-    --glass-inner-shadow: rgba(0, 0, 0, 0.25); /* bottom depth line */
-    --glass-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7), 0 4px 14px -4px rgba(0, 0, 0, 0.45);
-    --glass-gloss: radial-gradient(
-      140% 60% at 50% -20%,
-      rgba(255, 255, 255, 0.09),
-      rgba(255, 255, 255, 0) 55%
-    );
+    --glass-highlight: rgba(255, 255, 255, 0.06); /* top edge light-catch */
+    --glass-inner-shadow: rgba(0, 0, 0, 0.35); /* bottom depth line */
+    --glass-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.85), 0 6px 16px -2px rgba(0, 0, 0, 0.6);
+    --glass-gloss: none;
     --glass-radius: 22px;
-    --glass-refraction: url(#lg-refraction);
+    --glass-refraction: none;
     /* Spring-in with a small overshoot; ease-out flavor for the exit. */
     --glass-ease-spring: cubic-bezier(0.34, 1.35, 0.64, 1);
     --glass-ease-out: cubic-bezier(0.4, 0, 1, 1);
@@ -39,17 +33,13 @@
 
   html.light {
     --glass-bg: 250, 250, 252;
-    --glass-opacity: 0.94;
+    --glass-opacity: 1;
     --glass-border: rgba(0, 0, 0, 0.1);
     --glass-highlight: rgba(255, 255, 255, 0.95);
     --glass-inner-shadow: rgba(20, 20, 30, 0.06);
     --glass-shadow:
       0 18px 40px -12px rgba(20, 20, 30, 0.22), 0 3px 10px -4px rgba(20, 20, 30, 0.12);
-    --glass-gloss: radial-gradient(
-      140% 60% at 50% -20%,
-      rgba(255, 255, 255, 0.65),
-      rgba(255, 255, 255, 0) 55%
-    );
+    --glass-gloss: none;
   }
 
   html,
@@ -297,123 +287,76 @@ html.light .bg-neutral-950\/95 {
 }
 
 html.light .bg-neutral-900,
-html.light .bg-neutral-900\/90 {
-  background-color: rgb(245 245 245 / 0.95) !important;
+html.light .bg-neutral-900\/90,
+html.light .bg-neutral-900\/80,
+html.light .bg-neutral-900\/70,
+html.light .bg-neutral-900\/60 {
+  background-color: #f4f4f6 !important;
 }
 
-html.light .bg-neutral-800 {
+html.light .bg-neutral-950,
+html.light .bg-neutral-950\/90,
+html.light .bg-neutral-950\/80,
+html.light .bg-neutral-950\/70,
+html.light .bg-neutral-950\/60 {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-neutral-800,
+html.light .bg-neutral-800\/80,
+html.light .bg-neutral-800\/70 {
   background-color: rgb(229 229 229) !important;
 }
 
 /* =========================================================================
-   LIQUID GLASS — the main outer shells (dock, panel, popover).
-   Only three surfaces in the app carry .glass-surface. They are treated
-   as a physical translucent material, not a UI card, so every layer of
-   the composite (fill, refraction, blur, edge highlights, ambient
-   shadow, inner top gloss) is applied here and *only* here. Internal
-   UI uses the lighter .glass-card / .glass-btn primitives further
-   below — refraction is deliberately confined to the shell to keep
-   GPU cost bounded.
-
-   The composite, top-down:
-     1. Refracted backdrop        (backdrop-filter: url(#lg-refraction))
-     2. Blur + saturation         (backdrop-filter: blur + saturate)
-     3. Neutral translucent fill  (background-color)
-     4. 1px outer edge highlight  (border, near-transparent white)
-     5. Inset top light-catch     (inset box-shadow, thin bright line)
-     6. Inset bottom soft dark    (inset box-shadow, subtle depth)
-     7. Ambient floating shadow   (outer box-shadow, wide + soft)
-     8. Radial top gloss          (::before pseudo, low-opacity)
-
-   The global `* { box-shadow: none !important }` rule higher up strips
-   shadows from everything, so this class carries its own !important
-   shadow to reassert the floating-above-desktop effect.
+   SOLID SURFACES — the main outer shells (dock, panel, popover).
+   Solid, clean, high-contrast surfaces without background bleed-through.
    ========================================================================= */
 .glass-surface {
   position: relative;
   isolation: isolate;
-  background-color: rgba(var(--glass-bg), var(--glass-opacity));
+  background-color: rgb(var(--glass-bg));
   border: 1px solid var(--glass-border);
-  /* Displacement + blur + saturation. Refraction runs FIRST so the
-     subsequent blur softens its edges — otherwise the distortion reads
-     as sharp warp, not as a bent surface. Non-prefixed backdrop-filter
-     supports url() references in modern Chromium (WebView2). The
-     -webkit- alias omits the url() term since Safari can't chain SVG
-     filters in backdrop-filter reliably; it degrades to a plain blur,
-     which is an acceptable fallback. */
-  backdrop-filter: var(--glass-refraction) blur(var(--glass-blur)) saturate(var(--glass-saturation));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow:
     var(--glass-shadow),
     inset 0 1px 0 var(--glass-highlight),
     inset 0 -1px 0 var(--glass-inner-shadow) !important;
-  /* Keep the refraction filter's paintwork inside the shell's box so it
-     can't force re-layout of surrounding elements when the widget resizes
-     or slides. `paint` is the safest containment level here — `strict`
-     would break absolutely-positioned children like the +popover. */
   contain: paint;
 }
 
-/* Radial top gloss. Applied as a pseudo-element instead of another
-   inset shadow so the highlight can gradient smoothly across the upper
-   quarter of the surface, not just cling to the edge. */
-.glass-surface::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
-  background: var(--glass-gloss);
+html.light .glass-surface {
+  background-color: rgb(250, 250, 252) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Ensure the shell's own children paint above the pseudo-element gloss.
-   Scoped to > * so we don't disturb the stacking of components several
-   levels deeper. */
+.glass-surface::before {
+  display: none;
+}
+
 .glass-surface > * {
   position: relative;
   z-index: 1;
 }
 
-/* Fallback for environments that can't chain an SVG filter through
-   backdrop-filter (Safari today, and Chromium builds where the feature
-   ships behind a flag). We can't feature-detect `backdrop-filter: url()`
-   directly, but we can detect the plain form; if the browser doesn't
-   support it at all, we replace refraction+blur with a translucent
-   fill + border + shadow so text stays readable and the shell still
-   feels like a defined surface, just without the physical depth cues. */
-@supports not (backdrop-filter: blur(1px)) {
-  .glass-surface {
-    background-color: rgba(var(--glass-bg), 0.9);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
 /* =========================================================================
-   INTERNAL GLASS PRIMITIVES — used for cards, buttons, separators
-   inside the main shell. Deliberately simpler than .glass-surface:
-     • No SVG refraction (perf).
-     • Moderate blur only.
-     • Subtle borders + hover/active states via translucent overlays.
-     • No outer shadow — they sit ON the shell, they don't float above it.
+   INTERNAL SOLID PRIMITIVES — cards, buttons, separators
    ========================================================================= */
 .glass-card {
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  backdrop-filter: saturate(140%) blur(10px);
-  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  background-color: #1a1a20;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
 }
 
 html.light .glass-card {
-  background-color: rgba(255, 255, 255, 0.55) !important;
-  border-color: rgba(20, 20, 30, 0.06) !important;
+  background-color: #f4f4f7 !important;
+  border-color: rgba(20, 20, 30, 0.08) !important;
 }
 
 .glass-btn {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background-color: #202026;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: rgb(229, 229, 229);
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -422,45 +365,45 @@ html.light .glass-card {
 }
 
 .glass-btn:hover {
-  background-color: rgba(255, 255, 255, 0.11);
-  border-color: rgba(255, 255, 255, 0.12);
+  background-color: #2b2b34;
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .glass-btn:active {
-  background-color: rgba(0, 0, 0, 0.12);
+  background-color: #17171d;
   transform: scale(0.97);
 }
 
 .glass-btn.is-selected {
-  background-color: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: rgb(255, 255, 255);
+  background-color: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
 }
 
 html.light .glass-btn {
-  background-color: rgba(20, 20, 30, 0.04);
-  border-color: rgba(20, 20, 30, 0.06);
+  background-color: #ebebef;
+  border-color: rgba(20, 20, 30, 0.08);
   color: rgb(38, 38, 42);
 }
 
 html.light .glass-btn:hover {
-  background-color: rgba(20, 20, 30, 0.09);
-  border-color: rgba(20, 20, 30, 0.1);
+  background-color: #dedee4;
+  border-color: rgba(20, 20, 30, 0.14);
 }
 
 html.light .glass-btn:active {
-  background-color: rgba(20, 20, 30, 0.14);
+  background-color: #d2d2d9;
 }
 
 html.light .glass-btn.is-selected {
-  background-color: rgba(20, 20, 30, 0.85);
-  border-color: rgba(20, 20, 30, 0.9);
+  background-color: #18181c;
+  border-color: #18181c;
   color: rgb(255, 255, 255);
 }
 
 .glass-sep {
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(255, 255, 255, 0.08);
   border: 0;
 }
 
@@ -468,15 +411,8 @@ html.light .glass-sep {
   background-color: rgba(20, 20, 30, 0.08);
 }
 
-/* =========================================================================
-   LIQUID MERGE — opt-in container filter.
-   Wrap 2+ decorative child shapes in an element with .liquid-merge and
-   nearby shapes will bleed into one gooey mass through #lg-merge. Do NOT
-   apply to the whole shell or to any container with UI text — the alpha-
-   contrast step will chew edges to bits. Reserve for decorative accents.
-   ========================================================================= */
 .liquid-merge {
-  filter: url(#lg-merge);
+  filter: none;
 }
 @media (prefers-reduced-motion: reduce) {
   /* Drop the expensive filter when reduced motion is on. The shapes will

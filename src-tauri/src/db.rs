@@ -255,11 +255,11 @@ impl NoteRepository for Database {
         // caller the DB-authoritative row rather than echoing input.
         conn.query_row(
             "INSERT INTO notes (id, title, content, created_at, updated_at)
-             VALUES (?1, ?2, ?3, datetime('now'), datetime('now'))
+             VALUES (?1, ?2, ?3, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
              ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 content = excluded.content,
-                updated_at = datetime('now')
+                updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
              RETURNING id, title, content, created_at, updated_at;",
             params![note.id, note.title, note.content],
             |row| {
@@ -343,14 +343,14 @@ impl TaskRepository for Database {
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
         conn.query_row(
             "INSERT INTO tasks (id, title, description, status, priority, due_date, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'), datetime('now'))
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
              ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 description = excluded.description,
                 status = excluded.status,
                 priority = excluded.priority,
                 due_date = excluded.due_date,
-                updated_at = datetime('now')
+                updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
              RETURNING id, title, description, status, priority, due_date, created_at, updated_at;",
             params![
                 task.id,
@@ -383,7 +383,7 @@ impl TaskRepository for Database {
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
         let rows = conn
             .execute(
-                "UPDATE tasks SET status = ?1, updated_at = datetime('now') WHERE id = ?2;",
+                "UPDATE tasks SET status = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?2;",
                 params![status, id],
             )
             .map_err(|e| DbError::QueryFailed(e.to_string()))?;
@@ -471,10 +471,10 @@ impl SettingsRepository for Database {
             .map_err(|e| DbError::LockFailed(e.to_string()))?;
         conn.query_row(
             "INSERT INTO settings (key, value, updated_at)
-             VALUES (?1, ?2, datetime('now'))
+             VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
              ON CONFLICT(key) DO UPDATE SET
                 value = excluded.value,
-                updated_at = datetime('now')
+                updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
              RETURNING key, value, updated_at;",
             params![key, value],
             |row| {
@@ -512,7 +512,7 @@ impl ActivityRepository for Database {
         let saved = conn
             .query_row(
                 "INSERT INTO activity_log (id, entity, action, summary, created_at)
-                 VALUES (?1, ?2, ?3, ?4, datetime('now'))
+                 VALUES (?1, ?2, ?3, ?4, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
                  RETURNING id, entity, action, summary, created_at;",
                 params![id, entity, action, summary],
                 |row| {
@@ -625,7 +625,7 @@ impl ClipboardRepository for Database {
         let saved = conn
             .query_row(
                 "INSERT INTO clipboard_history (id, content, created_at)
-                 VALUES (?1, ?2, datetime('now'))
+                 VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
                  RETURNING id, content, created_at;",
                 params![id, content],
                 |row| {
