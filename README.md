@@ -1,111 +1,172 @@
-# Bilet-X
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/bilet-x-dark-icon-v1.png">
+    <source media="(prefers-color-scheme: light)" srcset="public/bilet-x-light-icon-v1.png">
+    <img src="public/bilet-x-dark-icon-v1.png" alt="Bilet-X Logo" width="128" height="128">
+  </picture>
+</p>
 
-**A tiny always-on-top desktop widget for notes, mail, and calendar — one hotkey away, everywhere on your screen.**
+<h1 align="center">Bilet-X</h1>
 
-Bilet-X sits quietly on the edge of your screen, stays above every other window, and follows you between virtual desktops. Press a single global hotkey and it's there; press it again and it's gone. Your notes and connected accounts stay entirely on your machine.
+<p align="center">
+  <strong>Your smart, always-on-top dynamic desktop companion.</strong><br>
+  <em>One hotkey away. Zero distractions. 100% private.</em>
+</p>
+
+<p align="center">
+  <a href="#download--installation"><img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux-4f46e5?style=flat-square" alt="Supported Platforms"></a>
+  <a href="#privacy-first-your-data-stays-with-you"><img src="https://img.shields.io/badge/Privacy-100%25%20Local%20%26%20Offline-10b981?style=flat-square" alt="Privacy First"></a>
+  <a href="../../releases"><img src="https://img.shields.io/badge/Version-1.1.0-blue?style=flat-square" alt="Latest Version"></a>
+  <a href="#for-developers--self-builders"><img src="https://img.shields.io/badge/Powered%20By-Tauri%20v2%20%2B%20Angular-ea580c?style=flat-square" alt="Tech Stack"></a>
+</p>
 
 ---
 
-## Highlights
+## Why Bilet-X?
 
-- **Always on top, always available.** A slim, frameless widget you can dock to any edge or corner of any monitor.
-- **One global hotkey.** Default `Ctrl + Shift + K` (or `⌘ + Shift + K` on macOS). Rebind it from Settings.
-- **Notes.** A fast, keyboardable scratchpad that persists locally.
-- **Unified Inbox.** Connect Gmail, Outlook, Slack, or WhatsApp and read them side-by-side in one tab.
-- **Calendar.** Read-only agenda view across your connected calendars.
-- **Local by default.** Everything you type and every account token lives in a SQLite database on your own machine. No servers, no telemetry.
-- **Multi-monitor aware.** Remembers where you last placed it and gracefully re-centers if a monitor is unplugged.
-- **Auto-hide, themes, and dock layouts.** Tweak position, orientation (vertical / horizontal), size, and light/dark theme from Settings.
+Tired of opening heavy browser tabs and juggling window clutter just to jot down a quick thought, glance at your next meeting, or check an incoming email? 
+
+**Bilet-X** acts like a **smart dynamic island** for your desktop. It docks quietly on the edge of your screen, floats over your apps when you need it, and tucks away the instant you don't. Press a single global hotkey (`Ctrl + Shift + K` or `⌘ + Shift + K`), handle your quick tasks, and slide right back into your flow.
+
+Best of all? **It never phones home.** Your notes, tasks, and accounts remain strictly on your own device.
 
 ---
 
-## Install
+## Everyday Superpowers
 
-Grab the installer for your OS from the **[Releases page](../../releases)**:
-
-| Platform | File to download |
+| Feature | How it helps your day |
 |---|---|
-| Windows 10 / 11 | `bilet-x_<version>_x64-setup.exe` (NSIS) or `.msi` |
-| macOS (Intel + Apple Silicon) | `bilet-x_<version>_universal.dmg` |
-| Linux (Debian / Ubuntu) | `bilet-x_<version>_amd64.deb` |
-| Linux (AppImage) | `bilet-x_<version>_amd64.AppImage` |
-
-Run the installer, launch **Bilet-X**, and press `Ctrl + Shift + K` to summon the widget.
-
----
-
-## First run in 60 seconds
-
-1. **Launch Bilet-X.** The widget appears docked to the right edge of your primary monitor.
-2. **Press the global hotkey** (`Ctrl + Shift + K` by default) to toggle it in and out.
-3. **Open the Settings tab** (gear icon) to:
-   - change the global hotkey,
-   - pick a dock position (left / right / top / bottom / any corner),
-   - switch between vertical and horizontal orientation,
-   - toggle light or dark theme,
-   - enable auto-hide.
-4. **Open the Inbox tab** and click **Connect** on any provider — a browser window will open, you sign in, and you're back in the widget with your messages loaded.
+| **Instant Scratchpad** | Quickly capture thoughts, code snippets, or meeting notes without losing your current window. Autosaves instantly to local storage. |
+| **Quick Tasks** | Keep your daily to-do checklist right in view. Check off items as you finish them without opening bulky project management software. |
+| **Unified Inbox** | Peek at new messages and notifications from **Gmail**, **Outlook**, **Slack**, and **WhatsApp** in one unified feed. |
+| **Glanceable Calendar** | See your upcoming schedule and meetings at a glance so you never miss an event. |
+| **Smart Clipboard History** | Easily recall recently copied snippets and paste them back into your work with a click. |
+| **Pomodoro & Focus Timer** | Lock in with 25-minute focus intervals and timely break reminders directly on your screen border. |
+| **Hydration Reminder** | Subtle reminders to drink water and maintain healthy habits during long work sessions. |
+| **Spotify Quick Controls** | See what's playing and control your music without switching away from your active app. |
+| **Bilet AI Companion** | Ask quick questions, summarize text, or draft replies directly from your floating widget. |
 
 ---
 
-## Integrations
+## Designed to Fit Your Screen & Style
 
-Bilet-X connects to your existing accounts through each provider's official OAuth login. Nothing is proxied through anyone else's server — the sign-in happens directly between your browser and the provider, and only the resulting token is stored locally.
+- **Dock Anywhere:** Pin Bilet-X to the top, bottom, left, or right edge—or dock it in any corner of your screen.
+- **Orientation Modes:** Switch effortlessly between **Horizontal Island** and **Vertical Bar** layouts depending on your display setup.
+- **Auto-Hide & Discreet Mode:** Keep your screen pristine; set it to auto-hide when you focus on full-screen work.
+- **Multi-Monitor Friendly:** Remembers your exact preferred screen and position, even if you disconnect or reconnect displays.
+- **Themes That Match Your Mood:** Seamless toggle between sleek **Dark Mode** and clean **Light Mode**.
 
-| Service | What it gives you |
+---
+
+## Get Started in 60 Seconds
+
+1. **Download & Launch:** Grab the installer for your operating system from the [Releases page](../../releases) and run it.
+2. **Summon the Widget:** Press your global hotkey (default: **`Ctrl + Shift + K`** on Windows/Linux or **`⌘ + Shift + K`** on macOS).
+3. **Personalize Your Dock:** Click the **Settings** icon to pick your dock edge, theme (dark/light), or customize your hotkey.
+4. **Connect Your Tools:** Head over to the **Inbox** tab and click **Connect** on any service (Gmail, Slack, etc.). Your browser will open the provider's official login page, and you're set!
+
+---
+
+## Essential Keyboard Shortcuts
+
+| Shortcut | Action |
 |---|---|
-| Gmail | Read, mark-as-read, and open messages in the unified inbox |
-| Outlook | Read and open messages in the unified inbox |
-| Slack | Read DMs and channel messages, open threads directly in the Slack app |
-| WhatsApp | Read recent chats |
-| Google Calendar | Read-only agenda view |
-| GitHub | Notifications and issue mentions |
-| Jira | Assigned issues and mentions |
-
-You can disconnect any account at any time from **Settings → Connected Services**. Disconnecting deletes the stored token from your machine.
+| `Ctrl + Shift + K` *(or `⌘ + Shift + K`)* | **Toggle Bilet-X** (Show / Hide widget anywhere) |
+| `Esc` | Close active popout / dismiss widget |
+| `Tab` / `Shift + Tab` | Navigate between widget modules and inputs |
+| *Customizable* | Change the summon hotkey anytime in **Settings → General** |
 
 ---
 
-## Your data stays on your machine
+## Supported Integrations
 
-Bilet-X uses a local SQLite database. There is no cloud sync, no analytics, no crash reporter phoning home.
+Bilet-X connects directly to each provider using official OAuth authentication. **No third-party proxy server ever touches your data or credentials.**
 
-Database and token store locations:
+| Provider | Supported Capabilities |
+|---|---|
+| **Gmail** | Read emails, mark as read, and view unread threads in your unified inbox. |
+| **Outlook** | View incoming emails and quick updates side-by-side. |
+| **Slack** | Read channel mentions and direct messages without opening the heavy Slack client. |
+| **WhatsApp** | View recent conversations and messages. |
+| **Google Calendar** | Read-only agenda view of upcoming meetings and day events. |
+| **GitHub** | Track notifications, PR review requests, and issue mentions. |
+| **Jira** | Stay on top of assigned tickets and project sprint updates. |
+
+> [!NOTE]
+> You can disconnect any service at any time from **Settings → Connected Services**. Disconnecting immediately and permanently removes all saved tokens from your local machine.
+
+---
+
+## Privacy First: Your Data Stays With You
+
+Unlike web-based productivity dashboards, **Bilet-X has no cloud backend, no account sign-up, and zero analytics or telemetry.**
+
+- **100% Local Storage:** All notes, to-dos, and cached items are stored in a local SQLite database directly on your drive.
+- **Direct Authentication:** OAuth logins happen directly between your browser and the provider. Tokens are encrypted and saved locally.
+- **Full Offline Capability:** Scratchpad, task lists, pomodoro timer, clipboard, and water tracker work completely offline.
+
+### Local Storage Directories
+
+If you ever want to back up or wipe your data manually:
 
 - **Windows:** `%APPDATA%\com.bilet.x.app\`
 - **macOS:** `~/Library/Application Support/com.bilet.x.app/`
 - **Linux:** `~/.local/share/com.bilet.x.app/`
 
-Uninstalling the app does not delete these folders — remove them by hand if you want a completely clean wipe.
+---
+
+## Download & Installation
+
+Download pre-built binaries for your platform from the **[Releases](../../releases)** tab:
+
+| Platform | Download Package |
+|---|---|
+| **Windows 10 / 11** | `bilet-x_<version>_x64-setup.exe` (NSIS) or `.msi` |
+| **macOS** (Apple Silicon & Intel) | `bilet-x_<version>_universal.dmg` |
+| **Linux (Ubuntu / Debian)** | `bilet-x_<version>_amd64.deb` |
+| **Linux (Any Distro)** | `bilet-x_<version>_amd64.AppImage` |
 
 ---
 
-## Build from source
+## For Developers & Self-Builders
 
-Requirements: Node 20+, Rust stable, and the platform prerequisites listed in the [Tauri v2 setup guide](https://v2.tauri.app/start/prerequisites/).
+Want to contribute, tweak features, or build from source? Bilet-X is built with modern, high-performance web and native tech:
+
+- **Shell & System Hooks:** [Tauri v2](https://v2.tauri.app/) (Rust)
+- **Frontend Framework:** [Angular 21](https://angular.dev/) + [Tailwind CSS](https://tailwindcss.com/)
+- **Embedded Database:** SQLite via `rusqlite`
+- **Icons:** [Lucide Angular](https://lucide.dev/)
+
+### Building Locally
+
+**Prerequisites:** Node.js 20+, Rust stable, and OS build tools (see [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)).
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/Habeeb-Rahman-CA/bilet-x.git
 cd bilet-x
+
+# 2. Install dependencies
 npm install
-npm run tauri:dev        # run in development
-npm run tauri:build      # produce an installer in src-tauri/target/release/bundle/
+
+# 3. Start development mode with hot reload
+npm run tauri:dev
+
+# 4. Build native release package
+npm run tauri:build
 ```
 
-If you want the OAuth integrations to work in your own build, create `src-tauri/.cargo/config.toml` (gitignored) with your own provider credentials — see the header comment inside any of the `src-tauri/src/*_oauth.rs` files for the exact keys each provider expects.
+---
+
+## Feedback & Community
+
+Have an idea for a new integration? Spotted an issue? 
+
+- **Suggest a Feature or Report a Bug:** Open an issue on our [GitHub Issues](../../issues) tracker.
+- **Support the Project:** If Bilet-X helps boost your day-to-day productivity, give the repository a star!
 
 ---
 
-## Under the hood
-
-- **UI:** Angular 21 + Tailwind CSS
-- **Shell:** Tauri v2 (Rust)
-- **Storage:** SQLite (`rusqlite`, bundled)
-- **Global shortcut:** `tauri-plugin-global-shortcut`
-- **Notifications:** `tauri-plugin-notification`
-
----
-
-## Feedback
-
-Found a bug or missing an integration you'd love to see? Open an issue on the repo — Bilet-X is a personal project first, but PRs and suggestions are welcome.
+<p align="center">
+  Crafted for focused, distraction-free productivity.
+</p>
